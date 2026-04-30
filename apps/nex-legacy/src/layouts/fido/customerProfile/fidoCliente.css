@@ -1,0 +1,24 @@
+/*--Mobile Format */
+@media only screen and (max-width: 770px) {
+    .GraphFatturato{
+        flex-wrap: wrap;
+    }
+}
+
+@keyframes colorChange {
+    0% {
+      background-position: 0;
+    }
+    100% {
+      background-position: 100%;
+    }
+  }
+
+  label[data-shrink=false]+.MuiInputBase-formControl .css-1cohrqd-MuiSelect-select-MuiInputBase-input-MuiOutlinedInput-input{
+    height: 100%;
+  }
+
+.MuiAutocomplete-hasPopupIcon.css-gvffqs-MuiAutocomplete-root .MuiOutlinedInput-root,
+.MuiAutocomplete-hasPopupIcon.css-c1r7q3-MuiAutocomplete-root .MuiOutlinedInput-root {
+    height: 100% !important;
+};

@@ -1,0 +1,271 @@
+import React, {
+    useEffect,
+    useContext,
+    useRef,
+    useMemo,
+    memo,
+    useCallback,
+    useState,
+    MutableRefObject,
+} from "react";
+import { UserContext } from "../../context/UserContext";
+import { useLocation, NavLink } from "react-router-dom";
+import List from "@mui/material/List";
+
+import {
+    useMaterialUIController,
+    setSidebarOpen
+} from "context/index";
+
+import PermissionMoudle from "../../classes/permission";
+import { SideNavFooter } from "./footer/footer";
+import { SideNavHeader } from "./header/header";
+import { Tooltip } from "react-tooltip";
+import type { UserState } from "types/UserContext";
+
+import SidebarContainer from "./SidebarContainer";
+import { useResponsiveSidebar } from "./useResponsiveSidebar";
+import SidebarItem from "./SidebarItem";
+import SidebarGroup from "./SidebarGroup";
+import { ContextMenu } from "components/UI/menu/ContextMenu";
+
+import { AiOutlineUser } from "react-icons/ai";
+import { ChangeSessionRole } from "classes/log-out";
+import { useNexTheme } from "@nex/theme-system";
+
+const Permission = new PermissionMoudle();
+
+const UserIcon = AiOutlineUser as React.FC<{ size?: number; className?: string }>;
+
+type SidenavProps = {
+    color?: "primary" | "secondary" | "info" | "success" | "warning" | "error" | "dark" | "purple";
+    brand?: string;
+    brandName: string;
+    routes: RouteElement[];
+    [key: string]: any;
+};
+
+const RenderedRoutes = memo(function RenderedRoutes({
+    collapseName,
+    miniSidenav,
+    filteredRoutes,
+}: {
+    collapseName: string;
+    miniSidenav: boolean;
+    filteredRoutes: RouteElement[];
+}) {
+    return (
+        <>
+            {filteredRoutes.map(({ type, name, icon, title, noCollapse, key, route, nested, ref_type, isNew, redirect }) => {
+                const type_ = ref_type || type;
+
+                switch (type_) {
+                    case "visible":
+                        return (
+                            <NavLink key={key} to={route ?? ""}>
+                                <SidebarItem
+                                    label={name}
+                                    icon={icon}
+                                    active={collapseName !== "" ? key === collapseName : key === "dashboard"}
+                                    isNew={isNew}
+                                    redirect={redirect}
+                                />
+                            </NavLink>
+                        );
+
+                    case "nested": {
+                        const normalizedNested: RouteElement[] = Array.isArray(nested) ? nested : nested?.elements ?? [];
+                        return (
+                            <SidebarGroup
+                                key={key}
+                                icon={icon}
+                                label={name}
+                                collapseKey={key}
+                                collapseName={collapseName}
+                                items={normalizedNested}
+                            />
+                        );
+                    }
+
+                    case "title":
+                        return (
+                            <p
+                                key={key}
+                                className="px-7 mt-2 mb-1 ml-1 uppercase text-xs font-semibold text-neutral-800 dark:text-neutral-200"
+                            >
+                                {!miniSidenav && title}
+                            </p>
+                        );
+
+                    case "divider":
+                        return <span key={key} className="bg-gray-300 dark:bg-neutral-700 m-6 block h-px rounded-md" />;
+
+                    default:
+                        return null;
+                }
+            })}
+        </>
+    );
+});
+
+function Sidenav({ color = "info", brand = "", brandName, routes, ...rest }: SidenavProps) {
+    const [userContext, setUserContext] = useContext(UserContext) as [
+        UserState | null,
+        React.Dispatch<React.SetStateAction<UserState | null>>
+    ];
+    const [controller, dispatch] = useMaterialUIController();
+    const { miniSidenav, transparentSidenav, whiteSidenav } = controller;
+    const { isMobile } = useResponsiveSidebar(); // ora abbiamo isMobile
+
+    const { preferences } = useNexTheme();
+    const darkMode = preferences.mode === "dark";
+
+    const location = useLocation();
+    const collapseName = location.pathname.replace("/", "");
+
+    // Stati di caricamento generali
+    const [loadStatus, setLoadStatus] = React.useState<{ [key: string]: any }>({
+        new_role: false, // Stato di caricamento per i messaggi
+    });
+
+    const [menuRole, setMenuRole] = useState<boolean>(false);
+    const menuRef = useRef<HTMLDivElement>(null) as MutableRefObject<HTMLDivElement | null>; // Riferimento per il menu contestuale dei messaggi fissati
+    const abortController = useRef<AbortController | null>(null);
+
+    // Funzione per cambiare lo stato di caricamento
+    // 'from' è il tipo di caricamento, 'bool' è il nuovo stato
+    const ChangeLoadStatus = ({ from, bool }: { from: string, bool: boolean }) => {
+        setLoadStatus((prev) => ({ ...prev, [from]: bool !== undefined ? bool : !prev[from] }))
+    };
+
+    // chiudi su cambio route, se mobile
+    useEffect(() => {
+        if (isMobile) setSidebarOpen(dispatch, false);
+    }, [location.pathname, isMobile, dispatch]);
+
+    // chiudi su ESC
+    useEffect(() => {
+        if (!isMobile) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setSidebarOpen(dispatch, false);
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [isMobile, dispatch]);
+
+
+    // calcolo delle route permesse UNA sola volta quando cambiano user/routes
+    const filteredRoutes = useMemo(() => {
+        const details = userContext?.details;
+        if (!details) return [];
+
+        const result = Permission.RouteToShow(
+            details.ruolo,
+            routes,
+            details.username,
+            details.permissions
+        );
+
+        return (result?.Data as RouteElement[] | undefined) ?? [];
+    }, [userContext?.details, routes]);
+
+
+
+    // hover/scrollbar show-hide
+    const [navIsFocused, setNavIsFocused] = useState(false);
+    const activedBar = useRef(false);
+    const timeoutId = useRef<number | null>(null);
+
+    const handleFocus = useCallback(() => {
+        activedBar.current = true;
+        if (timeoutId.current) {
+            window.clearTimeout(timeoutId.current);
+            timeoutId.current = null;
+        }
+        setNavIsFocused(true);
+    }, []);
+
+    const handleMouseLeave = useCallback(() => {
+        activedBar.current = false;
+        timeoutId.current = window.setTimeout(() => setNavIsFocused(false), 800);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (timeoutId.current && !activedBar.current) {
+                window.clearTimeout(timeoutId.current);
+            }
+        };
+    }, []);
+
+
+    return (
+        <>
+            {/* Backdrop mobile */}
+            {isMobile && !miniSidenav && (
+                <div
+                    onClick={() => setSidebarOpen(dispatch, false)}
+                    className="fixed inset-0 z-10 bg-black/40 backdrop-blur-[1px]"
+                    aria-hidden
+                />
+            )}
+
+            <SidebarContainer
+                onMouseEnter={handleFocus}
+                onMouseLeave={handleMouseLeave}
+                transparent={transparentSidenav}
+                white={whiteSidenav}
+                dark={darkMode}
+                isMobile={isMobile}
+                open={miniSidenav}
+            >
+                <SideNavHeader NavLink={NavLink} isMobile={isMobile} navIsFocused={navIsFocused} />
+
+                <List
+                    className={`transition-all-css ${navIsFocused ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"}`}
+                    style={{ flexBasis: "100%" }}
+                    translate="no"
+                >
+                    <RenderedRoutes
+                        collapseName={collapseName}
+                        miniSidenav={miniSidenav}
+                        filteredRoutes={filteredRoutes}
+                    />
+                </List>
+
+                <SideNavFooter menuRef={menuRef} setMenuRole={setMenuRole} />
+            </SidebarContainer>
+
+            {userContext && userContext.details && userContext.details.multiRuolo &&
+                Array.isArray(userContext.details.multiRuolo) &&
+                userContext.details.multiRuolo.length > 0 && <ContextMenu
+                    openFor={menuRole}
+                    pos={menuRef}
+                    onClose={() => setMenuRole(false)}
+                    menuButtons={
+                        userContext.details.multiRuolo.map((role: { ruolo: string; descrizione: string }) => ({
+                            title: role.ruolo,
+                            icon: <UserIcon size={16} />,
+                            onClick: () => userContext?.details?.ruolo !== role.ruolo && ChangeSessionRole({ userContext, setUserContext, abortController, role_: role.ruolo, loadStatus, ChangeLoadStatus }),
+                            className: `${userContext?.details?.ruolo === role.ruolo ?
+                                "bg-neutral-700 hover:bg-neutral-600 active:bg-neutral-600 focus:bg-neutral-600 text-white" : ""}`
+                        }))}
+                />
+            }
+
+            <Tooltip
+                id="general-sidenav-tooltip"
+                place="bottom"
+                style={{
+                    maxWidth: "15vw",
+                    minWidth: 150,
+                    fontSize: "0.87rem",
+                    textAlign: "center",
+                    zIndex: 9999,
+                }}
+            />
+        </>
+    );
+}
+
+export default memo(Sidenav);

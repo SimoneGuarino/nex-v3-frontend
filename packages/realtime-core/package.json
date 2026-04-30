@@ -1,0 +1,23 @@
+{
+  "name": "@nex/realtime-core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "npm exec --package=typescript@5.6.3 -- tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@nex/shared-platform": "*",
+    "socket.io-client": "^4.8.1"
+  }
+}

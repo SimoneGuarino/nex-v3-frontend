@@ -1,0 +1,21 @@
+{
+    "name": "nex-v3-multiwebapp-poc",
+    "private": true,
+    "packageManager": "npm@10",
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "dev:survey": "npm run dev -w apps/survey-builder",
+        "dev:shell": "npm run dev -w apps/shell",
+        "start:survey": "npm run start -w apps/survey-builder",
+        "start:legacy": "npm run start -w apps/nex-legacy",
+        "build:shell": "npm run build -w apps/shell",
+        "build:survey": "npm run build -w apps/survey-builder",
+        "build:legacy": "npm run build -w apps/nex-legacy"
+    },
+    "devDependencies": {
+        "@craco/craco": "^7.1.0"
+    }
+}

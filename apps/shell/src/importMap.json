@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "@nex/legacy": "/legacy/spa.js",
+    "@nex/survey-builder": "/survey_builder/spa.js"
+  }
+}

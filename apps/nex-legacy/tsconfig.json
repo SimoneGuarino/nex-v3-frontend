@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "baseUrl": "src",
+    "paths": {
+      "*": ["./*"],
+      "examples/*": ["examples/*"],
+      "components/*": ["components/*"],
+      "assets/*": ["assets/*"],
+      "config/*": ["config/*"],
+      "context/*": ["context/*"],
+      "layouts/*": ["layouts/*"],
+      "classes/*": ["classes/*"],
+      "utils/*": ["utils/*"],
+      "logs/*": ["logs/*"],
+      "types/*": ["types/*"],
+      "socket/*": ["socket/*"]
+    },
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

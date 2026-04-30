@@ -1,0 +1,74 @@
+:root {
+    --shadow-bg-color: #3a3a3a28;
+    --text-color: black;
+  }
+.dark-theme {
+    --shadow-bg-color: #3f3f3f;
+  }
+
+@mixin rings($duration, $delay) {
+    opacity: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    content: '';
+    height: 100%;
+    width: 100%;
+    top: 5px;
+    left: 5px;
+    max-width: 30px;
+    max-height: 30px;
+    border: 8px solid var(--shadow-bg-color);
+    border-radius: 100%;
+    animation-name: ripple;
+    animation-duration: $duration;
+    animation-delay: $delay;
+    animation-iteration-count: infinite;
+    animation-timing-function: cubic-bezier(.65,0,.34,1);
+    z-index: -1;
+}
+
+.request-loader {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  height: 150px;
+  width: 150px;
+  border-radius: 100%;
+  background: #FFFFFF;
+  box-shadow: 0 0 20px 0 var(--shadow-bg-color);
+  
+  span {
+    position: relative;
+    font-size: 72px;
+    top: 5px;
+    left: -5px;
+  }
+  
+  &::after {
+    @include rings(3s, 0s);
+  }
+  
+  &::before {
+    @include rings(3s, 0.5s);
+  }
+}
+
+
+@keyframes ripple {
+  from {
+    opacity: 1;
+    transform: scale3d(0.75,0.75,1);
+  }
+  
+  to {
+    opacity: 0;
+    transform: scale3d(1.5,1.5,1);
+  }
+}

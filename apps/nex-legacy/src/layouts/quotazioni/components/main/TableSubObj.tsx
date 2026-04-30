@@ -1,0 +1,242 @@
+import React from "react";
+import { TableVirtualized } from "components/Virtualized/table";
+import { IQuotationBuyerProgress, QuotazioneDTO, STATE_COLOR_STYLES } from "layouts/quotazioni/types/quotations";
+import { BuyerProgressCell, GlobalProgressCell } from "./BuyerProgressCell";
+import { MdMoreVert } from "react-icons/md";
+import { UserAvatar } from "examples/Navbars/components/userInfo";
+import { useGeneralDataContext } from "context/GeneralDataContext";
+
+const MdMoreVertIcon = MdMoreVert as React.FC<{ size?: number; className?: string }>;
+
+interface TableSubObjProps {
+    data: any;
+    loadStatus: { [key: string]: boolean };
+    isBuyer: boolean;
+    contextMenuRef: React.MutableRefObject<any>;
+    handleOpenSettings: (params: { indexRow: number; allData: any[] }) => void;
+    isSelected: (q: QuotazioneDTO) => boolean;
+    onSelect: (q: QuotazioneDTO, multi: boolean) => void;
+    setData: React.Dispatch<React.SetStateAction<any>>;
+};
+
+/**
+ * Componente per visualizzare gli avatar dei buyer associati ai progressi delle quotazioni.
+ * @param buyersProgress - Array di oggetti IQuotationBuyerProgress relativi ai buyer.
+ * @returns 
+ */
+const BuyersAvatarCell: React.FC<{ buyersProgress: IQuotationBuyerProgress[] | null, isBuyer: boolean }> = ({ buyersProgress, isBuyer }) => {
+    const { globalData } = useGeneralDataContext();
+    const { buyers } = globalData;
+
+    if (isBuyer) {
+        return <span className='text-xs text-gray-400 dark:text-gray-600'>
+            Non disponibile
+        </span>;
+    };
+
+    //trasforma i IQuotationBuyerProgress[] | null in avatar utenti
+    if (!buyersProgress || buyersProgress && Array.isArray(buyersProgress) && buyersProgress.length === 0) {
+        return <span className='text-xs text-gray-400 dark:text-gray-600'>
+            Nessun utente
+        </span>;
+    };
+
+    //prendi gli utenti unici dalla lista dei buyer progress e recupera le informazioni dal contesto globale buyers
+    //recuperando nome, cognome, immagini, biografia
+    const users = buyersProgress.map(bp => {
+        {
+            const buyerInfo = buyers.find(b => b?.codici?.buyer === bp.buyerCode);
+            return buyerInfo ? {
+                id: buyerInfo.id,
+                nome: buyerInfo.nome,
+                cognome: buyerInfo.cognome,
+                immagini: buyerInfo.immagini,
+                biografia: buyerInfo.biografia,
+            } : null;
+        }
+    }).filter(u => u !== null) as { id: number; nome: string; cognome: string; immagini: { avatar: string; cover: string }; biografia: string }[];
+
+    return <div className='flex -space-x-3 items-center justify-center'>
+        {users.slice(0, 3).map((u, i) => (
+            <UserAvatar key={i} src={u.immagini?.avatar} name={u.nome} textSize="xs"
+                cognome={u.cognome} size={8} cover={{ src: u.immagini?.cover, active: true }} bio={u.biografia} />
+        ))}
+        {users.length > 3 && (
+            <span className="text-xs p-1 ml-4">+{users.length - 3} altri</span>
+        )}
+    </div>
+};
+
+
+//--------------------------------------------------
+// HELPER
+//---------------------------------------------------
+/**
+ * Calcola stato scadenza partendo da finestraValidita.fine (o fallback legacy).
+ * Usiamo solo la data (no ora) per evitare falsi positivi dovuti al timezone.
+ */
+function getExpiryMeta(row: any) {
+    const raw = row?.finestraValidita?.fine ?? row?.scadenza ?? row?.dateTo;
+    if (!raw) return { label: "-", daysToExpiry: null as number | null, isExpired: false, isExpiringSoon: false };
+
+    const expiry = new Date(raw);
+    if (Number.isNaN(expiry.getTime())) {
+        return { label: "-", daysToExpiry: null as number | null, isExpired: false, isExpiringSoon: false };
+    }
+
+    const today = new Date();
+    const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    // Confronto a livello giorno (00:00) per evitare che "ieri" venga letto come 0 giorni rimanenti.
+    const startExpiry = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
+
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const daysToExpiry = Math.ceil((startExpiry.getTime() - startToday.getTime()) / msPerDay);
+
+    return {
+        label: expiry.toLocaleDateString("it-IT"),
+        daysToExpiry,
+        isExpired: daysToExpiry < 0,
+        isExpiringSoon: daysToExpiry >= 0 && daysToExpiry <= 5, // soglia 3-5 giorni
+    };
+}
+
+
+const TableSubObj: React.FC<TableSubObjProps> = ({ data, loadStatus, isBuyer, contextMenuRef,
+    handleOpenSettings, isSelected, onSelect, setData }) => {
+    // Normalizzazione semplice del campo cliente per la tabella:
+    // - BID_PASSIVO: testo business leggibile
+    // - altre tipologie: codice cliente reale
+    const normalizedData = React.useMemo(() => {
+        if (!Array.isArray(data)) return [];
+        return data.map((row: any) => ({
+            ...row,
+            // Unifichiamo il calcolo della scadenza in un solo helper,
+            // poi deriviamo la classe del "tag data" con lo stesso look di Tipologia.
+            ...(() => {
+                const expiryMeta = getExpiryMeta(row);
+                const scadenza_validita_badge = expiryMeta.isExpired
+                    ? "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300"
+                    : expiryMeta.isExpiringSoon
+                        ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300"
+                        : "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300";
+
+                return {
+                    scadenza_validita: expiryMeta.label,
+                    // Se non c'e una data valida, non coloriamo la cella.
+                    scadenza_validita_badge: expiryMeta.label === "-" ? "" : scadenza_validita_badge,
+                };
+            })(),
+            // BID_PASSIVO: mostriamo la label placeholder solo se il backend indica
+            // che il cliente è ancora tecnico/non registrato.
+            // Se il commerciale ha già sostituito il placeholder con cliente reale,
+            // qui deve comparire il codice cliente effettivo.
+            cliente: (() => {
+                const rawCliente = typeof row?.cliente === "string" ? row.cliente.trim() : "";
+                const isPlaceholder =
+                    Boolean(row?.clienteIsPlaceholder) ||
+                    rawCliente === "__BID_PASSIVO_CLIENT_PLACEHOLDER__" ||
+                    rawCliente === "Cliente non ancora registrato";
+
+                if (row?.tipologia === "BID_PASSIVO" && isPlaceholder) {
+                    return "Cliente non ancora registrato";
+                }
+                return rawCliente || "-";
+            })(),
+            //label ID progressivo
+            prog_num_label: (() => {
+                const n = row?.prog_num;
+                if (typeof n !== "number" || !Number.isFinite(n)) return "-";
+                // Formato business: minimo 4 cifre (1 -> 0001, 25 -> 0025, 2345 -> 2345)
+                return String(n).padStart(4, "0");
+            })(),
+
+        }));
+    }, [data]);
+
+
+
+    const [columns, setColumns] = React.useState<any>([
+        {
+            key: [], fieldToTake: [
+                {
+                    key: 'Settings', type: 'button', title: 'Impostazioni Riga', ariaLabel: 'impostazioni', icon: <MdMoreVertIcon />, funcAction: (i: any, data: any, e: any) => {
+                        contextMenuRef.current = e.currentTarget;
+                        handleOpenSettings({ indexRow: i, allData: data });
+                    }
+                },
+            ], label: ' ', type: 'info', excludeLogic: true,
+        },
+        { key: 'prog_num_label', label: 'ID', type: 'default', sort: true, sortType: 'number', width: 100, sx: { alignItems: 'center' } },
+        {
+            // Sort dedicato "expiry": calcolo business su date reali del record (non su stringa visualizzata).
+            key: 'scadenza_validita', label: 'Scadenza validità', type: 'default', sort: true, sortType: 'expiry', width: 200, sx: { alignItems: 'center' },
+            // Reimpieghiamo il look del tag di Tipologia (stesse utility class base),
+            // ma il colore cambia in base allo stato della scadenza.
+            render: ({ row }: { row: any }) => (
+                row.scadenza_validita === "-"
+                    ? <span>-</span>
+                    : (
+                        <span className={`text-xs font-medium mr-2 px-2.5 py-0.5 rounded ${row.scadenza_validita_badge}`}>
+                            {row.scadenza_validita}
+                        </span>
+                    )
+            ),
+        },
+        {
+            label: "Per te", key: "myBuyerProgress",
+            width: 200,
+            sx: { justifyContent: "center" },
+            render: ({ row }: { row: any }) => (
+                isBuyer ? <BuyerProgressCell progress={row.myBuyerProgress} /> : <GlobalProgressCell buyersProgress={row.buyersProgress} />
+            ),
+        },
+        {
+            label: "Buyers", key: "buyersProgress",
+            width: 130,
+            sx: { justifyContent: "center" },
+            render: ({ row }: { row: any }) => <BuyersAvatarCell buyersProgress={row.buyersProgress} isBuyer={isBuyer} />,
+        },
+        { key: 'stato', label: 'Stato', type: 'tag', tableOfColors: STATE_COLOR_STYLES, pointOfColor: true, sort: true, sortType: 'string', width: 200, sx: { alignItems: 'center' } },
+        { key: 'tipologia', label: 'Tipologia', type: 'tag', sort: true, sortType: 'string', width: 200, sx: { alignItems: 'center' } },
+        { key: 'valore', label: 'Valore', type: 'eur', sort: true, sortType: 'string', width: 200, sx: { alignItems: 'center' } },
+        { key: 'titolo', label: 'Titolo', type: 'default', sort: true, sortType: 'string', width: 200, sx: { alignItems: 'center' } },
+        { key: 'cliente', label: 'Cliente', type: 'default', sort: true, sortType: 'string', width: 200, sx: { alignItems: 'center' } },
+        // Queste due colonne devono restare indipendenti con ordinamento data.
+        { key: 'updated_at', label: 'Ultimo Aggiornamento', type: 'date', sort: true, sortType: 'date', width: 200, sx: { alignItems: 'center' } },
+        { key: 'created_at', label: 'Creato il', type: 'date', sort: true, sortType: 'date', width: 200, sx: { alignItems: 'center' } },
+    ]);
+
+    return (
+        !loadStatus.table ? normalizedData && <div className="w-full h-full min-h-0 flex flex-col gap-4">
+            {/* Pannello filtri */}
+            <div className="w-full flex-1 min-h-0 rounded-xl overflow-hidden border border-gray-200 dark:border-neutral-800">
+                <TableVirtualized
+                    className='h-full'
+                    height='100%'
+                    tableType='grid'
+                    data={normalizedData || []}
+                    setData={setData}
+                    columns={columns}
+                    setColumns={setColumns}
+                    results={(normalizedData || []).length}
+                    loadStatus={loadStatus.table}
+                    whereToFindData={false}
+                    footer={false}
+                    headerSettings={{
+                        className: {
+                            main_container: 'z-20 border-b border-gray-200 dark:border-neutral-800'
+                        }
+                    }}
+                    bodySettings={{
+                        variant: 'striped',
+                        isSelected,
+                        onSelect,
+                    }}
+                />
+            </div>
+        </div> : <div className="min-h-[600px] lg:w-3/4 sm:w-full bg-gray-200 dark:bg-neutral-700 rounded animate-pulse" />
+    );
+};
+
+export default TableSubObj;
+

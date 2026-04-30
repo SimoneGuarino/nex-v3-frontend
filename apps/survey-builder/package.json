@@ -1,0 +1,32 @@
+{
+    "name": "@nex/survey-builder",
+    "version": "0.0.1",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        
+        "dev": "vite --host 0.0.0.0 --port 3002 --strictPort",
+        "prebuild": "npm run build -w @nex/shared-platform && npm run build -w @nex/ui-feedback",
+        "build": "vite build",
+        "preview": "vite preview --host 0.0.0.0 --port 3002 --strictPort"
+    },
+    "dependencies": {
+        "@nex/shared-platform": "*",
+        "@nex/ui-feedback": "*",
+        "@tailwindcss/vite": "^4.2.1",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-router-dom": "^6.30.0",
+        "single-spa": "^6.0.3",
+        "single-spa-react": "^6.0.2",
+        "tailwindcss": "^4.2.1"
+    },
+    "devDependencies": {
+        "@types/react": "^18.3.12",
+        "@types/react-dom": "^18.3.1",
+        "@vitejs/plugin-react": "^4.3.4",
+        "typescript": "^5.6.3",
+        "vite": "^5.4.10",
+        "vite-plugin-single-spa": "^1.1.0"
+    }
+}

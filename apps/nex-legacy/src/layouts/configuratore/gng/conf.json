@@ -1,0 +1,17 @@
+{
+    "markup": {
+        "default": 25,
+        "byPrefix": {
+            "GG-HP": 28
+        },
+        "bySKU": {
+            "GG-HP-305XL-BK": 30
+        }
+    },
+    "currency": "EUR",
+    "rounding": {
+        "mode": "nearest",
+        "decimals": 2
+    },
+    "defaultTax": 22
+}

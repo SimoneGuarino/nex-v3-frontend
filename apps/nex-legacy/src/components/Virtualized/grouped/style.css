@@ -1,0 +1,69 @@
+.arrow-box{
+  position: absolute;
+  z-index: 1;
+  font-size: 2em;
+  bottom: 5px;
+  /*left: 47%;*/
+  width: 50px;
+  height: 50px;
+  overflow: hidden;
+}
+.transitionOpacity{
+  transition: opacity 300ms ease-in-out;
+}
+.arrow{
+  color: #ccc;
+  width: 30px !important;
+  height: 30px !important;
+}
+.arrowTop{
+  position: absolute;
+  bottom: 40px;
+  animation: arrowAnim3 1s infinite;
+}
+.arrowMiddle{
+  position: absolute;
+  bottom: 20px;
+  animation: arrowAnim2 1s infinite;
+
+}
+.arrowDown{
+  position: absolute;
+  bottom: 5px;
+  animation: arrowAnim 1s infinite;
+}
+
+.outlined-adornment-amount fieldset:focus {
+  border-color: #d2d6da !important;
+}
+
+[data-testid='virtuoso-top-item-list'] div{
+    width: 100%;
+}
+
+
+
+@keyframes arrowAnim{
+  0%{
+    bottom: 5px;
+  }
+  100%{
+    bottom: -30px;
+  }
+}
+@keyframes arrowAnim2{
+  0%{
+    bottom: 20px;
+  }
+  100%{
+    bottom: 5px;
+  }
+}
+@keyframes arrowAnim3{
+  0%{
+    bottom: 40px;
+  }
+  100%{
+    bottom: 20px;
+  }
+}

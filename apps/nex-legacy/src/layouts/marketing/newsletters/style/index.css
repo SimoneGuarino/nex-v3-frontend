@@ -1,0 +1,287 @@
+/* ====== theme (css variables) ====== */
+
+:root {
+  --bg-surface: #fff;
+  --bg-surface-alt: #f6f6f6;
+  --bg-elevated: #fff;
+  --text-primary: #000;
+  --text-secondary: #888;
+  --border: #ccc;
+  --shadow-1: 0rem 0.25rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.1), 0rem 0.125rem 0.25rem -0.0625rem rgba(0, 0, 0, 0.06);
+
+  --row-focelda-bg: #fff;
+  --row-mailup-bg: #f6f6f6;
+
+  --state-active-row: #f3fff8;
+  --state-disabled-row: #ffe5d5;
+  --state-unknown-row: #eee;
+
+  --state-active-group: #e2ece6;
+  --state-disabled-group: #ecd9cd;
+  --state-unknown-group: #d7d7d7;
+
+  --overlay-scrim: rgba(255, 255, 255, 0.5);
+}
+
+.theme-dark {
+  --bg-surface: #333;
+  --bg-surface-alt: #2b2b2b;
+  --bg-elevated: #333;
+  --text-primary: #fff;
+  --text-secondary: #bbb;
+  --border: #555;
+
+  --row-focelda-bg: #333;
+  --row-mailup-bg: #2b2b2b;
+
+  --state-active-row: #173d2a;
+  --state-disabled-row: #4e2d20;
+  --state-unknown-row: #3a3a3a;
+
+  --state-active-group: #1d3f34;
+  --state-disabled-group: #4a3329;
+  --state-unknown-group: #3a3a3a;
+
+  --overlay-scrim: rgba(0, 0, 0, 0.5);
+}
+
+/* ====== utility ====== */
+
+.theme-light,
+.theme-dark {
+  color: var(--text-primary);
+}
+
+.add-to-group-wrap {
+  display: inline-block;
+}
+
+.add-to-group-btn {
+  margin: 1.5rem 0 !important;
+  padding: 0.5rem 1.2rem 0.4rem 1.2rem;
+  text-transform: lowercase;
+}
+
+/* tooltip */
+.general-tooltip {
+  max-width: 15vw;
+  min-width: 150px;
+  font-size: 0.87rem;
+  z-index: 9999;
+  text-align: center;
+}
+
+/* ====== legend & dots ====== */
+
+.legend {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.active-dot-f,
+.active-dot-m,
+.disabled-dot-f,
+.disabled-dot-m {
+  border-radius: 100%;
+  border: 2px solid var(--text-secondary);
+  display: inline-block;
+  height: 11px;
+  margin-right: 0.2rem;
+  width: 11px;
+}
+
+/* ====== table ====== */
+
+.users-table-div {
+  margin-top: 1rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.users-table {
+  border-collapse: collapse;
+  box-shadow: var(--shadow-1);
+  width: 100%;
+  background-color: var(--bg-elevated);
+}
+
+.users-table thead {
+  border-bottom: 1px solid var(--border);
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+  font-size: 0.85rem;
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+  text-align: left;
+  z-index: 1;
+}
+
+.users-table thead th {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  padding: 0.7rem 1rem 0.5rem 1rem;
+}
+
+/* larghezze colonne */
+.users-table thead th:first-child,
+.users-table tbody td:first-child {
+  width: 8%;
+}
+
+.users-table thead th:nth-child(2),
+.users-table tbody td:nth-child(2) {
+  width: 15%;
+}
+
+.users-table thead th:last-child,
+.users-table tbody td:last-child {
+  width: 77%;
+}
+
+/* arrotondamento header */
+.users-table thead th:first-child {
+  border-top-left-radius: 1rem;
+}
+
+.users-table thead th:last-child {
+  border-top-right-radius: 1rem;
+}
+
+.users-table td {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.users-focelda-row {
+  background-color: var(--row-focelda-bg);
+}
+
+.users-mailup-row {
+  background-color: var(--row-mailup-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+/* primo td del secondo tr verticale in alto */
+.users-mailup-row td:first-child {
+  vertical-align: top;
+}
+
+/* secondo TD del secondo TR (lista gruppi) */
+.mailup-groups-cell {
+  padding: 0;
+  background-color: var(--row-mailup-bg);
+}
+
+/* righe stato - celle email e gruppi */
+.news-disabled-row,
+.news-active-row,
+.news-unknown-row,
+.news-active-group,
+.news-disabled-group,
+.news-unknown-group {
+  margin: 0;
+  padding: 0.4rem 1rem;
+  width: 100%;
+  color: var(--text-primary);
+}
+
+/* light/dark backgrounds per stati */
+.news-disabled-row,
+.disabled-dot-f {
+  background-color: var(--state-disabled-row);
+}
+
+.news-disabled-group,
+.disabled-dot-m {
+  background-color: var(--state-disabled-group);
+}
+
+.news-active-row,
+.active-dot-f {
+  background-color: var(--state-active-row);
+}
+
+.news-active-group,
+.active-dot-m {
+  background-color: var(--state-active-group);
+}
+
+.news-unknown-row {
+  background-color: var(--state-unknown-row);
+}
+
+.news-unknown-group {
+  background-color: var(--state-unknown-group);
+}
+
+/* no data */
+.no-data-text {
+  font-size: 0.9rem;
+  margin-top: 2rem;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+/* footer stats */
+.users-table-stats {
+  background-color: var(--bg-elevated);
+  border-bottom-left-radius: 1rem;
+  border-bottom-right-radius: 1rem;
+  border-top: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+  font-size: 0.9rem;
+  margin: 0 0.25rem 0 0;
+  padding: 0.8rem 1rem;
+  text-align: right;
+  color: var(--text-primary);
+}
+
+/* ====== overlay add-to-group ====== */
+
+.users-group-section {
+  align-items: center;
+  background-color: var(--overlay-scrim);
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  left: 0;
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  top: 0;
+  z-index: 1;
+  width: 100%;
+}
+
+.users-group-container {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-1);
+  max-width: 30rem;
+  padding: 1.4rem 2rem;
+  width: 100%;
+}
+
+.overlay-intro-text {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.overlay-warning-text {
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.groups-list {
+  border: 1px solid var(--border);
+  max-height: 20rem;
+  overflow-y: auto;
+  margin: 1.5rem 0;
+  padding: 0.5rem 0;
+}

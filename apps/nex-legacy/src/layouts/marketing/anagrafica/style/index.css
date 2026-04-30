@@ -1,0 +1,39 @@
+.registry-section-title, .registry-section-title-dark {
+  font-size: 0.8rem;
+  padding: 1.2rem 0;
+}
+
+.registry-section-title-dark {
+  color: #adb5bd;
+}
+
+.registry-container {
+  display: inline-block;
+  margin: 0 3rem 1rem 0;
+}
+
+.registry-container-title, .registry-container-title-dark {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.registry-container-title {
+  color: #888;
+}
+
+.registry-container-title-dark {
+  color: #666;
+}
+
+.registry-input, .registry-input-dark {
+  padding: 0.3rem 0.3rem;
+  width: auto;
+}
+
+.registry-input {
+  color: #111;
+}
+
+.registry-input-dark {
+  color: #fff;
+}
