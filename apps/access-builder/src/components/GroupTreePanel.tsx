@@ -61,40 +61,42 @@ export function GroupTreePanel({ groups, edges, selectedGroupId, onSelectGroup, 
     };
 
     return (
-        <FDBox className="absolute left-0 flex flex-col" pad="sm" radius="md">
-            <div className="ab-panel-header">
-                <div>
-                    <div className="ab-eyebrow">Struttura</div>
-                    <h2>Gruppi</h2>
+        <div className="absolute left-0 top-0 bottom-0 w-80 h-full">
+            <FDBox className="flex flex-col h-full" pad="sm" radius="md">
+                <div className="ab-panel-header">
+                    <div>
+                        <div className="ab-eyebrow">Struttura</div>
+                        <h2>Gruppi</h2>
+                    </div>
+                    <button className="ab-icon-button" type="button" title="Nuovo gruppo" onClick={() => setIsCreating((value) => !value)}>+</button>
                 </div>
-                <button className="ab-icon-button" type="button" title="Nuovo gruppo" onClick={() => setIsCreating((value) => !value)}>+</button>
-            </div>
 
-            {isCreating && (
-                <div className="ab-create-card">
-                    <label>Nome gruppo</label>
-                    <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Es. Buyer Notebook" />
-                    <label>Tipo gruppo</label>
-                    <select value={kind} onChange={(event) => setKind(event.target.value as GroupKind)}>
-                        <option value="ORG_UNIT">Org Unit</option>
-                        <option value="TEAM">Team</option>
-                        <option value="ROLE_GROUP">Role Group</option>
-                        <option value="CAPABILITY_GROUP">Capability Group</option>
-                    </select>
-                    <label className="ab-checkbox-row">
-                        <input type="checkbox" checked={createUnderSelected} onChange={(event) => setCreateUnderSelected(event.target.checked)} />
-                        Crea sotto il gruppo selezionato
-                    </label>
-                    <button type="button" className="ab-button ab-button-primary" onClick={submitCreate}>Crea gruppo</button>
+                {isCreating && (
+                    <div className="ab-create-card">
+                        <label>Nome gruppo</label>
+                        <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Es. Buyer Notebook" />
+                        <label>Tipo gruppo</label>
+                        <select value={kind} onChange={(event) => setKind(event.target.value as GroupKind)}>
+                            <option value="ORG_UNIT">Org Unit</option>
+                            <option value="TEAM">Team</option>
+                            <option value="ROLE_GROUP">Role Group</option>
+                            <option value="CAPABILITY_GROUP">Capability Group</option>
+                        </select>
+                        <label className="ab-checkbox-row">
+                            <input type="checkbox" checked={createUnderSelected} onChange={(event) => setCreateUnderSelected(event.target.checked)} />
+                            Crea sotto il gruppo selezionato
+                        </label>
+                        <button type="button" className="ab-button ab-button-primary" onClick={submitCreate}>Crea gruppo</button>
+                    </div>
+                )}
+
+                <input className="ab-search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cerca gruppo, reparto o capability…" />
+                <div className="ab-tree">
+                    {normalizedQuery
+                        ? visibleGroups.map((group) => renderNode(group, 0))
+                        : groupChildren(groups, edges, null).map((group) => renderNode(group))}
                 </div>
-            )}
-
-            <input className="ab-search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cerca gruppo, reparto o capability…" />
-            <div className="ab-tree">
-                {normalizedQuery
-                    ? visibleGroups.map((group) => renderNode(group, 0))
-                    : groupChildren(groups, edges, null).map((group) => renderNode(group))}
-            </div>
-        </FDBox>
+            </FDBox>
+        </div>
     );
 }

@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "npm run build -w @nex/shared-platform && npm run build -w @nex/ui-feedback && npm run build -w @nex/realtime-core && npm run build -w @nex/realtime-store && npm run build -w @nex/fd-ui && npm run build -w @nex/theme-system",
+    "predev": "npm run build -w @nex/shared-platform && npm run build -w @nex/utils && npm run build -w @nex/ui-feedback && npm run build -w @nex/realtime-core && npm run build -w @nex/realtime-store && npm run build -w @nex/fd-ui && npm run build -w @nex/theme-system",
     "dev": "vite --host 0.0.0.0 --port 3001 --strictPort",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 3001 --strictPort"
   },
   "dependencies": {
-    "@nex/fd-ui": "*", "@nex/realtime-core": "*", "@nex/realtime-store": "*", "@nex/shared-platform": "*", "@nex/theme-system": "*",
+    "@nex/fd-ui": "*", "@nex/realtime-core": "*", "@nex/realtime-store": "*", "@nex/shared-platform": "*", "@nex/theme-system": "*", "@nex/utils": "*",
     "framer-motion": "^12.19.2", "import-map-overrides": "^6.1.0", "react": "^18.2.0", "react-dom": "^18.2.0", "react-icons": "^5.5.0", "react-router-dom": "^6.30.0", "single-spa": "^6.0.3", "single-spa-react": "^6.0.2", "vite-plugin-single-spa": "^0.7.0"
   },
   "devDependencies": {

@@ -35,7 +35,7 @@ function App() {
     }
 
     return (
-        <div className="ab-app">
+        <div className="ab-app relative">
             <AccessBuilderHeader
                 pendingChanges={state.pendingChanges}
                 onPublish={async () => {
@@ -44,48 +44,46 @@ function App() {
                 }}
             />
 
-            <div className="ab-main-grid">
-                <GroupTreePanel
+            <GroupTreePanel
+                groups={state.snapshot.groups}
+                edges={state.snapshot.edges}
+                selectedGroupId={state.selectedGroupId}
+                onSelectGroup={state.setSelectedGroupId}
+                onCreateGroup={state.createGroup}
+            />
+
+            <div className="ab-center-stack">
+                <OrganizationCanvas
                     groups={state.snapshot.groups}
                     edges={state.snapshot.edges}
                     selectedGroupId={state.selectedGroupId}
                     onSelectGroup={state.setSelectedGroupId}
-                    onCreateGroup={state.createGroup}
                 />
+                <EffectiveAccessPreviewPanel
+                    users={state.snapshot.users}
+                    roles={state.snapshot.roles}
+                    selectedUserId={state.selectedUserId}
+                    selectedActorRole={state.selectedActorRole}
+                    preview={state.preview}
+                    isLoading={state.isPreviewLoading}
+                    onSelectUser={state.setSelectedUserId}
+                    onSelectActorRole={state.setSelectedActorRole}
+                />
+            </div>
 
-                <div className="ab-center-stack">
-                    <OrganizationCanvas
-                        groups={state.snapshot.groups}
-                        edges={state.snapshot.edges}
-                        selectedGroupId={state.selectedGroupId}
-                        onSelectGroup={state.setSelectedGroupId}
-                    />
-                    <EffectiveAccessPreviewPanel
-                        users={state.snapshot.users}
-                        roles={state.snapshot.roles}
-                        selectedUserId={state.selectedUserId}
-                        selectedActorRole={state.selectedActorRole}
-                        preview={state.preview}
-                        isLoading={state.isPreviewLoading}
-                        onSelectUser={state.setSelectedUserId}
-                        onSelectActorRole={state.setSelectedActorRole}
-                    />
-                </div>
-
-                <div className="ab-right-stack">
-                    <GroupInspectorPanel
-                        group={state.selectedGroup}
-                        memberships={state.selectedGroupMemberships}
-                        grants={state.selectedGroupGrants}
-                        users={state.snapshot.users}
-                        selectedUserId={state.selectedUserId}
-                        onSelectUser={state.setSelectedUserId}
-                        onAddSelectedUser={state.addSelectedUserToSelectedGroup}
-                        onRemoveMembership={state.removeMembership}
-                        onRemoveGrant={state.removeGrant}
-                    />
-                    <ResourceLibraryPanel resources={state.snapshot.resources} onGrant={state.grantResourceToSelectedGroup} />
-                </div>
+            <div className="ab-right-stack">
+                <GroupInspectorPanel
+                    group={state.selectedGroup}
+                    memberships={state.selectedGroupMemberships}
+                    grants={state.selectedGroupGrants}
+                    users={state.snapshot.users}
+                    selectedUserId={state.selectedUserId}
+                    onSelectUser={state.setSelectedUserId}
+                    onAddSelectedUser={state.addSelectedUserToSelectedGroup}
+                    onRemoveMembership={state.removeMembership}
+                    onRemoveGrant={state.removeGrant}
+                />
+                <ResourceLibraryPanel resources={state.snapshot.resources} onGrant={state.grantResourceToSelectedGroup} />
             </div>
 
             <PendingChangesBar changes={state.pendingChanges} isPublishing={state.isPublishing} onDiscard={state.discardDraft} />

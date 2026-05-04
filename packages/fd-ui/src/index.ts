@@ -12,4 +12,3 @@ export { default as FDTextArea } from "./components/UI/input/FDTextArea";
 export { default as MarkdownEditor } from "./components/UI/input/MarkdownEditor";
 export { default as RichTextEditor } from "./components/UI/input/RichTextEditor";
 export { ContextMenu } from "./components/UI/menu/ContextMenu";
-export * from "./assets/palette/palette";

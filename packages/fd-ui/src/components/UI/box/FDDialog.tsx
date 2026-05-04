@@ -119,7 +119,7 @@ export default function FDDialog({
         <AnimatePresence>
             {open && (
                 <motion.div
-                    className="fixed inset-0 z-[1400] flex items-center justify-center p-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
                     initial="hidden"
                     animate="visible"
                     exit="hidden"

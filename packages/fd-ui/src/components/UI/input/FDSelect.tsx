@@ -18,11 +18,13 @@
  */
 
 import React, {
-    useEffect, useMemo, useRef, useState, useId, memo, useContext
+    useEffect, useMemo, useRef, useState, useId, memo, useContext,
+    useLayoutEffect
 } from "react";
 import { motion, Variants } from "framer-motion";
 import { MdCheck, MdClose, MdExpandMore, MdSearch } from "react-icons/md";
 //import { TourCtx } from "tour/TourProvider";
+import { createPortal } from "react-dom";
 
 /** Tipizzazione esplicita delle icone per evitare type widening dei componenti */
 const MdCheckIcon = MdCheck as React.FC<{ size?: number; className?: string }>;
@@ -170,6 +172,12 @@ export interface FDSelectProps<T = string> {
     containerClassName?: string;
     color?: FDColor;
 
+    menuPortal?: boolean;
+    menuPlacement?: "auto" | "bottom-start" | "top-start";
+    menuOffset?: number;
+    menuViewportPadding?: number;
+    menuZIndex?: number;
+
     // Performance (windowing a riga fissa)
     itemHeight?: number;
     menuMaxHeight?: number;
@@ -257,6 +265,12 @@ export const FDSelect = memo(function FDSelect<T = string>({
     containerClassName = "",
     color = "neutral",
 
+    menuPortal = true,
+    menuPlacement = "auto",
+    menuOffset = 8,
+    menuViewportPadding = 8,
+    menuZIndex = 1600,
+
     itemHeight,
     menuMaxHeight = 280,
 
@@ -294,23 +308,33 @@ export const FDSelect = memo(function FDSelect<T = string>({
     /** Stato: testo ricerca */
     const [search, setSearch] = useState("");
 
+    const [menuCoords, setMenuCoords] = useState<{
+        top: number;
+        left: number;
+        width: number;
+        maxHeight: number;
+        transformOrigin: string;
+    } | null>(null);
+
+    const menuRef = useRef<HTMLDivElement>(null);
+
     /** Ref: trigger (bottone) e lista (scroll container) */
     const triggerRef = useRef<HTMLButtonElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
     /** Ref root per rilevare click esterni senza alterare i commenti precedenti */
     const rootRef = useRef<HTMLDivElement>(null);
 
-    //  const tour = useContext(TourCtx)
-    //const tourIsOpen = !!tour?.isOpen;
-    //const activeStepSelector = tour?.activeStepSelector;
+    //const tour = useContext(TourCtx)
+    const tourIsOpen = false; //!!tour?.isOpen;
+    const activeStepSelector = ""; //tour?.activeStepSelector;
 
-    /*const forceMenuOpenForTour =
+    const forceMenuOpenForTour =
         !!dataTourMenu &&
         tourIsOpen &&
         !disabled &&
-        selectorMatchesDataTour(activeStepSelector, dataTourMenu);*/
+        selectorMatchesDataTour(activeStepSelector, dataTourMenu);
 
-    const open = /*forceMenuOpenForTour ||*/ openInner;
+    const open = forceMenuOpenForTour || openInner;
 
     const prevOpenRef = useRef(false);
     useEffect(() => {
@@ -394,7 +418,7 @@ export const FDSelect = memo(function FDSelect<T = string>({
         if (!open) return;
 
         if (e.key === "Escape") {
-            if (/*!forceMenuOpenForTour*/ true) setOpenInner(false);
+            if (!forceMenuOpenForTour) setOpenInner(false);
             e.preventDefault();
             return;
         }
@@ -430,9 +454,9 @@ export const FDSelect = memo(function FDSelect<T = string>({
         return { start, end, before: start * rowH, after: Math.max(0, (filtered.length - end) * rowH) };
     }, [scrollTop, rowH, menuMaxHeight, filtered.length, enableWindowing]);
 
-    /*const prevForcedRef = useRef(false);
+    const prevForcedRef = useRef(false);
     useEffect(() => {
-        if (!forceMenuOpenForTour && !prevForcedRef.current) {
+        if (forceMenuOpenForTour && !prevForcedRef.current) {
             setOpenInner(true);
             setSearch("");
             onSearchChange?.("");
@@ -445,7 +469,7 @@ export const FDSelect = memo(function FDSelect<T = string>({
             setOpenInner(false);
         }
         prevForcedRef.current = forceMenuOpenForTour;
-    }, [forceMenuOpenForTour, onSearchChange]); */
+    }, [forceMenuOpenForTour, onSearchChange]);
 
     useEffect(() => {
         if (!open) return;
@@ -485,19 +509,28 @@ export const FDSelect = memo(function FDSelect<T = string>({
     useEffect(() => {
         function handlePointerDown(e: MouseEvent | TouchEvent) {
             if (!open) return;
-            //if (forceMenuOpenForTour) return;
+            if (forceMenuOpenForTour) return;
+
+            const target = e.target as Node;
             const root = rootRef.current;
-            if (root && !root.contains(e.target as Node)) {
+            const menu = menuRef.current;
+
+            const clickedInsideRoot = !!root && root.contains(target);
+            const clickedInsidePortalMenu = !!menu && menu.contains(target);
+
+            if (!clickedInsideRoot && !clickedInsidePortalMenu) {
                 setOpenInner(false);
             }
         }
+
         document.addEventListener("mousedown", handlePointerDown);
         document.addEventListener("touchstart", handlePointerDown, { passive: true });
+
         return () => {
             document.removeEventListener("mousedown", handlePointerDown);
             document.removeEventListener("touchstart", handlePointerDown);
         };
-    }, [open, /*forceMenuOpenForTour*/]);
+    }, [open, forceMenuOpenForTour]);
 
     /** reset scrollTop e posizione lista all'apertura del menu */
     useEffect(() => {
@@ -509,6 +542,228 @@ export const FDSelect = memo(function FDSelect<T = string>({
             });
         }
     }, [open]);
+
+    const recomputeMenuPosition = React.useCallback(() => {
+        if (!open || !menuPortal || !triggerRef.current || !menuRef.current) return;
+
+        const triggerRect = triggerRef.current.getBoundingClientRect();
+        const menuEl = menuRef.current;
+
+        const prevVis = menuEl.style.visibility;
+        const prevOp = menuEl.style.opacity;
+        menuEl.style.visibility = "hidden";
+        menuEl.style.opacity = "0";
+
+        const rect = menuEl.getBoundingClientRect();
+        const menuH = rect.height || menuMaxHeight;
+        const menuW = triggerRect.width;
+
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        const spaceBottom = vh - triggerRect.bottom;
+        const spaceTop = triggerRect.top;
+
+        const shouldOpenTop =
+            menuPlacement === "top-start" ||
+            (menuPlacement === "auto" && spaceBottom < menuH + menuOffset && spaceTop > spaceBottom);
+
+        let top = shouldOpenTop
+            ? triggerRect.top - menuOffset - Math.min(menuH, menuMaxHeight)
+            : triggerRect.bottom + menuOffset;
+
+        let left = triggerRect.left;
+        left = Math.min(Math.max(left, menuViewportPadding), vw - menuViewportPadding - menuW);
+
+        const availableBelow = vh - triggerRect.bottom - menuOffset - menuViewportPadding;
+        const availableAbove = triggerRect.top - menuOffset - menuViewportPadding;
+
+        const maxHeight = shouldOpenTop
+            ? Math.max(120, Math.min(menuMaxHeight, availableAbove))
+            : Math.max(120, Math.min(menuMaxHeight, availableBelow));
+
+        if (shouldOpenTop) {
+            top = Math.max(menuViewportPadding, triggerRect.top - menuOffset - maxHeight);
+        } else {
+            top = Math.min(triggerRect.bottom + menuOffset, vh - menuViewportPadding - maxHeight);
+        }
+
+        menuEl.style.visibility = prevVis;
+        menuEl.style.opacity = prevOp;
+
+        setMenuCoords({
+            top,
+            left,
+            width: menuW,
+            maxHeight,
+            transformOrigin: shouldOpenTop ? "bottom left" : "top left",
+        });
+    }, [open, menuPortal, menuPlacement, menuOffset, menuViewportPadding, menuMaxHeight]);
+
+    useLayoutEffect(() => {
+        if (!open || !menuPortal) return;
+        recomputeMenuPosition();
+    }, [open, menuPortal, filtered.length, search, recomputeMenuPosition]);
+
+    useEffect(() => {
+        if (!open || !menuPortal) return;
+
+        const handler = () => recomputeMenuPosition();
+        window.addEventListener("resize", handler, { passive: true });
+        window.addEventListener("scroll", handler, { passive: true });
+
+        const ro = new ResizeObserver(() => recomputeMenuPosition());
+        if (triggerRef.current) ro.observe(triggerRef.current);
+        if (menuRef.current) ro.observe(menuRef.current);
+
+        return () => {
+            window.removeEventListener("resize", handler);
+            window.removeEventListener("scroll", handler);
+            ro.disconnect();
+        };
+    }, [open, menuPortal, recomputeMenuPosition]);
+
+    const menuContent = (
+        <motion.div
+            ref={menuRef}
+            data-fd-select-portal="true"
+            data-tour={dataTourMenuScope === "menu" ? dataTourMenu : undefined}
+            key="menu"
+            role="listbox"
+            id={`${id}-listbox`}
+            aria-activedescendant={`${id}-opt-${activeIdx}`}
+            className="z-50 overflow-hidden rounded-md border border-neutral-600 bg-neutral-900 shadow-lg text-white"
+            initial="hidden"
+            animate="show"
+            exit="exit"
+            variants={popVariants}
+            onMouseDown={(e) => e.preventDefault()}
+            style={
+                menuPortal
+                    ? {
+                        position: "fixed",
+                        top: menuCoords?.top ?? -9999,
+                        left: menuCoords?.left ?? -9999,
+                        width: menuCoords?.width,
+                        zIndex: menuZIndex,
+                        transformOrigin: menuCoords?.transformOrigin,
+                    }
+                    : undefined
+            }
+        >
+            {/** Barra di ricerca + stato di caricamento */}
+            {(searchable || loading) && (
+                <div className="flex items-center gap-2 px-2 py-2 border-b border-neutral-700">
+                    <MdSearchIcon className="text-neutral-500" />
+                    <input
+                        /* NOTA: non disabilitiamo più l'input durante il loading
+                           così la search funziona anche alla prima apertura */
+                        value={search}
+                        onChange={e => {
+                            setSearch(e.target.value);
+                            onSearchChange?.(e.target.value);
+                        }}
+                        placeholder={loading ? "Caricamento…" : "Cerca…"}
+                        className={`flex-1 bg-transparent outline-none text-sm text-white/80`}
+                        autoFocus
+                    />
+                </div>
+            )}
+
+            {/** LISTA con windowing: solo il sottoinsieme visibile viene renderizzato */}
+            <div
+                ref={listRef}
+                style={{
+                    maxHeight: menuPortal ? menuCoords?.maxHeight ?? menuMaxHeight : menuMaxHeight,
+                }}
+                className="overflow-auto"
+                onScroll={(e) => {
+                    const el = e.target as HTMLDivElement;
+                    if (enableWindowing) {
+                        setScrollTop(el.scrollTop);
+                    };
+
+                    // near-bottom detection (threshold ~ 1.5 righe)
+                    const distanceFromBottom = el.scrollHeight - (el.scrollTop + el.clientHeight);
+                    if (distanceFromBottom <= (rowH * 1.5)) {
+                        onMenuScrollToBottom?.();
+                    };
+                }}
+            >
+                {/** spacer superiore (equivalente all'altezza delle righe scorse) */}
+                {enableWindowing && <div style={{ height: visible.before }} />}
+
+                {filtered.slice(visible.start, visible.end).map((opt, i) => {
+                    const realIdx = visible.start + i;        // indice assoluto della riga
+                    const sel = isSelected(opt);              // riga selezionata?
+                    const active = realIdx === activeIdx;     // riga "attiva" (focussed)
+
+                    const rawKey =
+                        getOptionKey?.(opt) ??
+                        ((typeof (opt as FDSelectOption<any>).value === "string" || typeof (opt as FDSelectOption<any>).value === "number")
+                            ? `v:${String((opt as FDSelectOption<any>).value)}`
+                            : `i:${indexByOption.get(opt) ?? realIdx}-${opt.label}`);
+                    const key = String(rawKey);
+
+                    // Render di default (o custom via renderOption)
+                    const row =
+                        renderOption
+                            ? renderOption(opt, sel, active)
+                            : (
+                                <div className="flex items-center justify-between w-full">
+                                    <div className="flex items-center gap-2">
+                                        {opt.icon && <span className="opacity-80">{opt.icon}</span>}
+                                        <span className="truncate">{opt.label}</span>
+                                    </div>
+                                    <span className={`ml-3 ${sel ? "opacity-100" : "opacity-0"}`}><MdCheckIcon /></span>
+                                </div>
+                            );
+
+                    const baseRowCls = `px-3` + (variant === "underline" ? " py-2.5" : " py-2.5");
+
+                    const rowDataTour =
+                        dataTourMenuScope === "firstOption" && dataTourMenu && realIdx === 0
+                            ? dataTourMenu
+                            : undefined;
+
+                    return (
+                        <button
+                            data-tour={rowDataTour}
+                            id={`${id}-opt-${realIdx}`}
+                            key={key + (opt.disabled ? "__disabled" : "__enabled")}
+                            role="option"
+                            aria-selected={sel}
+                            disabled={opt.disabled}
+                            className={[
+                                "w-full text-left text-sm box-border",
+                                baseRowCls,
+                                sel ? "bg-blue-400/10" : "", // pre-condition => active
+                                opt.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-neutral-800/70",
+                                palette[color].text ?? palette.neutral.text,
+                                "text-white/80"
+                            ].join(" ")}
+                            style={enableWindowing ? { height: rowH } : undefined}               // altezza fissa coerente col windowing
+                            onMouseEnter={() => setActiveIdx(realIdx)}
+                            onClick={() => (multiple ? toggleMulti(opt) : toggleSingle(opt))}
+                        >
+                            {row}
+                        </button>
+                    );
+                })}
+
+                {/** spacer inferiore */}
+                {enableWindowing && <div style={{ height: visible.after }} />}
+
+                {/** Empty/Loading states */}
+                {filtered.length === 0 && !loading && (
+                    <div className="px-3 py-3 text-sm text-neutral-500">Nessun risultato</div>
+                )}
+                {loading && (
+                    <div className="px-3 py-3 text-sm text-neutral-500">Caricamento…</div>
+                )}
+            </div>
+        </motion.div>
+    );
 
     return (
         <div ref={rootRef} className={`${fullWidth ? "w-full" : "w-auto"} ${containerClassName}`}>
@@ -537,7 +792,7 @@ export const FDSelect = memo(function FDSelect<T = string>({
                     ].join(" ")}
                     onClick={() => {
                         if (disabled) return;
-                        //if (forceMenuOpenForTour) return;
+                        if (forceMenuOpenForTour) return;
                         setOpenInner(o => !o);
                     }}
                 >
@@ -547,13 +802,22 @@ export const FDSelect = memo(function FDSelect<T = string>({
                         </div>
                         <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
                             {clearable && hasValue && !disabled && (
-                                <span
-                                    onClick={(e) => { e.stopPropagation(); clear(); }} // evita chiusura menu
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                    }}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        clear();
+                                    }}
                                     className="hover:text-neutral-700 dark:hover:text-neutral-200"
                                     aria-label="Pulisci"
                                 >
                                     <MdCloseIcon />
-                                </span>
+                                </button>
                             )}
                             <MdExpandMoreIcon className={`transition ${open ? "rotate-180" : ""}`} />
                         </div>
@@ -577,129 +841,14 @@ export const FDSelect = memo(function FDSelect<T = string>({
                 <span className={`pointer-events-none absolute inset-0 ${!error ? vCfg.focus : vCfg.error} rounded-[inherit]`} aria-hidden />
 
                 {/** MENU: appare sopra il trigger con portamento a listbox */}
-                {open && (
-                    <motion.div
-                        data-tour={dataTourMenuScope === "menu" ? dataTourMenu : undefined}
-                        key="menu"
-                        role="listbox"
-                        id={`${id}-listbox`}
-                        aria-activedescendant={`${id}-opt-${activeIdx}`}
-                        className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border border-neutral-600
-                        bg-neutral-900 shadow-lg text-white"
-                        initial="hidden" animate="show" exit="exit" variants={popVariants}
-                        onMouseDown={(e) => e.preventDefault()} // evita blur/chiusura mentre clicco dentro
-                    >
-                        {/** Barra di ricerca + stato di caricamento */}
-                        {(searchable || loading) && (
-                            <div className="flex items-center gap-2 px-2 py-2 border-b border-neutral-700">
-                                <MdSearchIcon className="text-neutral-500" />
-                                <input
-                                    /* NOTA: non disabilitiamo più l'input durante il loading
-                                       così la search funziona anche alla prima apertura */
-                                    value={search}
-                                    onChange={e => {
-                                        setSearch(e.target.value);
-                                        onSearchChange?.(e.target.value);
-                                    }}
-                                    placeholder={loading ? "Caricamento…" : "Cerca…"}
-                                    className={`flex-1 bg-transparent outline-none text-sm text-white/80`}
-                                    autoFocus
-                                />
-                            </div>
-                        )}
-
-                        {/** LISTA con windowing: solo il sottoinsieme visibile viene renderizzato */}
-                        <div
-                            ref={listRef}
-                            style={{ maxHeight: menuMaxHeight }}
-                            className="overflow-auto"
-                            onScroll={(e) => {
-                                const el = e.target as HTMLDivElement;
-                                if (enableWindowing) {
-                                    setScrollTop(el.scrollTop);
-                                };
-
-                                // near-bottom detection (threshold ~ 1.5 righe)
-                                const distanceFromBottom = el.scrollHeight - (el.scrollTop + el.clientHeight);
-                                if (distanceFromBottom <= (rowH * 1.5)) {
-                                    onMenuScrollToBottom?.();
-                                };
-                            }}
-                        >
-                            {/** spacer superiore (equivalente all'altezza delle righe scorse) */}
-                            {enableWindowing && <div style={{ height: visible.before }} />}
-
-                            {filtered.slice(visible.start, visible.end).map((opt, i) => {
-                                const realIdx = visible.start + i;        // indice assoluto della riga
-                                const sel = isSelected(opt);              // riga selezionata?
-                                const active = realIdx === activeIdx;     // riga "attiva" (focussed)
-
-                                const rawKey =
-                                    getOptionKey?.(opt) ??
-                                    ((typeof (opt as FDSelectOption<any>).value === "string" || typeof (opt as FDSelectOption<any>).value === "number")
-                                        ? `v:${String((opt as FDSelectOption<any>).value)}`
-                                        : `i:${indexByOption.get(opt) ?? realIdx}-${opt.label}`);
-                                const key = String(rawKey);
-
-                                // Render di default (o custom via renderOption)
-                                const row =
-                                    renderOption
-                                        ? renderOption(opt, sel, active)
-                                        : (
-                                            <div className="flex items-center justify-between w-full">
-                                                <div className="flex items-center gap-2">
-                                                    {opt.icon && <span className="opacity-80">{opt.icon}</span>}
-                                                    <span className="truncate">{opt.label}</span>
-                                                </div>
-                                                <span className={`ml-3 ${sel ? "opacity-100" : "opacity-0"}`}><MdCheckIcon /></span>
-                                            </div>
-                                        );
-
-                                const baseRowCls = `px-3` + (variant === "underline" ? " py-2.5" : " py-2.5");
-
-                                const rowDataTour =
-                                    dataTourMenuScope === "firstOption" && dataTourMenu && realIdx === 0
-                                        ? dataTourMenu
-                                        : undefined;
-
-                                return (
-                                    <button
-                                        data-tour={rowDataTour}
-                                        id={`${id}-opt-${realIdx}`}
-                                        key={key}
-                                        role="option"
-                                        aria-selected={sel}
-                                        disabled={opt.disabled}
-                                        className={[
-                                            "w-full text-left text-sm box-border",
-                                            baseRowCls,
-                                            sel ? "bg-blue-400/10" : "", // pre-condition => active
-                                            opt.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-neutral-800/70",
-                                            palette[color].text ?? palette.neutral.text,
-                                            "text-white/80"
-                                        ].join(" ")}
-                                        style={enableWindowing ? { height: rowH } : undefined}               // altezza fissa coerente col windowing
-                                        onMouseEnter={() => setActiveIdx(realIdx)}
-                                        onClick={() => (multiple ? toggleMulti(opt) : toggleSingle(opt))}
-                                    >
-                                        {row}
-                                    </button>
-                                );
-                            })}
-
-                            {/** spacer inferiore */}
-                            {enableWindowing && <div style={{ height: visible.after }} />}
-
-                            {/** Empty/Loading states */}
-                            {filtered.length === 0 && !loading && (
-                                <div className="px-3 py-3 text-sm text-neutral-500">Nessun risultato</div>
-                            )}
-                            {loading && (
-                                <div className="px-3 py-3 text-sm text-neutral-500">Caricamento…</div>
-                            )}
-                        </div>
-                    </motion.div>
+                {open && !menuPortal && (
+                    <div className="absolute z-50 mt-1 w-full">
+                        {menuContent}
+                    </div>
                 )}
+
+                {open && menuPortal && typeof document !== "undefined" &&
+                    createPortal(menuContent, document.body)}
             </div>
 
             {/** Helper/error text sotto il controllo */}
