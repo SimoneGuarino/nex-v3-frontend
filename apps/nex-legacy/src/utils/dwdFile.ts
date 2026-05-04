@@ -3,7 +3,7 @@ import { enqueueSnackbar } from "components/MessageBox";
 
 export const DwdFileFromLink = ({ path, fileName, serverUrl, completed, error_func, setProgressUpload }:
     { path: string, fileName: string, serverUrl: any, setProgressUpload?: (prev: number) => void; completed?: () => void; error_func?: () => void }): void => {
-    const serverUrl_ = serverUrl ? serverUrl : import.meta.env.VITE_API_SEARCH_ENDPOINT
+    const serverUrl_ = serverUrl ? serverUrl : import.meta.env.VITE_API_API_SEARCH_ENDPOINT
     const fileUrl: string = `${serverUrl_}${path}`;
     if (setProgressUpload != undefined && setProgressUpload != null) {
         setProgressUpload(10);

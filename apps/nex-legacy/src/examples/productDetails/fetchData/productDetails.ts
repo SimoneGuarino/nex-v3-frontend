@@ -2,9 +2,10 @@ import { enqueueSnackbar } from "components/MessageBox";
 import { FetchData } from "examples/Fetch";
 import { ChangeLoadStatusArgs } from "layouts/quotazioni/types/quotations";
 import { ProductDetailsApiResponse } from "../types/product";
+import { MutableRefObject } from "react";
 
 type GetCustomersDataAPIProps = {
-    abortController: AbortController;
+    abortController: MutableRefObject<AbortController | null> | undefined;
     id_product: string;
     ChangeLoadStatus: ({ from, bool }: ChangeLoadStatusArgs) => void;
 }

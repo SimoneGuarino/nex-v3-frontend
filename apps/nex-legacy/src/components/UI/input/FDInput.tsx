@@ -3,19 +3,20 @@ import React, {
     memo,
     useId,
     useMemo,
+    useRef,
     useState,
     HTMLInputTypeAttribute,
 } from "react";
 import { HTMLMotionProps, motion, Variants } from "framer-motion";
 import { FDColor, palette } from "assets/palette/palette";
 
-type FDInputVariant = "outline" | "filled" | "underline";
+type FDInputVariant = "outline" | "filled" | "underline" | "ghost" | "text";
 type FDInputSize = "xs" | "sm" | "md" | "lg";
 type FDRadius = "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 
 export interface FDInputProps
     extends Omit<HTMLMotionProps<"input">, "size"> {
-    label?: string;
+    label?: string | React.ReactNode;
     variant?: FDInputVariant;
     radius?: FDRadius;
     color?: FDColor;
@@ -24,6 +25,7 @@ export interface FDInputProps
     helperText?: React.ReactNode;
     leftIcon?: React.ReactNode;
     rightIcon?: React.ReactNode;
+    clearable?: boolean;
     loading?: boolean;
     fullWidth?: boolean;
     containerClassName?: string;
@@ -127,6 +129,22 @@ function variantClasses(variant: FDInputVariant, color: FDColor) {
                 error: "border-red-500 focus:ring-red-500/50 focus:border-red-500",
                 underlineExtra: "border-b border-neutral-300 dark:border-neutral-700",
             }
+
+        case "ghost":
+            return {
+                base: `bg-transparent ${c.text} focus:outline-none`,
+                focus: "focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500",
+                error: "border-red-500 focus:ring-red-500/50 focus:border-red-500",
+                underlineExtra: "border-b border-neutral-300 dark:border-neutral-700",
+            }
+            
+        case "text":
+            return {
+                base: `bg-transparent ${c.text} focus:outline-none`,
+                focus: "focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500",
+                error: "border-red-500 focus:ring-red-500/50 focus:border-red-500",
+                underlineExtra: "border-b border-neutral-300 dark:border-neutral-700",
+            }
     }
 }
 
@@ -163,6 +181,22 @@ const EyeIcon: React.FC<{ off?: boolean }> = ({ off }) => (
     </svg>
 );
 
+const ClearIcon = () => (
+    <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+    >
+        <path d="M18 6L6 18" />
+        <path d="M6 6l12 12" />
+    </svg>
+);
+
 export const FDInput = memo(
     forwardRef<HTMLInputElement, FDInputProps>(function FDInput(
         {
@@ -177,6 +211,7 @@ export const FDInput = memo(
             helperText,
             leftIcon,
             rightIcon,
+            clearable = false,
             loading,
             fullWidth,
             className = "",
@@ -186,6 +221,7 @@ export const FDInput = memo(
             value,
             defaultValue,
             animatedLabel = true,
+            onChange,
             onFocus,
             onBlur,
             ...rest
@@ -194,24 +230,64 @@ export const FDInput = memo(
     ) {
         const innerId = useId();
         const inputId = id ?? innerId;
+        const inputRef = useRef<HTMLInputElement | null>(null);
         const [focused, setFocused] = useState(false);
         const [showPwd, setShowPwd] = useState(false);
+        const [uncontrolledValue, setUncontrolledValue] = useState(() =>
+            defaultValue !== undefined && defaultValue !== null ? String(defaultValue) : ""
+        );
+
+        const isControlled = value !== undefined;
+        const effectiveValue = isControlled ? value : uncontrolledValue;
 
         const isPassword = type === "password";
         const computedType: HTMLInputTypeAttribute =
             isPassword && showPwd ? "text" : type;
 
-        // floating se ho focus o c'è un value (controlled o defaultValue)
+        // floating se ho focus o c'e' un valore
         const hasText =
-            (typeof value === "number" && !Number.isNaN(value)) ||
-            (typeof value === "string" && value.length > 0) ||
-            (!!defaultValue && String(defaultValue).length > 0);
+            (typeof effectiveValue === "number" && !Number.isNaN(effectiveValue)) ||
+            (typeof effectiveValue === "string" && effectiveValue.length > 0) ||
+            (Array.isArray(effectiveValue) && effectiveValue.length > 0);
 
         const sizeCfg = sizeClasses[size];
         const vCfg = variantClasses(variant, color);
 
         const leftPad = leftIcon ? "pl-10" : "";
-        const rightPad = rightIcon || loading || isPassword ? "pr-10" : "";
+        const rightAdornmentCount =
+            (rightIcon && !isPassword ? 1 : 0) +
+            (loading ? 1 : 0) +
+            (isPassword ? 1 : 0) +
+            (clearable ? 1 : 0);
+
+        const rightPad = rightAdornmentCount === 0
+            ? ""
+            : rightAdornmentCount === 1
+                ? "pr-10"
+                : rightAdornmentCount === 2
+                    ? "pr-16"
+                    : rightAdornmentCount === 3
+                        ? "pr-24"
+                        : "pr-28";
+
+        const clearInput = () => {
+            if (disabled) return;
+            const el = inputRef.current;
+            if (!el) return;
+
+            const nativeValueSetter = Object.getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype,
+                "value"
+            )?.set;
+            nativeValueSetter?.call(el, "");
+
+            if (!isControlled) setUncontrolledValue("");
+
+            onChange?.({
+                target: el,
+                currentTarget: el,
+            } as React.ChangeEvent<HTMLInputElement>);
+        };
 
         const baseClasses = useMemo(() => {
             const common =
@@ -245,7 +321,14 @@ export const FDInput = memo(
                     </label>}
 
                     <motion.input
-                        ref={ref}
+                        ref={(node) => {
+                            inputRef.current = node;
+                            if (typeof ref === "function") {
+                                ref(node);
+                            } else if (ref) {
+                                (ref as React.MutableRefObject<HTMLInputElement | null>).current = node;
+                            }
+                        }}
                         id={inputId}
                         type={computedType}
                         className={`${baseClasses} ${!error ? focusRing : vCfg.error}`}
@@ -268,6 +351,10 @@ export const FDInput = memo(
                             setFocused(false);
                             onBlur?.(e);
                         }}
+                        onChange={(e) => {
+                            if (!isControlled) setUncontrolledValue(e.target.value);
+                            onChange?.(e);
+                        }}
                         {...rest}
                     />
 
@@ -288,6 +375,17 @@ export const FDInput = memo(
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 gap-2">
                         {loading && <Spinner />}
                         {rightIcon && !isPassword && <div className="text-neutral-500 dark:text-neutral-400">{rightIcon}</div>}
+                        {clearable && hasText && !disabled && (
+                            <button
+                                type="button"
+                                tabIndex={-1}
+                                onClick={clearInput}
+                                className="text-neutral-500/80 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 transition"
+                                aria-label="Svuota input"
+                            >
+                                <ClearIcon />
+                            </button>
+                        )}
                         {isPassword && (
                             <button
                                 type="button"
@@ -318,3 +416,4 @@ export const FDInput = memo(
 );
 
 export default FDInput;
+

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { deleteQuotationData } from "../fetchdata/destroy/deleteQuotationData";
 
-import type { CartProductDTO, ContropropostaDTO, ProductDoc, TextRequestCartDTO } from "../types/qts_product";
+import type { CartProductDTO, ProductDoc, TextRequestCartDTO } from "../types/qts_product";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import HeaderBar from "../components/details/headerBar";
 import { Tooltip } from "react-tooltip";
@@ -11,15 +11,14 @@ import QuoteProgressCard from "../components/details/cards/quoteProgress";
 import CustomersCard from "../components/details/cards/customers";
 import QuotationDetailsCard from "../components/details/cards/quotation";
 import InternalBar from "../components/details/internalBar";
-import { useDetailsQuotation } from "../hook/useDetailsQuotation";
-import FDSearchPanel, { FilterChip } from "components/UI/search/FDSearchPanel";
+import { DONE_QUOTATION_STATES, useDetailsQuotation } from "../hook/useDetailsQuotation";
+import FDSearchPanel, { FilterChip, SearchItem } from "components/UI/search/FDSearchPanel";
 import DocumentsVirtualView from "../components/details/tables/DocumentsVirtualView";
 import ProductCard from "../components/details/tables/ProductCard";
 import CartPanel from "../components/details/cards/cart";
 
 import cartEmpty from 'assets/images/emptyCart/shopping-cart-with-boxes-concept-illustration_114360-18772-noBg.png';
 
-import { CheckAdminPermissions } from "utils";
 import { ProductsDetails } from "layouts/quotazioni/sidePanel/productsDetails";
 import { useGeneralDataContext } from "context/GeneralDataContext";
 import { TextRequestForm } from "../components/details/TextRequestForm";
@@ -28,6 +27,7 @@ import { CustomersPanel } from "components/UI/panels/customersPanel";
 import ContextMenu from "components/UI/menu/ContextMenu";
 import Filters from "../components/details/filters";
 import { FDButton } from "components/UI/buttons/FDButton";
+import FDIconButton from "components/UI/buttons/FDIconButton";
 import QuotazioneLock from "../components/details/lock";
 import { ClosureDraft, QuotazioneDTOExtended } from "../types/closure";
 import { useQuotationClosureGate } from "../hook/useQuotationClosureGate";
@@ -37,13 +37,21 @@ import { ValidityBanner } from "../components/details/closure/ValidityBanner";
 //icons
 import { MdDone } from "react-icons/md";
 import { TbAlertTriangle } from "react-icons/tb";
+import { BsCartPlus } from "react-icons/bs";
+import { IoEyeOutline } from "react-icons/io5";
+
 import { DuplicateQuotationModal } from "../components/details/DuplicateQuotationModal";
 import QuotationCard from "../components/details/tables/QuotationCard";
 import { enqueueSnackbar } from "components/MessageBox";
+import placeholder from 'assets/images/placeholder/av5c8336583e291842624.webp';
+import { CheckRole } from "utils/checkRole";
+import { OkLinksSidePanel } from "../components/OkLinksSidePanel";
+import { FDSkeletonLayout, FDSkeletonPresets, FDSkeletonSwitch } from "components/UI/box/FDSkeleton";
 
 const MdDoneIcon = MdDone as React.FC<{ size?: number; className?: string }>;
 const TbAlertTriangleIcon = TbAlertTriangle as React.FC<{ size?: number; className?: string }>;
-
+const BsCartPlusIcon = BsCartPlus as React.FC<{ size?: number; className?: string }>;
+const IoEyeOutlineIcon = IoEyeOutline as React.FC<{ size?: number; className?: string }>;
 
 // ——————————————————————————————————————————————————————————
 // SUB COMPONENTS
@@ -63,6 +71,8 @@ const RenderError = ({ error }: { error: string }) => (
 export function QuotationDetails() {
     const navigate = useNavigate();
     const {
+        CheckAdminDev,
+
         quotationId, // id della quotazione
         userState, // dati utente
         isRequester, // flag se l'utente è il richiedente della quotazione
@@ -80,8 +90,7 @@ export function QuotationDetails() {
         contextMenuRef,
 
         searchQuery,
-        searchItems,
-        searchCartItems,
+        searchItems, searchCartItems,
         recentSearch, setRecentSearch,
 
         scope, handleScopeChange,
@@ -97,6 +106,11 @@ export function QuotationDetails() {
 
         loading, setLoading,
         getProgressPercentage, areAllProductsDone,
+
+        // pannelli di dettaglio links OC/FB
+        openOkLinksPanel, setOpenOkLinksPanel,
+        okLinks, setOkLinks,
+        fetchQuotationOkLinks,
 
         searchDebounced,
         runSearch, runSearchOnCart,
@@ -121,6 +135,7 @@ export function QuotationDetails() {
         getFilteredEventsForCurrentProduct,
         handleUpdateValidityWindow,
         handleReplacePlaceholderCustomer,
+        sendProductNote,
         //abort controllers
         abortQtsRef,
         abortCartRef,
@@ -128,6 +143,7 @@ export function QuotationDetails() {
         // gestione assegnazione buyer
         assigningBuyer,
         handleAssignBuyer,
+        handleAssignExtraProductsDetails,
         setActiveCounterProposalForCurrent,
         reportingAnomaly,
         handleReportProductAnomaly,
@@ -136,17 +152,12 @@ export function QuotationDetails() {
         duplicateModalOpen,
         duplicateCandidates,
         closeDuplicateModal,
-        continueOpenAfterDuplicate
+        continueOpenAfterDuplicate,
+
+        categoryIndex
     } = useDetailsQuotation();
     const { globalData } = useGeneralDataContext();
     const buyerOptions = globalData?.buyers?.map(b => ({ value: b.codici?.buyer ?? "", label: `${b.codici?.buyer} - ${b.nome} ${b.cognome}` })) || []; // opzioni buyer
-
-    const CheckAdminDev = CheckAdminPermissions({
-        userRole: userState?.details?.ruolo ?? "N/A",
-        permissions: userState?.details?.permissions,
-        rolesToCheck: [0, 1, 2],
-        panelToCheck: 'dettagli_quotazione',
-    });
 
     // dati
     const [expandedId, setExpandedId] = useState<string | null>(null); // NEW
@@ -156,13 +167,14 @@ export function QuotationDetails() {
 
     const productsQueryRef = useRef<string>("");
     const isBozza = qts?.stato === "BOZZA";
+    const isDone = (qts && DONE_QUOTATION_STATES.has(qts.stato));
 
     // Parametri di layout derivati dalla densità
     const cardH = density === 'compact' ? 310 : 330;
     const minColW = density === 'compact' ? 280 : 320;
 
     //const hasTextRequest = cart?.some(p => p.kind === "TEXT_REQUEST");
-    const hasProducts = cart?.some(p => (p.kind ?? "PRODUCT") === "PRODUCT");
+    const hasProducts = cart?.some(p => p.kind === "PRODUCT");
 
     // chips per i filtri attivi
     // derivati dai filtri controllati
@@ -173,6 +185,65 @@ export function QuotationDetails() {
         ...(filters.gruppo ? [{ key: "gruppo", value: `Gruppo: ${filters.gruppo.Gruppo}`, onRemove: () => setFilters({ ...filters, gruppo: null }) }] : []),
         ...(filters.raggruppamento ? [{ key: "raggruppamento", value: `Raggruppamento: ${filters.raggruppamento}`, onRemove: () => setFilters({ ...filters, raggruppamento: null }) }] : []),
     ];
+
+    const searchPanelMode = (openSearch && typeof openSearch === "object") ? openSearch.from : null;
+    const isTargetedSearchMode = searchPanelMode === "prodotti" || searchPanelMode === "quotazioni";
+
+    const cartProductIds = useMemo(() => {
+        const ids = new Set<string>();
+        (cart ?? []).forEach((item) => {
+            if ((item.kind ?? "PRODUCT") === "PRODUCT") {
+                ids.add((item as CartProductDTO).product_id);
+            }
+        });
+        return ids;
+    }, [cart]);
+
+    const searchPanelItems = useMemo(() => {
+        return searchItems.map((d: ProductDoc) => {
+            const icon = d?.anteprima ? <img src={d.anteprima} /> : <img src={placeholder} />;
+            const isInCart = loading.cart ? Boolean(d.inCart) : cartProductIds.has(d._id);
+
+            return {
+                id: d._id,
+                title: d.descrizione ? d.descrizione?.slice(0, 30) + (d.descrizione && d.descrizione.length > 30 ? "..." : "") : "Prodotto senza descrizione",
+                subtitle: [d.codiceProduttore, d.codiceEAN, d.descrizione].filter((e) => e).join(" | "),
+                iconLeft: icon,
+                payload: d,
+                metaRight: isTargetedSearchMode ? (
+                    <FDIconButton
+                        variant={(isBozza && isInCart) ? "success" : "general"}
+                        rounded="md"
+                        size="small"
+                        asMotion={false}
+                        className="border border-neutral-200 dark:border-neutral-700"
+                        dataTooltipId="general-quotations-tooltip"
+                        dataTooltipContent={isBozza ? (isInCart ? "Rimuovi dal carrello" : "Aggiungi alla quotazione") : "Visualizza il prodotto nel carrello"}
+                        icon={isBozza ? <BsCartPlusIcon size={15} /> : <IoEyeOutlineIcon size={15} />}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (isBozza) {
+                                if (isInCart) {
+                                    removeFromCart(d._id);
+                                    return;
+                                }
+                                addToCart(d);
+                            } else {
+                                handleSelectFromSearch({ payload: d } as SearchItem<any>); // riusa la logica di selezione per visualizzare il prodotto nel carrello
+                            };
+                        }}
+                    />
+                ) : null,
+                actions: searchPanelMode === "propose_qts_products" ? [
+                    {
+                        label: "Seleziona Prodotto per la sostituzione",
+                        icon: <MdDoneIcon size={18} />,
+                        onAction: () => { },
+                    }
+                ] : [],
+            };
+        }) as any[];
+    }, [searchItems, isBozza, cartProductIds, isTargetedSearchMode, searchPanelMode, removeFromCart, addToCart, loading.cart]);
 
     /** Stato che ha lo scopo di gestire ClosureWizard */
     const [openClosure, setOpenClosure] = useState<boolean>(false);
@@ -194,7 +265,7 @@ export function QuotationDetails() {
                                 cp?.stato === "CONTROPROPOSTA_ACCETTATA" || cp?.approvato === true
                         ) ?? null
                         : null;
-                
+
                 const effectiveDetails = acceptedProposal?.dettagli_prodotto ?? p?.dettagli_prodotto;
 
                 const originalLabel =
@@ -284,7 +355,7 @@ export function QuotationDetails() {
             currentStato: qts.stato,
             HandleComplete: () => {
                 // dopo delete ritorno alla lista
-                navigate("/quotazioni");
+                navigate("/commerciale/quotazioni");
             },
             HandleError: (msg) => setErrorMsg(String(msg || "Errore durante l’eliminazione.")),
         }).catch(() => { });
@@ -339,32 +410,35 @@ export function QuotationDetails() {
     // ——————————————————————————————————————————————————————————
     return (
         <DashboardLayout>
-            <HeaderBar onDeleteQuotation={onDeleteQuotation} refreshAll={refreshAll} qts={qts} loading={loading.general_data || loading.cart} />
+            <HeaderBar onDeleteQuotation={onDeleteQuotation} refreshAll={refreshAll} qts={qts} loading={(loading.general_data || loading.cart) as boolean} />
             {qts && qts.stato === "VALIDAZIONE" && <QuotazioneLock className="mt-2" quoteType={qts?.tipologia} status={qts?.stato} onApproveUnlock={HandleQuotationState} onRejectUnlock={(reason) => HandleQuotationState({ isRefused: true, closed_reason: reason })} />}
             {errorMsg && <RenderError error={String(errorMsg)} />}
 
             {/* Banner di validità della quotazione + messaggio */}
-            {!isBozza && <ValidityBanner
+            {(!isBozza && !isDone) && <ValidityBanner
                 qts={qts}
                 isRequester={isRequester}
                 allProductsDone={areAllProductsDone}
                 onOpenClosure={handleOpenClosure}
             />}
-            {(!isBozza && gate.locked) && (
+
+            {(!isBozza && gate.locked && !isDone) && (
                 <RenderError error={`Quotazione bloccata: ${(qts?.tipologia === "MEPA" && gate.lockReason === "VALIDITY_EXPIRED") ? " gara MEPA scaduta e " : ""} in attesa di chiusura da parte del richiedente.`} />
             )}
 
             {/* Allert sulla data di validita (fine) errata se si è in bozze */}
-            {isBozza && qts.finestraValidita?.fine && new Date(qts.finestraValidita.fine) < new Date() && (
+            {isBozza && qts.finestraValidita?.fine && new Date(qts.finestraValidita.fine) < new Date() && !isDone && (
                 <RenderError error="La data di validità della quotazione è scaduta, procedi a cambiarla all'interno della card 'Dettagli Quotazione' prima di aprire la quotazione." />
             )}
 
             {/* LAYOUT: 3 colonne (1-2-9) con header bar sopra e tabella prodotti a destra */}
             {qts && <div className="grid grid-cols-1 md:grid-cols-12 gap-4 py-4">
                 {/* titolo + azioni principali + cards */}
-                {<FDBox variant="ghost" className="col-span-12 lg:col-span-3 flex flex-col gap-4 max-h-[80vh] overflow-y-auto pr-2">
-                    <QuotationDetailsCard quotation={qts} quotationId={quotationId} canSeePrices={CheckAdminDev} totalAmount={qts?.valore} onUpdateValidityWindow={handleUpdateValidityWindow} prog_num={(qts as any)?.prog_num} />
-                    {isBozza && <CartPanel qts={qts} cart={cart} clearCart={clearCart}
+                <FDBox variant="ghost" className="col-span-12 lg:col-span-3 flex flex-col gap-4 max-h-[80vh] overflow-y-auto pr-2">
+                    <QuotationDetailsCard quotation={qts} isAdmin={CheckAdminDev}
+                        totalAmount={qts?.valore} onUpdateValidityWindow={handleUpdateValidityWindow} prog_num={(qts as any)?.prog_num}
+                        setOpenOkLinksPanel={setOpenOkLinksPanel} fetchQuotationOkLinks={fetchQuotationOkLinks} loading={loading} setLoading={setLoading} isAgent={(userState && userState?.details?.ruolo == CheckRole(3)) ?? false} />
+                    {isBozza && <CartPanel qts={qts} cart={cart} clearCart={clearCart} loadingCart={loading.adding_to_cart as Map<string, boolean>}
                         updateCartItemQuantity={updateCartItemQuantity} removeFromCart={removeFromCart} openQuotation={HandleQuotationState} />}
                     <QuoteProgressCard value={getProgressPercentage()} />
                     <CustomersCard
@@ -377,7 +451,7 @@ export function QuotationDetails() {
                         canReplacePlaceholderCustomer={Boolean(isRequester && qts?.tipologia === "BID_PASSIVO" && customer?.isPlaceholder)}
                         onReplacePlaceholderCustomer={handleReplacePlaceholderCustomer}
                     />
-                </FDBox>}
+                </FDBox>
 
                 {/* LISTA PRODOTTI */}
                 <FDBox variant="ghost" className="col-span-12 lg:col-span-9 flex flex-col gap-4">
@@ -398,11 +472,11 @@ export function QuotationDetails() {
                         hasProducts={hasProducts}
                     />
 
-                    <div
-                        className={[
-                            // layout: testo a sinistra, gauge a destra
-                            "flex flex-col gap-2",
-                        ].filter(Boolean).join(" ")}>
+                    <FDSkeletonSwitch
+                        loading={loading.cart as boolean}
+                        skeleton={<FDSkeletonLayout layout={FDSkeletonPresets.cardList(3, { rowHeight: 200 })} />}
+                        className="flex flex-col gap-2"
+                    >
                         <div className=" min-h-full h-[80vh]">
                             {scope === "descrivi_necessita" ?
                                 <TextRequestForm
@@ -419,13 +493,13 @@ export function QuotationDetails() {
                                     // tuning layout
                                     cardHeight={cardH}
                                     minColWidth={minColW}
-                                    loading={loading.table_of_products}
+                                    loading={loading.table_of_products as boolean}
                                     gapX={16}
                                     gapY={16}
                                     overscan={6}
                                     // renderers
                                     renderCard={(it) => ((scope === 'prodotti' && isBozza) &&
-                                        <ProductCard item={it} addToCart={addToCart} />)}
+                                        <ProductCard item={it} addToCart={addToCart} loadingAddingToCart={((loading.adding_to_cart as Map<string, boolean>).has(it._id))} />)}
                                     renderRow={(it) =>
                                         it.kind === "TEXT_REQUEST" ? (
                                             <TextRequestCard
@@ -439,6 +513,7 @@ export function QuotationDetails() {
                                             <QuotationCard
                                                 item={it as CartProductDTO}
                                                 isQBozza={isBozza}
+                                                isBIDPassivo={qts?.tipologia === "BID_PASSIVO"}
                                                 menuRef={contextMenuRef}
                                                 handleOpenQtsSettings={handleOpenQtsSettings}
                                                 expanded={expandedId === it._id}
@@ -450,8 +525,8 @@ export function QuotationDetails() {
                                     scope={scope} // tab attivo - favorites, shared, deleted
                                     // infinite scroll
                                     onEndReached={() => runSearch(productsQueryRef.current, false, true)}                 // dal tuo hook
-                                    endReachedDisabled={scope !== "prodotti" || loading.table_of_products || !inpagination?.hasMore || inpagination?.loadingMore || loading.loadingMore}
-                                    loadingMore={loading.loadingMore}
+                                    endReachedDisabled={scope !== "prodotti" || (loading.table_of_products as boolean) || !inpagination?.hasMore || inpagination?.loadingMore || (loading.loadingMore as boolean)}
+                                    loadingMore={loading.loadingMore as boolean}
                                     highlightedItemId={highlightedItemId}
                                 /> :
                                     <div className="w-full h-full flex flex-col items-center justify-center gap-2">
@@ -465,7 +540,7 @@ export function QuotationDetails() {
                                     </div>
                             }
                         </div>
-                    </div>
+                    </FDSkeletonSwitch>
                 </FDBox>
             </div>}
 
@@ -473,38 +548,24 @@ export function QuotationDetails() {
                 open={!!openSearch}
                 onClose={() => setOpenSearch(false)}
                 query={searchQuery}
-                onQueryChange={searchDebounced}
-                loading={loading.search}
-                items={((openSearch && typeof openSearch === "object" && openSearch.from == "quotazioni") ? searchCartItems.map((d: ContropropostaDTO) => {
-                    const d_: any = (d as ContropropostaDTO).dettagli_prodotto;
-                    const icon = d_?.anteprima ? <img src={d_.anteprima} alt={d_.descrizione || "Prodotto"} /> : null;
-                    return {
-                        id: d.product_id ?? "N/A",
-                        title: d_.descrizione || "Prodotto senza descrizione",
-                        subtitle: [d_.codiceProduttore, d_.codiceEAN, d_.descrizione].filter(e => e).join(" • "),
-                        iconLeft: icon,
-                        payload: d,
-                        actions: [],
-                    }
-                }) : searchItems.map((d: ProductDoc) => {
-                    const icon = d?.anteprima ? <img src={d.anteprima} alt={d.descrizione || "Prodotto"} /> : null;
-                    return {
-                        id: d._id,
-                        title: d.descrizione || "Prodotto senza descrizione",
-                        subtitle: [d.codiceProduttore, d.codiceEAN, d.descrizione].filter(e => e).join(" • "),
-                        iconLeft: icon,
-                        payload: d,
-                        actions: (openSearch && typeof openSearch === "object" && openSearch?.from === 'propose_qts_products') ? [
-                            {
-                                label: 'Seleziona Prodotto per la sostituzione',
-                                icon: <MdDoneIcon size={18} />,
-                                onAction: () => { },
-                            }
-                        ] : [],
-                    }
-                }) as any[])}
-                onSelect={handleSelectFromSearch}
-                placeholder={`Cerca tra ${scope === "prodotti" ? "sui Prodotti" : "o sui prodotti della quotazione"}…`}
+                onQueryChange={(e: string) => searchDebounced(e, true)}
+                loading={loading.search as boolean}
+                items={searchPanelItems}
+                onSelect={(it: any) => {
+                    const d = it.payload as ProductDoc;
+                    const isInCart = loading.cart ? Boolean(d.inCart) : cartProductIds.has(d._id);
+                    
+                    if (isBozza) {
+                        if (isInCart) {
+                            removeFromCart(d._id);
+                            return;
+                        }
+                        addToCart(d);
+                    } else {
+                        handleSelectFromSearch({ payload: d } as SearchItem<any>); // riusa la logica di selezione per visualizzare il prodotto nel carrello
+                    };
+                }}
+                placeholder="Cerca prodotti nel catalogo (stato carrello incluso)…"
                 emptyLabel="Inizia a digitare per cercare…"
                 emptyNoResultsLabel="Nessun risultato per questa ricerca."
                 highlight
@@ -524,11 +585,14 @@ export function QuotationDetails() {
                 onClose={() => setOpenProductQtsSettings(null)}
                 product={openProductQtsSettings as CartProductDTO | TextRequestCartDTO}
                 qtsState={qts?.stato ?? null}
-                isBuyer={CheckAdminDev}
+                isBuyer={(userState && userState?.details?.ruolo == CheckRole(2)) ?? false}
+                isAgent={(userState && userState?.details?.ruolo == CheckRole(3)) ?? false}
+                CheckAdminDev={CheckAdminDev}
+                /* Stato dell'utente */
+                userState={userState}
+
                 onOpenSubstitutionSearch={() => {
-                    searchDebounced((openProductQtsSettings && openProductQtsSettings.kind === "PRODUCT" ? 
-                            (openProductQtsSettings as CartProductDTO).dettagli_prodotto.descrizione
-                        : "") ?? "");
+                    searchDebounced("");
                 }}
 
                 searchQuery={searchQuery}
@@ -548,6 +612,7 @@ export function QuotationDetails() {
                 createCounterProposalFromCommercialSuggestionForCurrent={createCounterProposalFromCommercialSuggestionForCurrent}
                 onPriceChange={handleProposeQtsProductsPrice}
                 onDirectQuoteExpiryChange={handleDirectQuoteExpiryChange}
+                sendProductNote={sendProductNote}
 
                 // nuova gestione prezzo proposta                
                 onChangeProposalPrice={(e: React.ChangeEvent<HTMLInputElement>, _id: string) => {
@@ -577,10 +642,19 @@ export function QuotationDetails() {
                 currentProposalNote={currentProposalNote}
                 getFilteredEventsForCurrentProduct={getFilteredEventsForCurrentProduct}
 
-                isDraftQuotation={isBozza}
+                isDraftQuotation={isBozza} isPassiveBid={qts?.tipologia === "BID_PASSIVO"}
                 buyerOptions={buyerOptions}
+                categoryIndex={categoryIndex}
                 assigningBuyer={assigningBuyer}
-                onAssignBuyer={handleAssignBuyer}
+                onAssignBuyer={async (buyerCode) => {
+                    const result = await handleAssignBuyer(buyerCode);
+                    if (result?.shouldExitQuotation) {
+                        navigate("/commerciale/quotazioni");
+                    }
+                }}
+                onAssignCategories={(from: "prefisso" | "linea" | "gruppo", value) => {
+                    handleAssignExtraProductsDetails(from, value);
+                }}
                 // Wiring segnalazione anomalia verso ProductDetailsReporting:
                 // il componente figlio costruisce original+patch+note e il hook
                 // persiste il tutto come evento prodotto su Mongo.
@@ -659,6 +733,14 @@ export function QuotationDetails() {
                         }}
                     />
                 }
+            />
+
+            <OkLinksSidePanel
+                open={openOkLinksPanel}
+                onClose={() => setOpenOkLinksPanel(false)}
+                onRefresh={fetchQuotationOkLinks}
+                loading={Boolean(loading.get_quotation_ok_links)}
+                items={okLinks}
             />
 
             <Tooltip id="general-quotations-tooltip" place="bottom" className="max-w-[15vw] min-w-[150px] !text-xs text-center z-50 !rounded-md" />

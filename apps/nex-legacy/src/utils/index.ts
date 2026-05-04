@@ -1,6 +1,5 @@
 export { SplitCammelCase } from './splitCammelCase';
 export { CalcPercent } from './percent';
-export { DecompressBrotliObjects } from './brodliDecompress';
 export { DwdFileFromLink, CreateAndDownloadExcel, CreateAndDownloadCSV } from './dwdFile';
 export { RetriveSupplierFromCookies } from './retriveSupplierFromCookies';
 export { ConvertToItalianDate } from './italianDate';

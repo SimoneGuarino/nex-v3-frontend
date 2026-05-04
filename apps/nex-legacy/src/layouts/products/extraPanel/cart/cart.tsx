@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Button, Card, Collapse, Divider, Fade, IconButton, Stack, TextField } from '@mui/material';
+import { Button, Collapse, Divider, Fade, IconButton, Stack, TextField } from '@mui/material';
 
 import noProductImageBlackAndWhite80Opaicty from './img/6605525-no-product-image-blackAndWhite_80percOpacity.png';
 import cartEmpty from 'assets/images/emptyCart/shopping-cart-with-boxes-concept-illustration_114360-18772-noBg.png';
@@ -10,9 +10,8 @@ import { icon_close, icon_delete, icon_people } from 'config/icons';
 import { TransitionGroup } from 'react-transition-group';
 import { NumberToEuro } from 'utils/index.js';
 import MDTypography from 'components/MDTypography';
-import { useMaterialUIController } from 'context/index';
-import theme from 'assets/theme';
 import { MainTheme } from 'assets/settingsTheme';
+import { useNexTheme } from '@nex/theme-system';
 
 
 interface ProductCartProps {
@@ -118,7 +117,7 @@ const Product: React.FC<ProductProps> = (({ DelFromCart, index, productCode, tit
 });
 
 const Footer: React.FC<FooterProps> = (({ ChangeOrderPanelStatus,
-cartDataEuroTotal, darkMode }) => {
+    cartDataEuroTotal, darkMode }) => {
     const palette = MainTheme().palette;
 
     return <Stack p={2} borderTop={`1px solid ${darkMode ? palette.grey[700] : palette.grey[400]}`} gap={1}>
@@ -159,10 +158,10 @@ interface CartPanelProps {
     ChangeValueOfQuantity: (index: number, quantity: number) => void;
 };
 export const CartPanel: React.FC<CartPanelProps> = ({ ChangeOrderPanelStatus,
-openErrorSB, ChangeCartStatus, cartData, setCartData,
-cartDataEuroTotal, DelFromCart, ChangeValueOfQuantity }) => {
-    const [controller, dispatch] = useMaterialUIController();
-    const { darkMode } = controller;
+    openErrorSB, ChangeCartStatus, cartData, setCartData,
+    cartDataEuroTotal, DelFromCart, ChangeValueOfQuantity }) => {
+    const { preferences } = useNexTheme();
+    const darkMode = preferences.mode === "dark";
     const palette = MainTheme().palette;
 
     return <Stack id="hintBox" mt={1} sx={{
@@ -192,6 +191,6 @@ cartDataEuroTotal, DelFromCart, ChangeValueOfQuantity }) => {
         </Stack>
 
         {cartData.length !== 0 && <Footer cartDataEuroTotal={cartDataEuroTotal}
-            ChangeOrderPanelStatus={ChangeOrderPanelStatus} darkMode={darkMode}/>}
+            ChangeOrderPanelStatus={ChangeOrderPanelStatus} darkMode={darkMode} />}
     </Stack>
 }

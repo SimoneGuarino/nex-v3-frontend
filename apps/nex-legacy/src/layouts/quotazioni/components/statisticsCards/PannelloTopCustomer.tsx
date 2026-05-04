@@ -15,7 +15,7 @@ import { NumberToEuro } from "utils";
 // ——————————————————————————————————————————————————————————
 const LineUp = MdOutlineTrendingUp as React.FC<{ size?: number; className?: string }>;
 const LineDown = MdOutlineTrendingDown as React.FC<{ size?: number; className?: string }>;
-const FaRegChartBarIcon =FaRegChartBar as React.FC<{ size?: number; className?: string }>;
+const FaRegChartBarIcon = FaRegChartBar as React.FC<{ size?: number; className?: string }>;
 
 
 // ——————————————————————————————————————————————————————————
@@ -69,6 +69,7 @@ export function PannelloTopCustomer({
     const trendText = trend === null ? "—" : fmtPct(Math.abs(trend));
 
     const quotations = Number(customer?.quotations ?? 0);
+    const okQuotations = Number(customer?.okQuotations ?? 0);
     const maxValue = Number(customer?.maxValue ?? 0);
     const avgValue = Number(customer?.avgValue ?? 0);
 
@@ -101,7 +102,7 @@ export function PannelloTopCustomer({
 
     const CmpHeader = ({ hideTopRank }: { hideTopRank: boolean }) => {
         return <div className="flex items-center justify-between">
-            <h1 className="text-sm">Cliente chiave ({mese})</h1>
+            <h1 className="text-sm">Cliente più quotato ({mese})</h1>
             <div className="flex items-center gap-1">
                 {!hideTopRank && <FDIconButton
                     size="small"
@@ -149,7 +150,7 @@ export function PannelloTopCustomer({
                     className={`col-start-1 row-start-1 flex flex-col overflow-hidden`}
                     style={{ backfaceVisibility: "hidden", pointerEvents: showChart ? "none" : "auto" }}
                 >
-                    <CmpHeader hideTopRank={true}/>
+                    <CmpHeader hideTopRank={true} />
 
                     <div className={`flex flex-col h-full overflow-hidden ${isClienteHidden && "max-h-[0px]"}`}>
                         <div className="flex items-center justify-between mb-2">
@@ -176,6 +177,9 @@ export function PannelloTopCustomer({
                                     Quotazioni ultimi 31gg: <span className="font-bold">{loading ? "…" : fmtInt(quotations)}</span>
                                 </li>
                                 <li>
+                                    Convertite in FB: <span className="font-bold">{loading ? "…" : fmtInt(okQuotations)}</span>
+                                </li>
+                                <li>
                                     Valore massimo: <span className="font-bold">{loading ? "…" : NumberToEuro({ convert: maxValue })}</span>
                                 </li>
                                 <li>
@@ -194,7 +198,7 @@ export function PannelloTopCustomer({
                         pointerEvents: showChart ? "auto" : "none",
                     }}
                 >
-                    <CmpHeader hideTopRank={false}/>
+                    <CmpHeader hideTopRank={false} />
 
                     <div className={`overflow-hidden ${isClienteHidden && "max-h-[0px]"}`}>
                         <BarChart

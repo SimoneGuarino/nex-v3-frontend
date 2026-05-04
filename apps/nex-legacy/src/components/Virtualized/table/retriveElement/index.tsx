@@ -37,6 +37,7 @@ interface RetriveElementProps {
     blockCondition?: { condition: string; bg: string };
     visibleColumns?: string[];
     columnKey?: any;
+    textCenter?: boolean;
 };
 
 type TableOfColorsProps = Record<string, { text: string; bg: string; dot: string; dotDark: string }>;
@@ -117,11 +118,14 @@ const TagDist: React.FC<{ value: DistItem[] | string; showProps?: ShowProp[], ta
 // MAIN COMPONENT
 // ——————————————————————————————————————————————————————————
 function RetrieveElement(props: RetriveElementProps): JSX.Element {
-    const { columns, data, elm, index, handleOpenMenu, columnIndex, addZeroes, formatData, addingValue, blockCondition } =
+    const { columns, data, elm, index, handleOpenMenu, columnIndex, addZeroes, formatData, addingValue, blockCondition, textCenter = false } =
         props;
     const colIndex = columns[columnIndex];
     const textData = colIndex.secKey ? data[index]?.[colIndex.key]?.[colIndex.secKey] : data[index]?.[colIndex.key];
     const indexOnData = data.findIndex((e) => e?.CodiceProduttore === elm?.CodiceProduttore);
+    const centeredCellStyle: React.CSSProperties = textCenter
+        ? { alignItems: 'center', textAlign: 'center' }
+        : {};
 
     const defineElements = (objE: any, array: string[], condition: any[]): boolean => {
         for (let i = 0; i < array.length; i++) {
@@ -331,6 +335,10 @@ function RetrieveElement(props: RetriveElementProps): JSX.Element {
             }
             : {};
 
+        if (!iconElement && !fieldInColumns?.onHover) {
+            return content;
+        }
+
         return (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} {...tooltipProps}>
                 {iconElement && <span className="cell-prefix-icon" style={{ display: 'inline-flex' }}>{iconElement}</span>}
@@ -356,10 +364,15 @@ function RetrieveElement(props: RetriveElementProps): JSX.Element {
     }) => {
         const key_ = key || colIndex.key;
         const secKey_ = secKey || colIndex.secKey;
+        const baseTextSx = {
+            width: '100%',
+            minWidth: 0,
+            fontSize: 'min(calc(0.50vw + 0.50vh), 15px)',
+        };
 
         const text = preText_ ?? data[index]?.[colIndex.key];
         let text_: React.ReactNode = (
-            <MDTypography variant="body2" sx={{ fontSize: 'min(calc(0.50vw + 0.50vh), 15px)', ...colIndex?.sxText }}>
+            <MDTypography variant="body2" sx={{ ...baseTextSx, ...(colIndex?.sxText || {}) }}>
                 {colIndex.secKey ? data[index]?.[colIndex.key]?.[colIndex.secKey] : text}
             </MDTypography>
         );
@@ -522,7 +535,7 @@ function RetrieveElement(props: RetriveElementProps): JSX.Element {
                             text_ = withIconAndTooltip(
                                 <MDTypography
                                     variant="body2"
-                                    sx={{ ...(style?.sx_children || {}), fontSize: 'min(calc(0.50vw + 0.50vh), 15px)' }}
+                                    sx={{ ...baseTextSx, ...(style?.sx_children || {}) }}
                                 >
                                     {displayed}
                                 </MDTypography>,
@@ -556,7 +569,7 @@ function RetrieveElement(props: RetriveElementProps): JSX.Element {
                         text_ = withIconAndTooltip(
                             <MDTypography
                                 variant="body2"
-                                sx={{ ...(style?.sx_children || {}), fontSize: 'min(calc(0.50vw + 0.50vh), 15px)' }}
+                                sx={{ ...baseTextSx, ...(style?.sx_children || {}) }}
                             >
                                 {displayed}
                             </MDTypography>,
@@ -691,7 +704,7 @@ function RetrieveElement(props: RetriveElementProps): JSX.Element {
     if (Array.isArray(colIndex.key)) {
         return (
             <Stack
-                sx={{ backgroundColor: retriveBoxColor(colIndex?.color), ...(colIndex.sx || {}) }}
+                sx={{ backgroundColor: retriveBoxColor(colIndex?.color), ...centeredCellStyle, ...(colIndex.sx || {}) }}
                 style={{ minWidth: 100, height: '100%', padding: '10px', justifyContent: 'center', width: colIndex.width }}
             >
                 {colIndex.type !== 'supplier' ? (
@@ -764,6 +777,7 @@ function RetrieveElement(props: RetriveElementProps): JSX.Element {
 
         const commonStyle: React.CSSProperties = {
             ...addingStyle,
+            ...centeredCellStyle,
             ...(colIndex.sx || {}),
             height: '100%',
             padding: 10,
@@ -781,9 +795,12 @@ function RetrieveElement(props: RetriveElementProps): JSX.Element {
                 >
                     {colIndex.render({
                         row: elm,
+                        elm,
                         value: textData,
                         index,
                         allData: data,
+                        data,
+                        column: colIndex,
                     })}
                 </Stack>
             );

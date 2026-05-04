@@ -18,10 +18,11 @@
   10. The `component` key is used to store the component of its route.
 */
 
-import { type ReactElement, type ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 import Dashboard from "layouts/dashboard";
 import Tables from "layouts/compare";
+import SignIn from "layouts/authentication/sign-in";
 import Profile from "layouts/profile/Overview";
 import UserManagement from "layouts/administration/users/userManagement.js";
 import GeneralSettings from "layouts/administration/generalSettings";
@@ -64,12 +65,15 @@ import Fatturati from "layouts/fatturati";
 import ListiniPromo from "layouts/listiniPromo";
 import Rubrica from "layouts/rubrica";
 import Procedure from "layouts/procedure";
+import Trackings from "layouts/trackings";
 import TestPage from "layouts/test"
 import Movimenti from "layouts/movimenti";
 import QuotationDetails from "layouts/quotazioni/pages/quotationDetails";
 import ConfiguratorPanel from "layouts/configuratore/gng";
 import FileSellout from "layouts/sellout";
 import Payments from "layouts/stocks/payments";
+import Preventivi from "layouts/preventivi";
+import PurchasesPage from "layouts/purchases";
 
 
 // ---------------------------------------------------------------------------
@@ -77,11 +81,12 @@ import Payments from "layouts/stocks/payments";
 // ---------------------------------------------------------------------------
 import {
     MdOutlineDashboard, MdOutlineSell, MdOutlineProductionQuantityLimits,
-    MdOutlineGroups2, MdOutlineGroups, MdOutlineShoppingCart, MdPayment, MdWebAsset, MdOutlineAdminPanelSettings
+    MdOutlineGroups2, MdOutlineGroups, MdOutlineShoppingCart, MdPayment, MdWebAsset, MdOutlineAdminPanelSettings,
+    MdOutlineLocalShipping
 } from "react-icons/md";
 import {
     LuPackageCheck, LuPackageMinus, LuTarget, LuLogs, LuWeight, LuReceiptEuro, LuBrain, LuClock5,
-    LuUserSearch, LuSettings
+    LuUserSearch, LuSettings, LuShoppingCart
 } from "react-icons/lu";
 import { TfiPackage } from "react-icons/tfi";
 import { RiAdvertisementLine } from "react-icons/ri";
@@ -97,6 +102,7 @@ import { VscGraph } from "react-icons/vsc";
 import { ImHammer2 } from "react-icons/im";
 import { FaCloudDownloadAlt, FaWarehouse } from "react-icons/fa";
 import { LiaFileInvoiceDollarSolid } from "react-icons/lia";
+import { HiOutlineDocumentText } from "react-icons/hi2";
 import { navigateToApp } from "@nex/shared-platform";
 
 
@@ -144,6 +150,12 @@ export const routes: any = [
         key: "dashboard",
         route: "/",
         component: Dashboard,
+    },
+    {
+        name: "Sign In",
+        key: "sign_in",
+        route: "/authentication/sign_in",
+        component: SignIn,
     },
     {
         name: "Profile",
@@ -289,7 +301,7 @@ export const routes: any = [
                     icon: MdOutlineGroups,
                     route: "/marketing/anagraficaClienti",
                     component: AnagraficaClienti,
-                },
+                }
             ]
         },
         group: 0
@@ -309,6 +321,14 @@ export const routes: any = [
                     icon: LuWeight,
                     route: "/logistica/pesiVolumi",
                     component: PesiVolumi,
+                },
+                {
+                    name: "Trackings",
+                    key: "trackings",
+                    icon: MdOutlineLocalShipping,
+                    route: "/logistica/trackings",
+                    component: Trackings,
+                    isNew: true
                 },
             ]
         },
@@ -406,6 +426,21 @@ export const routes: any = [
                     route: "/contabilita/fatturati",
                     icon: VscGraph,
                     component: Fatturati,
+                    isNew: true
+                }, {
+                    name: "Preventivi",
+                    key: "preventivi",
+                    route: "/contabilita/preventivi",
+                    icon: HiOutlineDocumentText,
+                    component: Preventivi,
+                    isNew: true
+                },
+                {
+                    name: "Acquisti clienti",
+                    key: "acquisti_clienti",
+                    route: "/contabilita/acquisti_clienti",
+                    icon: LuShoppingCart,
+                    component: PurchasesPage,
                     isNew: true
                 },
             ]
@@ -622,16 +657,6 @@ export const routes: any = [
             ]
         }
     },
-    // {
-    //     type: "visible",
-    //     name: "Quotazioni",
-    //     key: "quotazioni",
-    //     icon: ImHammer2,
-    //     route: "/quotazioni",
-    //     component: Quotazioni,
-    //     group: 0,
-
-    // },
     {
         type: "hidden",
         name: "Dettagli Quotazione",
@@ -705,14 +730,6 @@ export const routes: any = [
         route: "*",
         component: PageNotFound,
     },
-    // {
-    //     name: "test",
-    //     key: "test",
-    //     icon: MdOutlineGroups,
-    //     route: "/test",
-    //     component: TestPage,
-    //     hide: true
-    // }
 ];
 
 export default routes;

@@ -18,6 +18,7 @@ import { IoIosCloseCircleOutline } from "react-icons/io";
 import { CiSquarePlus } from "react-icons/ci";
 import { IoEyeOutline } from "react-icons/io5";
 import { MdOutlineDelete } from "react-icons/md";
+import { PiInvoiceLight } from "react-icons/pi";
 
 import EmptyState from "layouts/documentiPDF/components/EmptyState";
 import LoadingState from "layouts/documentiPDF/components/LoadingState";
@@ -25,8 +26,9 @@ import TableSubObj from "../components/main/TableSubObj";
 import { enqueueSnackbar } from "components/MessageBox";
 import { deleteQuotationData } from "../fetchdata/destroy/deleteQuotationData";
 import { createQuotationData } from "../fetchdata/create/createQuotationData";
-import CreateQuotationModal from "../components/createQuotation";
+import CreateQuotationModal, { FormStateProps } from "../components/createQuotation";
 import StatsPanel from "../components/StatsPanel";
+import { OkLinksSidePanel } from "../components/OkLinksSidePanel";
 
 
 // ——————————————————————————————————————————————————————————
@@ -39,6 +41,7 @@ const TfiTimerIcon = TfiTime as React.FC<{ size?: number; className?: string }>;
 const FcApprovalIcon = FcApproval as React.FC<{ size?: number; className?: string }>;
 const IoCloseCircleOutlineIcon = IoIosCloseCircleOutline as React.FC<{ size?: number; className?: string }>;
 const CiSquarePlusIcon = CiSquarePlus as React.FC<{ size?: number; className?: string }>;
+const PiInvoiceLightIcon = PiInvoiceLight as React.FC<{ size?: number; className?: string }>;
 
 
 // ——————————————————————————————————————————————————————————
@@ -58,13 +61,15 @@ export interface QuotationType {
     onlyForBuyers?: boolean;
 };
 
-export const mepaTypes = { value: "MEPA", icon: <CiSquarePlusIcon />, description: "È una richiesta per una gara con CIG o RDO o una fornitura per cui il cliente finale può essere individuato come un ente o, comunque, non come un rivenditore o una azienda provata/libero professionista" };
+export const mepaTypes = {
+    value: "MEPA", icon: <CiSquarePlusIcon />, description: "È una richiesta per una gara con CIG o RDO o una fornitura per cui il cliente finale può essere individuato come un ente o, comunque, non come un rivenditore o una azienda provata/libero professionista"
+};
 export const quotationTypes: QuotationType[] = [
-    { value: "STANDARD", icon: <CiSquarePlusIcon />, description: "Richiesta di quotazione per uno special price, per quantità o per esigenze commerciali" },
-    { value: "BID ATTIVO", icon: <CiSquarePlusIcon />, description: "Richiesta di un BID per cui è esistita una trattativa del commerciale o del buyer tesa a finalizzare la fornitura" },
-    { value: "BID PASSIVO", icon: <CiSquarePlusIcon />, onlyForBuyers: true, description: "Nel momento della creazione della quotazione, l'utente dovrà attendere una validazione da parte di un buyers autorizzato, L’inserimento, a titolo puramente informativo, di una vendita passata all’azienda direttamente dal vendor" },
+    { value: "STANDARD", icon: <CiSquarePlusIcon />, description: "Richiesta di quotazione per uno special price, per quantità o per esigenze commerciali, ricorda di valutare il prezzo trattaiva banco" },
+    { value: "BID ATTIVO", icon: <CiSquarePlusIcon />, description: "Il commerciale richiede per conto del proprio cliente un BID. Per BID si intende una quotazione speciale, autorizzabile esclusivamente dal vendor. È necessario inserire nelle note i dati COMPLETI dell’utente finale" },
+    { value: "BID PASSIVO", icon: <CiSquarePlusIcon />, onlyForBuyers: true, description: "IL Vendor comunica al buyer/commerciale una quotazione speciale dedicata ad un cliente – passivo perché è il vendor che ha gestito la quotazione direttamente con cliente" },
     { value: "CTO", icon: <CiSquarePlusIcon />, description: "È una richiesta di quotazione che prevede una configurazione ad hoc (dividere CTO nostri da brand)" },
-    { value: "ALTRA GARA", icon: <CiSquarePlusIcon />, description: "Altra tipologia di gara" },
+    { value: "LICENZE", icon: <CiSquarePlusIcon />, description: "Licenze Software" },
 ];
 
 export type OnCreateRequestType = {
@@ -76,8 +81,7 @@ export type OnCreateRequestType = {
     customer?: string; //CustomerQuickDetailsDTO;
     dateFrom?: string;
     dateTo?: string;
-    cig?: string;
-    rdo?: string;
+    extraForm?: Record<string, any>; // campi dinamici extra da form di creazione (es. data scadenza, configurazione CTO, ecc.)
 };
 
 /**
@@ -120,6 +124,12 @@ export function Quotazioni() {
         openSearch, setOpenSearch,
         contextMenuRef,
 
+        openOkLinksPanel, setOpenOkLinksPanel,
+        okLinks, setOkLinks,
+        fetchQuotationOkLinks,
+
+        setSelectedQuotationId,
+
         dateFrom, setDateFrom,
         dateTo, setDateTo,
         filterType, setFilterType,
@@ -137,7 +147,8 @@ export function Quotazioni() {
         runAdvancedSearch,
         stopAdvancedSearch,
 
-        loading, setLoading,
+        loading, setLoading, infiniteScroll, buildApiFilters,
+        inpagination,
         advancedSearchQuery,
         advancedSearchRows,
         advancedSearchLoading,
@@ -241,35 +252,6 @@ export function Quotazioni() {
 
     ];
 
-    // Costruiamo i filtri API a partire dai controlli UI.
-    // filterId resta stringa in UI, ma qui lo convertiamo a numero perché prog_num su BE è numerico.
-    const parseOptionalNumber = (raw: string): number | null => {
-        const normalized = String(raw ?? "").trim().replace(",", ".");
-        if (!normalized) return null;
-        const n = Number(normalized);
-        return Number.isFinite(n) ? n : null;
-    };
-
-    const buildApiFilters = () => {
-        const parsedProgNum = Number(filterId);
-        const parsedValoreMin = parseOptionalNumber(priceFrom);
-        const parsedValoreMax = parseOptionalNumber(priceTo);
-        const normalizedBuyerCode = String(filterBuyerCode ?? "").trim();
-        const normalizedAgenteId = String(filterAgenteId ?? "").trim();
-
-        return {
-            ...(filterState && filterState !== "TUTTE" ? { stato: filterState as any } : {}),
-            ...(filterType && filterType !== "TUTTE" ? { tipologia: filterType as any } : {}),
-            ...(filterId && Number.isFinite(parsedProgNum) ? { prog_num: parsedProgNum } : {}),
-            ...(dateFrom ? { dateFrom } : {}),
-            ...(dateTo ? { dateTo } : {}),
-            ...(parsedValoreMin !== null ? { valoreMin: parsedValoreMin } : {}),
-            ...(parsedValoreMax !== null ? { valoreMax: parsedValoreMax } : {}),
-            ...(normalizedBuyerCode ? { buyerCode: normalizedBuyerCode } : {}),
-            ...(normalizedAgenteId ? { agenteId: normalizedAgenteId } : {}),
-        };
-    };
-
     // Elabora l'elenco ricevuto dal BE e mostra un avviso solo per quotazioni "in scadenza".
     // Le quotazioni gia scadute non generano popup: sono gia evidenziate in rosso in tabella.
     // Questa funzione viene chiamata dal callback onComplete di runFetch.
@@ -353,15 +335,44 @@ export function Quotazioni() {
         });
     };
 
-    const onCreate = ({ titolo, note, type, customer, dateTo, cig, rdo, resetStates }: OnCreateRequestType & { resetStates: () => void }) => {
+    const onCreate = ({ titolo, note, type, customer, dateTo, extraForm, resetStates }: OnCreateRequestType & { resetStates: () => void }) => {
         createAbortRef.current?.abort();
         createAbortRef.current = new AbortController();
         setCreating(true);
 
+        // elimina i campi strighe vuote o nulle in extraForm per evitare confusione con i filtri lato BE (es. dateTo: "" viene interpretato come "tutte le date", mentre dateTo: null viene interpretato come "date senza valore")
+        // anche per gli elementi negli oggetti annidati in extraForm (es. configurazione CTO)
+        const cleanedExtraForm = Object.entries(extraForm ?? {}).reduce((acc, [key, value]) => {
+            if (typeof value === "string") {
+                const trimmed = value.trim();
+                if (trimmed !== "") {
+                    acc[key] = trimmed;
+                }
+            } else if (typeof value === "object" && value !== null) {
+                const cleanedNested = Object.entries(value).reduce((nestedAcc, [nestedKey, nestedValue]) => {
+                    if (typeof nestedValue === "string") {
+                        const trimmedNested = nestedValue.trim();
+                        if (trimmedNested !== "") {
+                            nestedAcc[nestedKey] = trimmedNested;
+                        }
+                    } else if (nestedValue !== null && nestedValue !== undefined) {
+                        nestedAcc[nestedKey] = nestedValue;
+                    }
+                    return nestedAcc;
+                }, {} as Record<string, any>);
+                if (Object.keys(cleanedNested).length > 0) {
+                    acc[key] = cleanedNested;
+                }
+            } else if (value !== null && value !== undefined) {
+                acc[key] = value;
+            }
+            return acc;
+        }, {} as Record<string, any>);
+
         createQuotationData({
             abortController: createAbortRef.current,
             user: userState,
-            payload: { titolo, note, type, customer, dateTo, cig, rdo },
+            payload: { titolo, note, type, customer, dateTo, extraForm: cleanedExtraForm },
             HandleComplete: () => {
                 setCreating(false);
                 setCreateOpen(false);
@@ -422,7 +433,7 @@ export function Quotazioni() {
             <main className="flex flex-col flex-1 min-h-full w-full overflow-hidden">
                 {/* Header */}
                 {/* merge eseguito con combinazione. potrebbero essere presenti cose inutili */}
-                <TopBar loading={loading} deletingId={deletingId} creating={creating}
+                <TopBar loading={loading.general_data} deletingId={deletingId} creating={creating}
                     // Refresh manuale da topbar: ricarica dati e riepilogo scadenze.
                     setCreateOpen={setCreateOpen} runFetch={() => runFetch(buildApiFilters(), { force: true, onComplete: (res) => notifyExpirySummary(res.data) })} menuRef={contextMenuRef}
                     setOpenFilters={setOpenFilters} setOpenSearch={setOpenSearch} openSearch={openSearch}
@@ -444,21 +455,23 @@ export function Quotazioni() {
                     chips={chips} scope={scope} setScope={setScope} isAgents={isAgent} />
                 <StatsPanel userDetails={userDetails} />
 
-                {!loading ?
+                {!loading.general_data ?
                     counts.raw === 0 ? (
                         // non è arrivato proprio nulla
                         <EmptyState text="Nessuna quotazione trovata." />
-                    ) : (!loading && counts.flat === 0 ? (
+                    ) : (!loading.general_data && counts.flat === 0 ? (
                         // ci sono dati 'raw', ma i filtri/ambito li hanno esclusi
                         <EmptyState text="Nessuna quotazione trovata. Prova a cambiare i filtri." />
-                    ) : ((!loading && items.length !== 0) &&
+                    ) : ((!loading.general_data && items.length !== 0) &&
                         <div className="flex-1 min-h-0 w-full min-w-0">
-                            <TableSubObj data={items} loadStatus={{ table: false }} isBuyer={!isAgent}
+                            <TableSubObj data={items} loading={loading} isBuyer={!isAgent}
                                 contextMenuRef={contextMenuRef}
                                 handleOpenSettings={({ indexRow, allData }) => setOpenTableRowSettings({ indexRow, allData })}
                                 setData={setRaw}
                                 isSelected={isSelected}
                                 onSelect={toggleSelect}
+                                inpagination={inpagination as any}
+                                onLoadMore={infiniteScroll}
                             />
                         </div>
                     ))
@@ -484,6 +497,19 @@ export function Quotazioni() {
                         icon: <IoEyeOutlineIcon size={20} />,
                         onClick: viewItem,
                     },
+                    ...((openTableRowSettings?.allData[openTableRowSettings.indexRow]?.final_outcome &&
+                        openTableRowSettings?.allData[openTableRowSettings.indexRow]?.final_outcome.ok_links_stats &&
+                        openTableRowSettings?.allData[openTableRowSettings.indexRow]?.final_outcome.ok_links_stats.links_count > 0)
+                        ? [{
+                            title: 'Visualizza FB & OC collegati',
+                            icon: <PiInvoiceLightIcon size={20} />,
+                            onClick: () => {
+                                const item: any = openTableRowSettings.allData[openTableRowSettings.indexRow];
+                                fetchQuotationOkLinks(item._id);
+                                setOpenOkLinksPanel(true);
+                            },
+                        }] : []),
+
                     ...(openTableRowSettings?.allData[openTableRowSettings.indexRow]?.stato == 'BOZZA' ? [{
                         title: 'Elimina Quotazione',
                         icon: <MdOutlineDeleteIcon size={20} />,
@@ -507,6 +533,19 @@ export function Quotazioni() {
                         />
                 }
             />
+
+            <OkLinksSidePanel
+                open={openOkLinksPanel}
+                onClose={() => setOpenOkLinksPanel(false)}
+                onRefresh={() => {
+                    if (!openTableRowSettings) return;
+                    const item: any = openTableRowSettings.allData[openTableRowSettings.indexRow];
+                    fetchQuotationOkLinks(item._id);
+                }}
+                loading={Boolean(loading.get_quotation_ok_links)}
+                items={okLinks}
+            />
+
             <Tooltip id="general-quotations-tooltip" place="bottom" className="max-w-[15vw] min-w-[150px] !text-xs text-center z-50 !rounded-md" />
         </DashboardLayout>
     );

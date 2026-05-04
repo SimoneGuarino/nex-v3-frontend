@@ -25,7 +25,7 @@ interface NotificationsProps {
 export async function Notifications({ body, userToken, statusNotificationSend }: NotificationsProps) {
     try {
         // Chiamata API per salvare ed emettere la notifica
-        await FetchData(`${import.meta.env.VITE_API_USERS}notifications/create`, 'POST', {
+        await FetchData(`${import.meta.env.VITE_API_API_USERS}notifications/create`, 'POST', {
             tk: userToken,
             ...body,
         }, { current: null });

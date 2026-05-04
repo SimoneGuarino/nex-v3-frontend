@@ -19,6 +19,7 @@ const lifecycles = singleSpaReact({
         return el;
     },
     errorBoundary(err) {
+        console.error("[LegacyRoot] errorBoundary caught error:", err);
         return (
             <div style={{ padding: 24 }}>
                 <h2>NEX Legacy crashed</h2>

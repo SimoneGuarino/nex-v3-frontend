@@ -62,6 +62,7 @@ export type ProductEventType =
     // segnalazioni/correzioni della scheda prodotto nel contesto Quotazioni.
     | "SEGNALAZIONE_ANOMALIA_SCHEDA"
     | "CAMBIO_BUYER"
+    | "CAMBIO_DETTAGLI_PRODOTTO"
     | "SUGGERIMENTO_ALTERNATIVA_AGGIUNTO"
     | "SUGGERIMENTO_ALTERNATIVA_RIMOSSO"
     | "ALTRO";
@@ -103,6 +104,8 @@ export interface ProductEventDTO {
         prevBuyerCode?: string | null;          // codice buyer precedente
         newBuyerCode?: string | null;           // codice buyer nuovo
 
+        prev?: any; // valore precedente (es. dettaglio prodotto)
+        new?: any;  // valore nuovo (es. dettaglio prodotto)
         /**
          * Dati usati quando viene segnalata un'anomalia sulla scheda prodotto.
          * - anomalyOriginal: vista completa della scheda all'apertura del form (originale)
@@ -240,7 +243,7 @@ export interface CartDocumentDTO {
         descrizione: string | null;
         anteprima?: string | null;
         marca: string | null;
-
+        prefisso?: string | null;
         linea: string | null;
         gruppo: string | null;
         famiglia: string | null;
@@ -251,16 +254,18 @@ export interface CartDocumentDTO {
     controproposte?: ContropropostaDTO[];
     alternativeSuggestions?: CommercialAlternativeSuggestionDTO[];
     quotazione: QuotationeCart;
+    updatedAt?: string | Date;
 };
 
 export interface ProductDoc {
     _id: string;
+    inCart?: boolean;
     codiceProduttore?: string | null;
     codiceEAN?: string | null;
     da?: string | null;                        // es. "Focelda"
     marca?: string | null;
     anteprima?: string | null | any;
-
+    prefisso?: string | null;
     linea?: string | null;
     gruppo?: string | null;
     famiglia?: string | null;

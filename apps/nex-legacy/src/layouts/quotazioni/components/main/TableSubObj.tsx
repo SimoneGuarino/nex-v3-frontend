@@ -6,32 +6,48 @@ import { MdMoreVert } from "react-icons/md";
 import { UserAvatar } from "examples/Navbars/components/userInfo";
 import { useGeneralDataContext } from "context/GeneralDataContext";
 
-const MdMoreVertIcon = MdMoreVert as React.FC<{ size?: number; className?: string }>;
 
+// ——————————————————————————————————————————————————————————
+// CONSTANTS
+// ——————————————————————————————————————————————————————————
+const MdMoreVertIcon = MdMoreVert as React.FC<{ size?: number; className?: string }>;
+const PAGE_SIZE = 50;
+
+
+// ——————————————————————————————————————————————————————————
+// TYPES & INTERFACES
+// ——————————————————————————————————————————————————————————
 interface TableSubObjProps {
     data: any;
-    loadStatus: { [key: string]: boolean };
+    loading: { [key: string]: boolean };
     isBuyer: boolean;
     contextMenuRef: React.MutableRefObject<any>;
+    inpagination: any;
+    onLoadMore: () => Promise<any>;
     handleOpenSettings: (params: { indexRow: number; allData: any[] }) => void;
     isSelected: (q: QuotazioneDTO) => boolean;
     onSelect: (q: QuotazioneDTO, multi: boolean) => void;
     setData: React.Dispatch<React.SetStateAction<any>>;
 };
 
+
+// ——————————————————————————————————————————————————————————
+// COMPONENTS
+// ——————————————————————————————————————————————————————————
 /**
  * Componente per visualizzare gli avatar dei buyer associati ai progressi delle quotazioni.
  * @param buyersProgress - Array di oggetti IQuotationBuyerProgress relativi ai buyer.
  * @returns 
  */
-const BuyersAvatarCell: React.FC<{ buyersProgress: IQuotationBuyerProgress[] | null, isBuyer: boolean }> = ({ buyersProgress, isBuyer }) => {
+const BuyersAvatarCell: React.FC<{ buyersProgress: IQuotationBuyerProgress[] | null, isBuyer: boolean }> = ({ buyersProgress }) => {
     const { globalData } = useGeneralDataContext();
     const { buyers } = globalData;
-
-    if (isBuyer) {
-        return <span className='text-xs text-gray-400 dark:text-gray-600'>
-            Non disponibile
-        </span>;
+    type AvatarUser = {
+        id: string | number;
+        nome?: string;
+        cognome?: string;
+        immagini?: { avatar?: string; cover?: string };
+        biografia?: string;
     };
 
     //trasforma i IQuotationBuyerProgress[] | null in avatar utenti
@@ -41,36 +57,150 @@ const BuyersAvatarCell: React.FC<{ buyersProgress: IQuotationBuyerProgress[] | n
         </span>;
     };
 
+    const normalizeCode = (value: unknown) => String(value ?? "").trim().toUpperCase();
+
+    const toAvatarUser = (entry: any, fallbackId?: string) => {
+        if (!entry) return null;
+        return {
+            id: entry?._id ?? entry?.id ?? fallbackId ?? "",
+            nome: entry?.nome,
+            cognome: entry?.cognome,
+            immagini: entry?.immagini,
+            biografia: entry?.biografia,
+        };
+    };
+
     //prendi gli utenti unici dalla lista dei buyer progress e recupera le informazioni dal contesto globale buyers
     //recuperando nome, cognome, immagini, biografia
     const users = buyersProgress.map(bp => {
-        {
-            const buyerInfo = buyers.find(b => b?.codici?.buyer === bp.buyerCode);
-            return buyerInfo ? {
-                id: buyerInfo.id,
-                nome: buyerInfo.nome,
-                cognome: buyerInfo.cognome,
-                immagini: buyerInfo.immagini,
-                biografia: buyerInfo.biografia,
-            } : null;
-        }
-    }).filter(u => u !== null) as { id: number; nome: string; cognome: string; immagini: { avatar: string; cover: string }; biografia: string }[];
+        const normalizedBuyerCode = normalizeCode(bp?.buyerCode);
+        if (!normalizedBuyerCode) return null;
+
+        const buyerInfo = buyers.find(b => normalizeCode(b?.codici?.buyer) === normalizedBuyerCode);
+        if (buyerInfo) return toAvatarUser(buyerInfo, normalizedBuyerCode);
+
+        // fallback: se il payload contiene già un sotto-oggetto buyer, usiamolo
+        const embeddedBuyer = (bp as any)?.buyer;
+        const embeddedUser = toAvatarUser(embeddedBuyer, normalizedBuyerCode);
+        if (embeddedUser) return embeddedUser;
+
+        // fallback finale: mostriamo almeno un avatar con codice buyer
+        return {
+            id: normalizedBuyerCode,
+            nome: normalizedBuyerCode,
+            cognome: "",
+            immagini: undefined,
+            biografia: "",
+        };
+    }).filter(u => u !== null) as AvatarUser[];
+
+    const uniqueUsers = Array.from(
+        new Map(users.map((u) => [String(u.id ?? `${u.nome ?? ""}-${u.cognome ?? ""}`), u])).values()
+    );
+
+    if (uniqueUsers.length === 0) {
+        return <span className='text-xs text-gray-400 dark:text-gray-600'>
+            Nessun utente
+        </span>;
+    }
 
     return <div className='flex -space-x-3 items-center justify-center'>
-        {users.slice(0, 3).map((u, i) => (
+        {uniqueUsers.slice(0, 3).map((u, i) => (
             <UserAvatar key={i} src={u.immagini?.avatar} name={u.nome} textSize="xs"
                 cognome={u.cognome} size={8} cover={{ src: u.immagini?.cover, active: true }} bio={u.biografia} />
         ))}
-        {users.length > 3 && (
-            <span className="text-xs p-1 ml-4">+{users.length - 3} altri</span>
+        {uniqueUsers.length > 3 && (
+            <span className="text-xs p-1 ml-4">+{uniqueUsers.length - 3} altri</span>
         )}
     </div>
 };
 
+/**
+ * Componente per visualizzare l'avatar dell'agente proprietario della quotazione.
+ * Usa prima i dati già presenti sulla riga, con fallback su globalData.agents tramite agenteId.
+ */
+const AgentAvatarCell: React.FC<{ agenteId?: string | null, agente?: any }> = ({ agenteId, agente }) => {
+    const { globalData } = useGeneralDataContext();
+    const { agents } = globalData;
 
-//--------------------------------------------------
-// HELPER
-//---------------------------------------------------
+    const agentData = React.useMemo(() => {
+        const normalize = (value: unknown) => String(value ?? "").trim();
+        const normalizedCandidates = Array.from(new Set([
+            normalize(agenteId),
+            normalize(agente?._id),
+            normalize(agente?.id),
+            normalize(agente?.username),
+            normalize(agente?.codici?.agente),
+            typeof agente === "string" ? normalize(agente) : "",
+        ].filter(Boolean)));
+
+        const toAvatarUser = (entry: any) => {
+            if (!entry) return null;
+            return {
+                id: entry?._id ?? entry?.id ?? normalizedCandidates[0] ?? "",
+                nome: entry?.nome,
+                cognome: entry?.cognome,
+                immagini: entry?.immagini,
+                biografia: entry?.biografia,
+            };
+        };
+
+        const inlineAgent =
+            agente && typeof agente === "object" && Object.keys(agente).length > 0
+                ? toAvatarUser(agente)
+                : null;
+
+        if (normalizedCandidates.length === 0) return inlineAgent;
+
+        const agentInfo = (Array.isArray(agents) ? agents : []).find((a: any) => {
+            const candidateKeys = [
+                normalize(a?._id),
+                normalize(a?.id),
+                normalize(a?.username),
+                normalize(a?.codici?.agente),
+            ].filter(Boolean);
+
+            return candidateKeys.some((key) => normalizedCandidates.includes(key));
+        });
+
+        // Preferiamo il record "ricco" da globalData quando trovato,
+        // altrimenti manteniamo i dati presenti sulla riga.
+        return toAvatarUser(agentInfo) ?? inlineAgent;
+    }, [agents, agente, agenteId]);
+
+    if (!agentData) {
+        const fallbackName =
+            [agente?.nome, agente?.cognome].filter(Boolean).join(" ").trim() ||
+            String(agente?.username ?? agenteId ?? (typeof agente === "string" ? agente : "Agente")).trim() ||
+            "Agente";
+
+        return <div className='flex items-center justify-center'>
+            <UserAvatar
+                name={fallbackName}
+                textSize="xs"
+                size={8}
+                cover={{ src: null, active: false }}
+            />
+        </div>;
+    }
+
+    return <div className='flex items-center justify-center'>
+        <UserAvatar
+            src={agentData.immagini?.avatar}
+            name={agentData.nome}
+            textSize="xs"
+            cognome={agentData.cognome}
+            size={8}
+            cover={{ src: agentData.immagini?.cover, active: true }}
+            bio={agentData.biografia}
+        />
+    </div>;
+};
+
+
+// ——————————————————————————————————————————————————————————
+// HELPER FUNCTIONS
+// ——————————————————————————————————————————————————————————
 /**
  * Calcola stato scadenza partendo da finestraValidita.fine (o fallback legacy).
  * Usiamo solo la data (no ora) per evitare falsi positivi dovuti al timezone.
@@ -98,10 +228,13 @@ function getExpiryMeta(row: any) {
         isExpired: daysToExpiry < 0,
         isExpiringSoon: daysToExpiry >= 0 && daysToExpiry <= 5, // soglia 3-5 giorni
     };
-}
+};
 
 
-const TableSubObj: React.FC<TableSubObjProps> = ({ data, loadStatus, isBuyer, contextMenuRef,
+// ——————————————————————————————————————————————————————————
+// MAIN COMPONENT
+// ——————————————————————————————————————————————————————————
+const TableSubObj: React.FC<TableSubObjProps> = ({ data, loading, isBuyer, contextMenuRef, inpagination, onLoadMore,
     handleOpenSettings, isSelected, onSelect, setData }) => {
     // Normalizzazione semplice del campo cliente per la tabella:
     // - BID_PASSIVO: testo business leggibile
@@ -154,7 +287,6 @@ const TableSubObj: React.FC<TableSubObjProps> = ({ data, loadStatus, isBuyer, co
     }, [data]);
 
 
-
     const [columns, setColumns] = React.useState<any>([
         {
             key: [], fieldToTake: [
@@ -167,6 +299,12 @@ const TableSubObj: React.FC<TableSubObjProps> = ({ data, loadStatus, isBuyer, co
             ], label: ' ', type: 'info', excludeLogic: true,
         },
         { key: 'prog_num_label', label: 'ID', type: 'default', sort: true, sortType: 'number', width: 100, sx: { alignItems: 'center' } },
+        {
+            label: "Agente", key: "agenteId",
+            width: 130,
+            sx: { justifyContent: "center" },
+            render: ({ row }: { row: any }) => <AgentAvatarCell agenteId={row.agenteId} agente={row.agente} />,
+        },
         {
             // Sort dedicato "expiry": calcolo business su date reali del record (non su stringa visualizzata).
             key: 'scadenza_validita', label: 'Scadenza validità', type: 'default', sort: true, sortType: 'expiry', width: 200, sx: { alignItems: 'center' },
@@ -207,19 +345,19 @@ const TableSubObj: React.FC<TableSubObjProps> = ({ data, loadStatus, isBuyer, co
     ]);
 
     return (
-        !loadStatus.table ? normalizedData && <div className="w-full h-full min-h-0 flex flex-col gap-4">
+        !loading.general_data ? normalizedData && <div className="w-full h-full min-h-0 flex flex-col gap-4">
             {/* Pannello filtri */}
             <div className="w-full flex-1 min-h-0 rounded-xl overflow-hidden border border-gray-200 dark:border-neutral-800">
                 <TableVirtualized
                     className='h-full'
                     height='100%'
                     tableType='grid'
+                    results={inpagination?.total || 0} // totale elementi (non quelli caricati finora)
                     data={normalizedData || []}
                     setData={setData}
                     columns={columns}
                     setColumns={setColumns}
-                    results={(normalizedData || []).length}
-                    loadStatus={loadStatus.table}
+                    loadStatus={loading.general_data}
                     whereToFindData={false}
                     footer={false}
                     headerSettings={{
@@ -231,6 +369,11 @@ const TableSubObj: React.FC<TableSubObjProps> = ({ data, loadStatus, isBuyer, co
                         variant: 'striped',
                         isSelected,
                         onSelect,
+                    }}
+                    infiniteScroll={{
+                        func: () => onLoadMore(),
+                        loadStatus: loading.general_data,
+                        numberToFetch: PAGE_SIZE,
                     }}
                 />
             </div>

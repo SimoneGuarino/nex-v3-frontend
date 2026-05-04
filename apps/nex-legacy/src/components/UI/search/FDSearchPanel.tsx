@@ -45,7 +45,7 @@ export type RecentSearchConfig = {
 export type QuickAction<T> = {
     label: string;
     icon?: React.ReactNode;
-    onAction: (item: T) => void;
+    onAction: (item: T, event: React.MouseEvent<HTMLButtonElement>) => void;
 };
 
 export type SearchItem<T = any> = {
@@ -247,7 +247,7 @@ const FDSearchPanel = <T,>({
     const [active, setActive] = React.useState(0);
     const [recent, setRecent] = React.useState<string[]>([]);
     const [ctxOpenFor, setCtxOpenFor] = React.useState<SearchItem | null>(null);
-    const menuRef = React.useRef<HTMLDivElement>(null);
+    const menuRef = React.useRef<HTMLButtonElement | null>(null);
 
     const btnRefs = React.useRef<Map<SearchItemId, React.RefObject<HTMLDivElement>>>(new Map());
     const deferredQ = React.useDeferredValue(innerQ);
@@ -291,11 +291,6 @@ const FDSearchPanel = <T,>({
         [recentCfg.enabled, recentCfg.limit, recentCfg.cookieName, recent, customRecent, setCustomRecent]
     );
 
-    function ensureBtnRef(id: SearchItemId) {
-        if (!btnRefs.current.has(id)) btnRefs.current.set(id, React.createRef<HTMLDivElement>());
-        return btnRefs.current.get(id)!;
-    }
-
     const handleSelect = (it: SearchItem<T>) => {
         const rq = (it.payload as any)?.recentQuery as string | undefined;
         if (rq) {
@@ -331,54 +326,6 @@ const FDSearchPanel = <T,>({
         }
     };
 
-    const Row = ({ it, idx }: { it: SearchItem<T>; idx: number }) => {
-        const anchorRef = ensureBtnRef(it.id);
-        const isActive = idx === active;
-        return (
-            <button
-                key={it.id}
-                className={clsx(
-                    "group w-full h-14 px-3 rounded-lg flex items-center gap-3 text-left transition-colors cursor-pointer",
-                    isActive ? "bg-blue-50 dark:bg-neutral-800/80 ring-1 ring-blue-400/40" : "hover:bg-neutral-100/80 dark:hover:bg-neutral-800/60"
-                )}
-                onMouseEnter={() => setActive(idx)}
-                onClick={() => handleSelect(it)}
-                aria-selected={isActive}
-            >
-                <div className="w-8 h-8 flex items-center justify-center shrink-0 rounded-full bg-neutral-100 dark:bg-neutral-800">
-                    {it.iconLeft}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                    <div className="text-[15px] truncate">{highlight ? highlightText(it.title, deferredQ) : it.title}</div>
-                    {it.subtitle && (
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                            {highlight ? highlightText(it.subtitle, deferredQ) : it.subtitle}
-                        </div>
-                    )}
-                </div>
-
-                {it.metaRight && <div className="ml-2 text-xs text-neutral-500 dark:text-neutral-400">{it.metaRight}</div>}
-
-                {it.actions && it.actions.length > 0 && (
-                    <div className="ml-2 relative" ref={anchorRef}>
-                        <FDIconButton
-                            size="small"
-                            variant="text"
-                            ariaLabel="Actions"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setCtxOpenFor(it);
-                                (menuRef as React.MutableRefObject<HTMLElement | null>).current = e.currentTarget as HTMLElement;
-                            }}
-                            icon={<IoEllipsisVerticalIcon className="text-neutral-500 dark:text-neutral-400" />}
-                            initial={false}
-                        />
-                    </div>
-                )}
-            </button>
-        );
-    };
 
     return (
         <AnimatePresence>
@@ -533,7 +480,51 @@ const FDSearchPanel = <T,>({
                                         <div className="flex flex-col gap-1">
                                             {filtered.slice(virt.start, virt.end).map((it, i) => {
                                                 const globalIdx = recentItems.length + virt.start + i;
-                                                return <Row key={it.id} it={it} idx={globalIdx} />;
+                                                const isActive = globalIdx === active;
+
+                                                return <div
+                                                    key={it.id}
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    className={clsx(
+                                                        "group w-full h-14 px-3 rounded-lg flex items-center gap-3 text-left transition-colors cursor-pointer",
+                                                        isActive ? "bg-blue-50 dark:bg-neutral-800/80 ring-1 ring-blue-400/40" : "hover:bg-neutral-100/80 dark:hover:bg-neutral-800/60"
+                                                    )}
+                                                    onMouseEnter={() => setActive(globalIdx)}
+                                                    onClick={() => handleSelect(it)}
+                                                    aria-selected={isActive}
+                                                >
+                                                    <div className="w-8 h-8 flex items-center justify-center shrink-0 rounded-full bg-neutral-100 dark:bg-neutral-800">
+                                                        {it.iconLeft}
+                                                    </div>
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-[15px] truncate">{highlight ? highlightText(it.title, deferredQ) : it.title}</div>
+                                                        {it.subtitle && (
+                                                            <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                                                                {highlight ? highlightText(it.subtitle, deferredQ) : it.subtitle}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {it.metaRight && <div className="ml-2 text-xs text-neutral-500 dark:text-neutral-400">{it.metaRight}</div>}
+
+                                                    {it.actions && it.actions.length > 0 && (
+                                                        <div className="ml-2 relative">
+                                                            <FDIconButton
+                                                                size="small"
+                                                                ariaLabel="Actions"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setCtxOpenFor(it);
+                                                                    (menuRef as React.MutableRefObject<HTMLElement | null>).current = e.currentTarget;
+                                                                }}
+                                                                icon={<IoEllipsisVerticalIcon className="text-neutral-500 dark:text-neutral-400" />}
+                                                                initial={false}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>;
                                             })}
                                         </div>
                                     )}
@@ -565,14 +556,13 @@ const FDSearchPanel = <T,>({
                         openFor={!!ctxOpenFor}
                         pos={menuRef}
                         onClose={() => setCtxOpenFor(null)}
-                        placement="auto"
                         menuButtons={
                             !!(ctxOpenFor && ctxOpenFor?.actions)
                                 ? ctxOpenFor.actions.map((a) => ({
                                     title: a.label,
                                     icon: a.icon ?? null,
-                                    onClick: () => {
-                                        a.onAction(ctxOpenFor.payload as T);
+                                    onClick: (e: React.MouseEvent<HTMLButtonElement>) => {
+                                        a.onAction(ctxOpenFor.payload as T, e);
                                         setCtxOpenFor(null);
                                     },
                                 }))

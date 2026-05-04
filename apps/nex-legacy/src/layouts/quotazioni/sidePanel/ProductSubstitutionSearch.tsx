@@ -2,12 +2,15 @@ import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import FDBox from "components/UI/box/FDBox";
 import { MdDone } from "react-icons/md";
+import { FiChevronRight } from "react-icons/fi";
+import { CartProductDTO } from "../types/qts_product";
 
 
 // ——————————————————————————————————————————————————————————
 // CONSTANTS
 // ——————————————————————————————————————————————————————————
 const MdDoneIcon = MdDone as React.FC<{ className?: string }>;
+const FiChevronRightIcon = FiChevronRight as React.FC<{ className?: string }>;
 
 
 // ——————————————————————————————————————————————————————————
@@ -25,7 +28,7 @@ type SubstitutionResultView = {
     thumbnailUrl?: string;
 };
 
-export type ProductSubstitutionSearchProps<T = any> = {
+export type ProductSubstitutionSearchProps<T = CartProductDTO> = {
     /** Apertura / chiusura della modalità sostituzione */
     open: boolean;
     onClose: () => void;
@@ -39,14 +42,16 @@ export type ProductSubstitutionSearchProps<T = any> = {
     /** Stato di ricerca (useDetailsQuotation) */
     query: string;
     onQueryChange: (value: string) => void;
-    results: T[];
-    loading?: boolean;
+    results: CartProductDTO[];
+    loading: { [key: string]: boolean | Map<string, boolean> };
 
     /** Mapping da risultato grezzo → dati per la UI */
-    mapResultToView: (item: T) => SubstitutionResultView;
+    mapResultToView: (item: CartProductDTO) => SubstitutionResultView;
 
     /** Azione quando scegli un prodotto come controproposta */
-    onSelectProduct: (item: T) => void;
+    onSelectProduct: (item: CartProductDTO) => void;
+    /** Apre la scheda prodotto del risultato selezionato */
+    onOpenProductDetails?: (item: CartProductDTO) => void;
     /** Lista degli id selezionati */
     selectedIds: string[];
 };
@@ -91,7 +96,9 @@ export function ProductSubstitutionSearch<T>({
     results,
     loading,
     mapResultToView,
-    selectedIds, onSelectProduct,
+    selectedIds,
+    onSelectProduct,
+    onOpenProductDetails,
 }: ProductSubstitutionSearchProps<T>) {
     const isMobile = useIsMobile();
 
@@ -191,7 +198,7 @@ export function ProductSubstitutionSearch<T>({
                                 </span>
                                 <input
                                     type="text"
-                                    value={query}
+                                    // value=""
                                     onChange={handleChange}
                                     placeholder="Cerca tra i prodotti disponibili…"
                                     className="
@@ -203,7 +210,7 @@ export function ProductSubstitutionSearch<T>({
                             </div>
                             <div className="mt-1 flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
                                 <span>
-                                    {loading
+                                    {loading.search_replace_products as boolean
                                         ? "Ricerca in corso…"
                                         : results.length
                                             ? `${results.length} risultati trovati`
@@ -218,14 +225,27 @@ export function ProductSubstitutionSearch<T>({
                         <div className="mt-4 flex flex-col flex-[1.6] min-w-0 min-h-0">
                             <div className="flex-1 min-h-0 overflow-y-auto pr-1">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-3 pb-2">
-                                    {!loading ? results.map((item) => {
+                                    {!loading.search_replace_products as boolean ? results.map((item: CartProductDTO) => {
                                         const view = mapResultToView(item);
                                         const isSelected = selectedIds.includes(view.id);
+                                        const canOpenDetails = typeof onOpenProductDetails === "function";
+                                        const _loading = !!(loading.agents_alternatives as Map<string, boolean>).get(item._id);
+
                                         return (
-                                            <button
+                                            <div
                                                 key={view.id}
-                                                type="button"
-                                                onClick={() => onSelectProduct(item)}
+                                                onClick={() => {
+                                                    !_loading && onSelectProduct(item)
+                                                }}
+                                                role="button"
+                                                tabIndex={0}
+                                                onKeyDown={(e) => {
+                                                    if (e.target !== e.currentTarget) return;
+                                                    if (e.key === "Enter" || e.key === " ") {
+                                                        e.preventDefault();
+                                                        !_loading && onSelectProduct(item);
+                                                    }
+                                                }}
                                                 className={`
                                                         group flex flex-col items-stretch
                                                         rounded-2xl border border-neutral-200/80 dark:border-neutral-800
@@ -241,6 +261,13 @@ export function ProductSubstitutionSearch<T>({
                                                         : "bg-white/80 dark:bg-neutral-900/80"}
                                                     `}
                                             >
+                                                {/* Overlay di loading per l'intera card quando si sta assegnando come alternativa (solo per commercial suggestion) */}
+                                                {_loading && (
+                                                    <div className="absolute inset-0 bg-white/70 dark:bg-neutral-900/70 flex items-center justify-center rounded-2xl">
+                                                        <span className={`inline-flex items-center justify-center animate-spin h-4 w-4 border-2 border-t-transparent border-gray-400 rounded-full`} />
+                                                    </div>
+                                                )}
+
                                                 {isSelected && (
                                                     <MdDoneIcon className="absolute top-2 left-2 text-sky-500 dark:text-sky-400" />
                                                 )}
@@ -285,12 +312,34 @@ export function ProductSubstitutionSearch<T>({
                                                     </div>
                                                 </div>
 
-                                                {view.priceLabel && (
-                                                    <p className="mt-2 text-xs font-semibold text-neutral-900 dark:text-neutral-50">
-                                                        {view.priceLabel}
-                                                    </p>
+                                                {(view.priceLabel || canOpenDetails) && (
+                                                    <div className="mt-2 flex items-center justify-between gap-2">
+                                                        {view.priceLabel ? (
+                                                            <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-50">
+                                                                {view.priceLabel}
+                                                            </p>
+                                                        ) : (
+                                                            <span />
+                                                        )}
+
+                                                        {canOpenDetails && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    onOpenProductDetails?.(item);
+                                                                }}
+                                                                className="inline-flex items-center gap-1 rounded-full px-2 py-[3px] text-[10px]
+                                                                bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700
+                                                                text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+                                                            >
+                                                                <span>Dettagli</span>
+                                                                <FiChevronRightIcon className="w-3 h-3" />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 )}
-                                            </button>
+                                            </div>
                                         );
                                     }) : (
                                         /** Skeleton per il caricamento */

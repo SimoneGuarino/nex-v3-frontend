@@ -83,10 +83,11 @@ const Filters: React.FC<FiltersProps> = ({
                 title: row?.titolo?.trim() || `Quotazione ${formatProgNum(row?.prog_num)}`,
                 subtitle,
                 payload: row,
-                actions: [{
+                actions: [
+                {
                     label: "Apri Dettagli",
                     icon: <IoEyeOutlineIcon size={18} />,
-                    onAction: (q: QuotazioneDTO) => {
+                    onAction: (q: QuotazioneDTO, e: React.MouseEvent<HTMLButtonElement>) => {
                         const quotationId = String(q?._id ?? "").trim();
                         if (!quotationId) {
                             enqueueSnackbar("Impossibile aprire i dettagli: ID quotazione non valido.", {

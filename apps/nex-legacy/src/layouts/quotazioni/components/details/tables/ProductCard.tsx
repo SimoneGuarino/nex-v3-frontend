@@ -15,6 +15,7 @@ const BsCartPlusIcon = BsCartPlus as React.FC<{ size?: number; className?: strin
 interface Props {
     item: ProductDoc;
     addToCart: (ProductDoc: ProductDoc) => void;
+    loadingAddingToCart: boolean;
 };
 
 
@@ -32,7 +33,7 @@ const Tag = ({ title, value }: { title: string; value: any }) => (
 // ——————————————————————————————————————————————————————————
 // MAIN COMPONENT
 // ——————————————————————————————————————————————————————————
-const DocumentCard: React.FC<Props> = ({ item, addToCart }) => {
+const DocumentCard: React.FC<Props> = ({ item, addToCart, loadingAddingToCart }) => {
     const [src, setSrc] = useState<string>(item.anteprima || placeholder);
     const [isPlaceholder, setIsPlaceholder] = useState<boolean>(!item.anteprima);
 
@@ -83,8 +84,14 @@ const DocumentCard: React.FC<Props> = ({ item, addToCart }) => {
             <Tag title={`Linea: ${item.descrizioneLinea ?? "N/A"}`} value={item.descrizioneLinea ?? "N/A"} />
             <Tag title={`Gruppo: ${item.descrizioneGruppo ?? "N/A"}`} value={item.descrizioneGruppo ?? "N/A"} />
         </div>
+
         <FDIconButton dataTooltipContent='Aggiungi alla quotazione'
-            dataTooltipId='general-quotations-tooltip' icon={<BsCartPlusIcon />} onClick={() => addToCart(item)} className='absolute top-2 right-2' />
+            dataTooltipId='general-quotations-tooltip' 
+            icon={<BsCartPlusIcon />} 
+            onClick={() => addToCart(item)} 
+            loading={loadingAddingToCart}
+            className='absolute top-2 right-2' 
+        />
     </>
     );
 };

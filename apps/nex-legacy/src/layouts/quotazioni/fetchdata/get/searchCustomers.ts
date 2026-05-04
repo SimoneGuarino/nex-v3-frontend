@@ -15,7 +15,7 @@ export async function SearchCustomersAPI({
         ChangeLoadStatus({ from: "req_customersList", bool: true });
 
         const base = import.meta.env.VITE_API_CUSTOMERSFIDO ?? "";
-        const url = new URL(`${base}/v2/customers/search?${params.toString()}`);
+        const url = new URL(`${base}v2/customers/search?${params.toString()}`);
 
         const res = await FetchData(
             url.toString(),

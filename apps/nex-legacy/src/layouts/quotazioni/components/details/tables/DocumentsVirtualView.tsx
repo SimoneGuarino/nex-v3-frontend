@@ -430,7 +430,7 @@ const DocumentsVirtualView: React.FC<Props> = ({
                     {slice.map((it: CartProductDTO, i) => {
                         const key = (it as any)._id as string;
                         const globalIndex = startIndex + i;
-                        const highlighted = highlightedItemId.includes(it.product_id);
+                        const highlighted = highlightedItemId.includes(it.product_id ?? it._id);
 
                         return (
                             <MeasuredRow

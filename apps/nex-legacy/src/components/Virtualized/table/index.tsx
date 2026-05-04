@@ -23,11 +23,40 @@ import { BodySettings, variantBody } from './types/bodySettings';
 import { clsx } from 'components/UI/box/FDBox';
 import { useNexTheme } from '@nex/theme-system';
 
+function parseStyleObject(value: unknown): Record<string, any> | undefined {
+    if (!value) return undefined;
+    if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
+    if (typeof value !== 'string') return undefined;
+
+    try {
+        const parsed = JSON.parse(value);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            return parsed as Record<string, any>;
+        }
+    } catch {
+        return undefined;
+    }
+
+    return undefined;
+}
+
+function normalizeColumnType(type: unknown): string {
+    if (typeof type !== 'string' || !type.trim()) return 'default';
+    const normalized = type.trim().toLowerCase();
+
+    if (normalized === 'string') return 'default';
+    if (['int', 'integer', 'float', 'double', 'decimal'].includes(normalized)) return 'number';
+
+    return type;
+}
+
 function normalizeConfigColumn(column: RetriveColumnConfig, minColWidth: number) {
     const label = (column.label as string | undefined) ?? column.nome ?? (typeof column.key === 'string' ? column.key : '');
     const key = column.key ?? label;
     const width = typeof column.width === 'number' && column.width > 0 ? column.width : minColWidth;
     const description = typeof column.descrizione === 'string' ? column.descrizione : undefined;
+    const sx = parseStyleObject(column.sx);
+    const sxText = parseStyleObject(column.sxText);
 
     return {
         ...column,
@@ -37,7 +66,9 @@ function normalizeConfigColumn(column: RetriveColumnConfig, minColWidth: number)
         columnOnHover: description,
         sort: typeof column.sort === 'boolean' ? column.sort : false,
         sortType: (column.sortType as string | undefined) ?? 'String',
-        type: (column.type as string | undefined) ?? 'default',
+        type: normalizeColumnType(column.type),
+        ...(sx ? { sx } : {}),
+        ...(sxText ? { sxText } : {}),
     };
 }
 
@@ -69,6 +100,7 @@ interface RenderLeftSideCellMemoProps {
     /** larghezza minima colonna (coerente con header) */
     minColWidth?: number;
     bodySettings?: BodySettings;
+    textCenter?: boolean;
 };
 const RenderLeftSideCellMemo: React.FC<RenderLeftSideCellMemoProps> = ({
     visibleColumns,
@@ -80,7 +112,8 @@ const RenderLeftSideCellMemo: React.FC<RenderLeftSideCellMemoProps> = ({
     tableType,
     blockCondition,
     minColWidth = 100,
-    bodySettings = { variant: 'default' }
+    bodySettings = { variant: 'default' },
+    textCenter = false,
 }) => {
     const { preferences } = useNexTheme();
     const darkMode = preferences.mode === "dark";
@@ -140,6 +173,7 @@ const RenderLeftSideCellMemo: React.FC<RenderLeftSideCellMemoProps> = ({
                     columnKey={column}
                     columnIndex={index}
                     blockCondition={blockCondition}
+                    textCenter={textCenter}
                 /></Stack>
         })}
     </div>
@@ -148,8 +182,8 @@ const RenderLeftSideCellMemo: React.FC<RenderLeftSideCellMemoProps> = ({
 interface VirtualizedTableProps {
     data: any;
     setData: (prev: any) => void;
-    columns: any;
-    setColumns: (prev: any) => void;
+    columns?: any[];
+    setColumns?: React.Dispatch<React.SetStateAction<any[]>>;
     /** allineato a HeaderVirtualized: solo epoch ms */
     lastDateDist?: Record<string, number>;
     cookie?: string;
@@ -190,10 +224,16 @@ interface VirtualizedTableProps {
     className?: string;
     /** Nome tabella per autoload configurazione colonne da BE */
     tableName?: string;
+    textCenter?: boolean;
 
     /** 👇 nuovo: larghezza minima colonna per header+body (default 100) */
     minColWidth?: number;
 
+    /**
+     * Impostazioni header tabella.
+     * onSortChange consente sort lato server con payload: { columnKey, sortDirection }.
+     * sortState riallinea lo stato icone sort dopo remount.
+     */
     headerSettings?: HeaderSettings;
     bodySettings?: BodySettings;
 };
@@ -205,9 +245,9 @@ export const TableVirtualized: React.FC<VirtualizedTableProps> = ({
     data,
     setData,
     results,
-    columns,
+    columns: propColumns,
     className,
-    setColumns,
+    setColumns: propSetColumns,
     tableName,
     cookie,
     tableType,
@@ -221,9 +261,36 @@ export const TableVirtualized: React.FC<VirtualizedTableProps> = ({
     headerSettings,
     bodySettings,
     lastDateDist,
-    minColWidth = 100
+    minColWidth = 100,
+    textCenter = false,
 }) => {
     const palette = MainTheme().palette;
+    const [internalColumns, setInternalColumns] = useState<any[]>(
+        Array.isArray(propColumns) ? propColumns : []
+    );
+    const columns = propSetColumns
+        ? (Array.isArray(propColumns) ? propColumns : [])
+        : internalColumns;
+    const setColumns = useCallback(
+        (next: any[] | ((prev: any[]) => any[])) => {
+            if (propSetColumns) {
+                propSetColumns(next as React.SetStateAction<any[]>);
+                return;
+            }
+
+            setInternalColumns((prev) =>
+                typeof next === "function"
+                    ? (next as (prev: any[]) => any[])(prev)
+                    : next
+            );
+        },
+        [propSetColumns]
+    );
+    const setColumnsRef = useRef(setColumns);
+
+    useEffect(() => {
+        setColumnsRef.current = setColumns;
+    }, [setColumns]);
 
     const [impTableStatus, setImpTableStatus] = useState<boolean>(false);
     const [copyData, setCopyData] = useState(data);
@@ -245,6 +312,12 @@ export const TableVirtualized: React.FC<VirtualizedTableProps> = ({
         if ((copyData && copyData.length === 0) || !copyData) { setCopyData(data); };
     }, [data]) // eslint-disable-line
 
+    useEffect(() => {
+        if (propSetColumns) return;
+        if (!Array.isArray(propColumns)) return;
+        setInternalColumns(propColumns);
+    }, [propColumns, propSetColumns]);
+
     const [visibleColumns, setVisibleColumns] = useState(setCookie()
         || columns.map((column: any) => column.label));
     const defaultColumnOrder = useMemo(() => columns.map((column: any) => column.label), [columns]);
@@ -262,7 +335,7 @@ export const TableVirtualized: React.FC<VirtualizedTableProps> = ({
                 const normalizedColumns = rows
                     .filter((row) => !row.hide)
                     .map((row) => normalizeConfigColumn(row, minColWidth));
-                setColumns(normalizedColumns as any);
+                setColumnsRef.current(normalizedColumns as any);
             })
             .catch((err: any) => {
                 if (err?.name === 'AbortError') return;
@@ -273,7 +346,7 @@ export const TableVirtualized: React.FC<VirtualizedTableProps> = ({
             active = false;
             abortController.abort();
         };
-    }, [tableName, setColumns, minColWidth]);
+    }, [tableName, minColWidth]);
 
     useEffect(() => {
         const allLabels = columns
@@ -460,7 +533,7 @@ export const TableVirtualized: React.FC<VirtualizedTableProps> = ({
             data={data}
             itemContent={index => <RenderLeftSideCellMemo key={index} rowIndex={index}
                 visibleColumns={visibleColumns} columns={columns} data={data} formatData={formatData}
-                addZeroes={addZeroes} tableType={tableType} blockCondition={blockCondition} minColWidth={minColWidth} bodySettings={bodySettings} />}
+                addZeroes={addZeroes} tableType={tableType} blockCondition={blockCondition} minColWidth={minColWidth} bodySettings={bodySettings} textCenter={textCenter} />}
             fixedHeaderContent={() => (
                 <div className={`rounded-tl-lg ${headerSettings?.className?.main_container}`} style={{
                     height: state.rowHeight - 10,
@@ -486,7 +559,7 @@ export const TableVirtualized: React.FC<VirtualizedTableProps> = ({
             )}
             rangeChanged={handleRangeChanged}
         />
-    }, [data, columns, height, state.height, visibleColumns, copyData, formatData, addZeroes, tableType, blockCondition, whereToFindData, setData, lastDateDist, minColWidth, bodySettings]); // deps complete
+    }, [data, columns, height, state.height, visibleColumns, copyData, formatData, addZeroes, tableType, blockCondition, whereToFindData, setData, lastDateDist, minColWidth, bodySettings, textCenter]); // deps complete
 
     return (<Card sx={{ height: '100%' }} className={className}>
         {!loadStatus ?

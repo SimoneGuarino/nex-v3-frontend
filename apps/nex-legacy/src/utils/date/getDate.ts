@@ -146,3 +146,28 @@ export function daysBetween(a?: string, b?: string) {
     const diffMs = db.getTime() - da.getTime();
     return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 };
+
+/**
+ * Converte una data in un formato accettabile per un input di tipo "datetime-local".
+ * @param val - stringa o oggetto Date da convertire
+ * @returns stringa formattata per input "datetime-local" (YYYY-MM-DDTHH:mm) o stringa vuota se input non valido
+ */
+export function toLocalDateTimeInputValue(val?: string | Date | null): string {
+    if (!val) return "";
+    const d = new Date(val);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+/**
+ * Formatta una data in formato ISO (YYYY-MM-DD HH:mm) o restituisce la stringa originale se non è convertibile.
+ * @param val - stringa o oggetto Date da formattare
+ * @returns stringa formattata in locale italiano o stringa originale se non convertibile
+ */
+export function formatISODate(val?: string | Date): string {
+    if (!val) return "-";
+    const d = new Date(val);
+    if (typeof val === "string" && Number.isNaN(d.getTime())) return val;
+    return d.toLocaleString("it-IT");
+};

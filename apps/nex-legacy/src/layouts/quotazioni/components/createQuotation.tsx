@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FDBackdrop } from "components/UI/box/FDBackdrop";
-import FDBox from "components/UI/box/FDBox";
+import FDBox, { clsx } from "components/UI/box/FDBox";
 import { mepaTypes, OnCreateRequestType, quotationTypes } from "../pages";
 import FDSelect from "components/UI/input/FDSelect";
 import { CustomerQuickDetailsDTO } from "layouts/quotazioni/types/customers";
@@ -16,10 +16,29 @@ import { MdClose } from "react-icons/md";
 import { CiSquareInfo } from "react-icons/ci";
 import { SearchCustomersAPI } from "../fetchdata/get/searchCustomers";
 import { enqueueSnackbar } from "components/MessageBox";
+import { formatISODate, toLocalDateTimeInputValue } from "utils/date/getDate";
+import FDSwitch from "components/UI/input/FDSwitch";
 
 const MdCloseIcon = MdClose as React.FC<{ size?: number; className?: string }>;
 const CiInfoIcon = CiSquareInfo as React.FC<{ size?: number; className?: string }>;
 
+const formDefaultState: FormStateProps = {
+    isEndUser: false, // di default la quotazione è rivolta alla PA, l'utente può decidere di renderla valida per End User tramite switch
+    type: {
+        value: null, // va eliminato quando viene inviato nel al BE se la qts.state è diverso da PASSIVO & MEPA
+        CIG: "",
+        RDO: "",
+        ACCORDO_QUADRO: "",
+    },
+    details: {
+        nome: "",
+        partitaIva: "",
+        riferimento: "",
+        telefono: "",
+        email: "",
+        sedeLegale: "",
+    },
+};
 
 // ——————————————————————————————————————————————————————————
 // TYPES & INTERFACES
@@ -29,7 +48,97 @@ type Props = {
     loading?: boolean;
     isMEPAUser: boolean | undefined;
     onClose: () => void;
-    onCreate: ({ titolo, note, type, customer, dateTo, cig, rdo, resetStates }: OnCreateRequestType & { resetStates: () => void }) => void;
+    onCreate: ({ titolo, note, type, customer, dateTo, extraForm, resetStates }: OnCreateRequestType & { resetStates: () => void }) => void;
+};
+
+type OptionType = {
+    label: string;
+    value: "RDO" | "CIG" | "ACCORDO_QUADRO";
+};
+
+type endUserFormProps = {
+    key: string;
+    label: string;
+    isRequired: boolean;
+    onlyNumber?: boolean;
+    isEmail?: boolean;
+    maxLength?: number;
+};
+
+export type FormStateProps = {
+    isEndUser: boolean;
+    type: {
+        value: "RDO" | "CIG" | "ACCORDO_QUADRO" | "ND" | null;
+        CIG?: string;
+        RDO?: string;
+        ACCORDO_QUADRO?: string;
+    };
+    details: {
+        nome: string;
+        partitaIva: string;
+        riferimento?: string;
+        telefono?: string;
+        email?: string;
+        sedeLegale?: string;
+    };
+};
+
+
+/**
+ * Controlla che se è stata selezionata una tipologia tra CIG, RDO o Accordo Quadro, allora il campo relativo non sia vuoto, altrimenti mostra errore.
+ * @returns {boolean} true se il form è valido, false altrimenti
+ */
+function isValidateFormType(extraForm: FormStateProps): { status: boolean; message?: string } {
+    if (extraForm.type.value === "CIG" && extraForm.type.CIG?.trim().length === 0) {
+        return { status: false, message: "Il campo CIG non può essere vuoto se selezionato" };
+    };
+    if (extraForm.type.value === "RDO" && extraForm.type.RDO?.trim().length === 0) {
+        return { status: false, message: "Il campo RDO non può essere vuoto se selezionato" };
+    };
+    if (extraForm.type.value === "ACCORDO_QUADRO" && extraForm.type.ACCORDO_QUADRO?.trim().length === 0) {
+        return { status: false, message: "Il campo Accordo Quadro non può essere vuoto se selezionato" };
+    };
+
+    return { status: true };
+};
+
+/**
+ * Controlla che i campi obbligatori su details (nome e partita IVA) siano presenti e validi, e che eventuali campi opzionali se presenti siano validi.
+ * La validazione è semplice e si basa su regole di base (es. nome non vuoto, partita IVA non vuota, telefono con formato base, email con chiocciola, ecc).
+ * @param details i dettagli da validare
+ * @returns un oggetto con lo stato della validazione e un messaggio opzionale in caso di errore
+ */
+function isValidateFromDetails(details: FormStateProps["details"]): { status: boolean; message?: string } {
+    // validazione semplice del campo nome: se è presente, non può essere vuoto e non puo contenere ( +, -, @, #, $, %, &, *, ecc).
+    if ((details.nome && details.nome.trim().length === 0) || !details.nome || /[+@#$%^&*]/.test(details.nome)) {
+        return { status: false, message: "Il campo Nome è obbligatorio per le quotazioni rivolte alla Pubblica Amministrazione e agli End User." };
+    };
+
+    // validazione semplice del campo partita IVA: se è presente, non può essere vuoto.
+    if ((details.partitaIva && details.partitaIva.trim().length === 0) || !details.partitaIva) {
+        return { status: false, message: "Il campo Partita IVA/C.F. è obbligatorio per le quotazioni rivolte alla Pubblica Amministrazione e agli End User." };
+    };
+
+    // validazione dei campi opzionali su details (riferimento, telefono, email, sedeLegale) se presenti
+    if (details.riferimento && details.riferimento.trim().length === 0) {
+        return { status: false, message: "Se presente, il campo Riferimento non può essere vuoto." };
+    };
+
+    // validazione semplice del formato telefono: se è presente, deve essere non vuoto e contenere solo numeri, spazi, +, -, (, )
+    if (details.telefono && (details.telefono.trim().length === 0 || !/^[0-9+\-\s()]+$/.test(details.telefono))) {
+        return { status: false, message: "Se presente, il campo Telefono non può essere vuoto e deve contenere solo numeri, spazi, +, -, (, )." };
+    };
+
+    // validazione semplice del formato email: se è presente, deve essere non vuota e contenere una chiocciola.
+    if (details.email && (details.email.trim().length === 0 || !details.email.includes("@"))) {
+        return { status: false, message: "Se presente, il campo Email non può essere vuoto e deve contenere una chiocciola." };
+    };
+
+    if (details.sedeLegale && details.sedeLegale.trim().length === 0) {
+        return { status: false, message: "Se presente, il campo Sede Legale non può essere vuoto." };
+    };
+
+    return { status: true };
 };
 
 
@@ -44,22 +153,66 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
     const [customerSearch, setCustomerSearch] = useState("");
     const [customerLoading, setCustomerLoading] = useState(false);
 
+    /** Stato che gestisce lo switch, se true allora l'opzione è valida per l'endUser, se false è Pubblica amministrazione. */
+    const [formState, setFormState] = useState<FormStateProps>(formDefaultState);
+    const endUserForm: endUserFormProps[] = [
+        {
+            key: "nome",
+            label: "Nome",
+            isRequired: true,
+        },
+        {
+            key: "partitaIva",
+            label: "Partita IVA/C.F.",
+            isRequired: true,
+            onlyNumber: true,
+            maxLength: 11,
+        },
+        {
+            key: "riferimento",
+            label: "Riferimento",
+            isRequired: false,
+        },
+        {
+            key: "telefono",
+            label: "Telefono",
+            isRequired: false,
+            onlyNumber: true,
+            maxLength: 15,
+        },
+        {
+            key: "email",
+            label: "Email",
+            isRequired: false,
+            isEmail: true,
+        },
+        {
+            key: "sedeLegale",
+            label: "Sede Legale",
+            isRequired: false,
+        },
+    ]
+
     const [titolo, setTitolo] = useState<string>("");
     const [note, setNote] = useState<string>("");
     const [localErr, setLocalErr] = useState<string | null>(null);
-    const [q_type, setQ_Type] = useState<string>("");
+    const [q_type, setQ_Type] = useState<string>(""); //tipologia della quotazione (RDO, CIG, MEPA, BID PASSIVO, BID ATTIVO)
     const [dateTo, setDateTo] = useState<string>("");
-    const [cig, setCig] = useState<string>("");
-    const [rdo, setRdo] = useState<string>("");
+
     // Checkbox FE: per BID PASSIVO consente di proseguire senza cliente selezionato.
     // true  -> l'utente vuole collegare un cliente esistente (mostro FDSelect)
     // false -> l'utente prosegue senza cliente (il BE userà placeholder)
     const [hasExistingCustomer, setHasExistingCustomer] = useState<boolean>(true);
 
-    // Applichiamo gli stessi filtri di compilazione a MEPA e ALTRA GARA.
+    // Applichiamo gli stessi filtri di compilazione a MEPA.
     // Il controllo autorizzativo user.isMEPA resta lato BE solo per tipologia MEPA.
-    const hasMepaLikeFilters = q_type === "MEPA" || q_type === "ALTRA GARA";
+    const isMepaType = q_type === "MEPA";
+    const isLicenzeType = q_type === "LICENZE";
     const isBidPassivoType = q_type === "BID PASSIVO";
+    const isBidAttivoType = q_type === "BID ATTIVO";
+
+    // La select cliente è visibile solo in BID PASSIVO se l'utente vuole collegare un cliente esistente,
+    // altrimenti è nascosta e non richiesta in nessun altro caso.
     const shouldShowCustomerSelect = !isBidPassivoType || hasExistingCustomer;
 
     const qTypes = React.useMemo(() =>
@@ -115,7 +268,7 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
                     params: params.toString(),
                     ChangeLoadStatus: () => { },
                 });
-                if (!items) { enqueueSnackbar("Errore nel recupero dei clienti.", { title: 'Ops..', type: 'error' }); return; }
+                if (!items) { return; }
 
                 setCustomerOptions(items);
             } catch (err: any) {
@@ -141,13 +294,19 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
         setTitolo("");
         setNote("");
         setQ_Type("");
-        setCig("");
-        setRdo("");
         setCustomer(null);
         setDateTo("");
         setCustomerSearch("");
         setCustomerOptions([]);
         setHasExistingCustomer(true);
+        resetFormState();
+    };
+
+    /**
+     * Reset stato formState ai valori iniziali (usato alla creazione quotazione per pulire i campi condizionali)
+     */
+    const resetFormState = () => {
+        setFormState(formDefaultState);
     };
 
     /**
@@ -173,11 +332,44 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
             };
         }
 
-        if (hasMepaLikeFilters) {
-            if (!cig.trim() && !rdo.trim()) {
-                setLocalErr("Per le quotazioni MEPA o ALTRA GARA è necessario inserire almeno un valore tra CIG e RDO");
-                return;
+        if (formState && formState.type.value) {
+            const validationResult = isValidateFormType(formState);
+            if (!validationResult.status) {
+                return setLocalErr(validationResult.message as string);
             };
+        };
+
+        if (isBidAttivoType || isMepaType || isLicenzeType) {
+            if (formState && formState.details) {
+                if (isMepaType && formState.isEndUser) {
+                    return setLocalErr("Per le quotazioni MEPA non è possibile selezionare End User, in quanto per definizione sono rivolte alla Pubblica Amministrazione.");
+                };
+
+                if (isLicenzeType && !formState.isEndUser) {
+                    return setLocalErr("Per le quotazioni LICENZE è necessario selezionare End User.");
+                };
+
+                if (!isLicenzeType) {
+                    const validationResult = isValidateFormType(formState);
+                    if (!formState.type.value) {
+                        return setLocalErr("Per le tipologie BID ATTIVO e MEPA è necessario specificare un valore tra CIG, RDO o Acccordo Quadro o inserire N/D per saltare l'inserimento.");
+                    } else if (!validationResult.status) {
+                        return setLocalErr(validationResult.message as string);
+                    };
+                };
+
+                // validazione dei campi su extraParams.details
+                const detailsValidationResult = isValidateFromDetails(formState.details);
+                if (!detailsValidationResult.status) {
+                    return setLocalErr(detailsValidationResult.message as string);
+                };
+
+            } else {
+                return setLocalErr("Per le tipologie BID ATTIVO e MEPA è necessario specificare i dettagli obbigatori extra mostrati in visual quando si seleziona la tipologia di quotazione.");
+            }
+        };
+
+        if (isMepaType) {
             //controlla se l'utente ha inserito il range di date
             if (!dateTo) {
                 setLocalErr("Per questa tipologia di quotazione è necessario inserire una scadenza, che indicherà la durata di validità della quotazione.");
@@ -205,14 +397,9 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
             // non inviamo il campo: il backend applica il placeholder.
             customer: shouldShowCustomerSelect ? customer?.codiceCliente : undefined,
             dateTo,
-            cig,
-            rdo,
+            extraForm: formState,
             resetStates,
         });
-    };
-
-    const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
-        if (e.key === "Enter" && !loading) handleCreate();
     };
 
 
@@ -226,7 +413,6 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onKeyDown={onKeyDown}
                     >
                         <FDBox
                             asMotion
@@ -391,47 +577,187 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
                                     <FDSelect
                                         options={qTypes.map(type => ({ label: type.value, value: type.value }))}
                                         value={q_type}
-                                        onChange={(v: any) => setQ_Type(v)}
+                                        onChange={(v: any) => {
+                                            setQ_Type(v); resetFormState();
+                                            if (v === "LICENZE") {
+                                                setFormState((prev) => ({ ...prev, isEndUser: true }))
+                                            };
+                                        }}
                                         placeholder="tipologia.."
                                         size="sm" variant="outline" radius="md" fullWidth searchable
                                         virtualized={false}
                                         menuMaxHeight={240}
                                         clearable={false}
                                     />
+
                                     {/* Descrizione tipologia selezionata */}
                                     {q_type ? (
-                                        <div className="p-3 bg-gray-100/50 dark:bg-gray-800/50 rounded-md text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                        <div className="p-3 bg-yellow-200/40 dark:bg-yellow-800/40 rounded-md text-xs text-gray-600 dark:text-yellow-400 flex items-center gap-2">
                                             <CiInfoIcon className="w-12 h-12 text-yellow-500" />
                                             {qTypes.find(qt => qt.value === q_type)?.description || ""}
                                         </div>
                                     ) : null}
 
-                                    {/* Se la quotazione selezionata è MEPA o ALTRA GARA => input per inserire CIG o RDO */}
-                                    {hasMepaLikeFilters && <div className="space-y-2 w-full mt-4">
-                                        <h3 className="opacity-80 text-xs">(*) Inserisci uno o entrambi i valori CIG o RDO</h3>
-                                        <div className="flex flex-wrap gap-2">
-                                            <FDInput
-                                                type="text"
-                                                value={cig}
-                                                onChange={(e) => setCig(e.target.value)}
-                                                variant="outline"
-                                                size="sm"
-                                                radius="md"
-                                                disabled={loading}
-                                                placeholder="CIG"
-                                            />
-                                            <FDInput
-                                                type="text"
-                                                value={rdo}
-                                                onChange={(e) => setRdo(e.target.value)}
-                                                variant="outline"
-                                                size="sm"
-                                                radius="md"
-                                                disabled={loading}
-                                                placeholder="RDO"
-                                            />
+                                    {/** EXTRA FORM */}
+                                    <div>
+                                        {(isBidAttivoType || isMepaType || isLicenzeType) && <div className="flex flex-col items-center gap-4 mb-6">
+                                            <span className="opacity-80 text-xs">(*) Quotazione valida per End User?, se disabilitata verrà considerata la pubblica Amministrazione</span>
+                                            <div
+                                                className="inline-flex items-center gap-2 rounded-full border border-neutral-200/70 dark:border-neutral-800/70 bg-neutral-50/80 dark:bg-neutral-900/50 px-2 py-1"
+                                                onClick={(event) => event.stopPropagation()}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    className={clsx(
+                                                        "px-2 py-[3px] rounded-full text-[11px] font-medium transition",
+                                                        !formState.isEndUser
+                                                            ? "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200"
+                                                            : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200",
+                                                        isLicenzeType && "cursor-not-allowed opacity-50 line-through"
+                                                    )}
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        setFormState((prev: FormStateProps) => ({
+                                                            ...prev,
+                                                            isEndUser: false,
+                                                        }));
+                                                    }}
+                                                    disabled={loading || isMepaType || isLicenzeType}
+                                                >
+                                                    Pubblica Amministrazione
+                                                </button>
+
+                                                <FDSwitch
+                                                    size="sm"
+                                                    color="primary"
+                                                    checked={formState.isEndUser}
+                                                    ariaLabel="Mostra sconti categoria"
+                                                    onClick={(event) => event.stopPropagation()}
+                                                    onChange={(v: boolean) => setFormState((prev: FormStateProps) => ({
+                                                        ...prev,
+                                                        isEndUser: v,
+                                                    }))}
+                                                    disabled={loading || isMepaType || isLicenzeType}
+                                                />
+
+                                                <button
+                                                    type="button"
+                                                    className={clsx(
+                                                        "px-2 py-[3px] rounded-full text-[11px] font-medium transition",
+                                                        formState.isEndUser
+                                                            ? "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200"
+                                                            : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200",
+                                                        isMepaType && "cursor-not-allowed opacity-50 line-through"
+                                                    )}
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        setFormState((prev: FormStateProps) => ({
+                                                            ...prev,
+                                                            isEndUser: true,
+                                                        }));
+                                                    }}
+                                                    disabled={loading || isMepaType || isLicenzeType}
+                                                >
+                                                    End User
+                                                </button>
+                                            </div>
+                                        </div>}
+
+                                        {/**
+                                             * Se è Pubblica Amministrazione permetti la selezione di compilazione
+                                             */
+                                            !formState.isEndUser &&
+                                            <div className="flex items-center gap-4 mt-2 justify-between">
+                                                <span className="opacity-80 text-xs mr-4">{(!isBidAttivoType && !isMepaType) ? "[opzionale] Inserisci RDO o CIG " : "(*) Seleziona una valore tra RDO, CIG, Accordo Quadro o N/D"}</span>
+                                                <FDSelect
+                                                    options={[
+                                                        { label: "RDO", value: "RDO" },
+                                                        { label: "CIG", value: "CIG" },
+                                                        ...(isBidAttivoType || isMepaType) ? [{ label: "Accordo Quadro", value: "ACCORDO_QUADRO" }, { label: "N/D", value: "ND" }] : [],
+                                                    ] as OptionType[]}
+                                                    value={formState.type.value ?? null}
+                                                    onChange={(v: any) => setFormState((prev) => ({
+                                                        ...prev,
+                                                        type: {
+                                                            value: v,
+                                                            CIG: "",
+                                                            RDO: "",
+                                                            ACCORDO_QUADRO: "",
+                                                        },
+                                                    }))}
+                                                    placeholder="Seleziona il tipo di cliente.."
+                                                    size="sm" variant="outline" radius="md"
+                                                    virtualized={false}
+                                                    menuMaxHeight={240}
+                                                    clearable={true}
+                                                    searchable={false}
+                                                    className="!w-38"
+                                                />
+                                            </div>
+                                        }
+
+                                        {/**
+                                             * Se è End User mostra i campi di compilazione dinamici in base alla tipologia selezionata (CIG, RDO o Accordo Quadro)
+                                             */}
+                                        <div>
+                                            {(((isBidAttivoType && !formState.isEndUser) || (isMepaType && !formState.isEndUser) || (!isBidAttivoType || !isMepaType)) && formState.type.value && formState.type.value !== "ND") &&
+                                                <div className="grid grid-cols-[max-content_1fr] items-center gap-2 mt-2 justify-between sm:grid-cols-[150px_1fr]">
+                                                    <span className="opacity-80 text-xs mr-4">{(!isBidAttivoType && !isMepaType) ? "[opzionale]" : "(*) Inserisci"} {`${formState.type.value}`}</span>
+                                                    <FDInput
+                                                        label={`Inserisci ${formState.type.value}..`}
+                                                        onChange={(e) => setFormState((prev) => ({
+                                                            ...prev,
+                                                            type: {
+                                                                ...prev.type,
+                                                                [formState.type.value || ""]: e.target.value,
+                                                            },
+                                                        }))}
+                                                        type="text"
+                                                        value={(formState.type.value && formState.type.value) ? formState.type[formState.type.value] : ""}
+                                                        variant="outline"
+                                                        size="sm"
+                                                        radius="md"
+                                                        disabled={loading || !formState.type.value}
+                                                        fullWidth
+                                                        placeholder="esempio 123456"
+                                                    />
+                                                </div>
+                                            }
+
+                                            {/**
+                                                 * Compilazione form dinamica nome, partita iva, email e sede legale per End User in BID ATTIVO, MEPA e LICENZE
+                                                 */}
+                                            {(isBidAttivoType || isMepaType || isLicenzeType) && endUserForm.map((key: endUserFormProps, index: number) => (
+                                                <div key={key.key + index} className="grid grid-cols-[max-content_1fr] items-center gap-2 mt-2 justify-between sm:grid-cols-[150px_1fr]">
+                                                    <span className="opacity-80 text-xs mr-4 w">{key.isRequired ? "(*)" : ""} {key.label}</span>
+                                                    <FDInput
+                                                        type="text"
+                                                        value={formState.details[key.key as keyof FormStateProps["details"]] || ""}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                                            const value = e.target.value;
+                                                            if (key.onlyNumber && isNaN(Number(value))) {
+                                                                return;
+                                                            };
+                                                            if (key.maxLength && value.length > key.maxLength) {
+                                                                return;
+                                                            }
+                                                            setFormState((prev: FormStateProps) => {
+                                                                const newForm = { ...prev };
+                                                                newForm.details[key.key as keyof FormStateProps["details"]] = value;
+                                                                return newForm;
+                                                            });
+                                                        }}
+                                                        variant="outline"
+                                                        size="sm"
+                                                        radius="md"
+                                                        disabled={loading}
+                                                        placeholder={`${key.label}..`}
+                                                        fullWidth
+                                                    />
+                                                </div>
+                                            ))}
                                         </div>
-                                    </div>}
+                                    </div>
                                 </div>
 
                                 {/* Divider */}
@@ -439,11 +765,16 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
 
                                 {/* Date Range */}
                                 <div className="w-full">
-                                    <h3 className="opacity-80 text-xs">{hasMepaLikeFilters && "(*) "}Esplicita una scadenza per la validità della quotazione</h3>
+                                    <h3 className="opacity-80 text-xs">{isMepaType && "(*) "}Esplicita una scadenza per la validità della quotazione</h3>
                                     <FDDate
-                                        value={dateTo || undefined}
-                                        onChange={(v) => { setDateTo(v || ''); }}
+                                        type="datetime-local"
+                                        value={toLocalDateTimeInputValue(dateTo) || undefined}
+                                        onChange={(v) => { setDateTo(v ? new Date(v).toISOString() : ''); }}
                                         size="sm" variant="outline" radius="md" color="auto" fullWidth
+                                        range={false}
+                                        dataTooltipId="general-quotations-tooltip"
+                                        dataTooltipContent={`${dateTo ?
+                                            `Scadenza: ${formatISODate(dateTo)}` : "Nessuna scadenza impostata"}`}
                                     />
                                 </div>
 

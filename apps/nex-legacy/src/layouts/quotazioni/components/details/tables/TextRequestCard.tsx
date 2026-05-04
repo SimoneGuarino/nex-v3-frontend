@@ -4,12 +4,14 @@ import { FiEdit3 } from "react-icons/fi";
 import { NumberToEuro, TruncateText } from "utils";
 import { CartProductDTO, TextRequestCartDTO } from "layouts/quotazioni/types/qts_product";
 import {
+    productStateTransitions,
     RigaStato,
     stateProductLabels,
     stateProductOptionsPalette,
 } from "layouts/quotazioni/types/quotations";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import { clsx } from "components/UI/box/FDBox";
+import { CapitalizeFirstLetter } from "utils/string/capitalize";
 
 const FiEdit3Icon = FiEdit3 as React.FC<{ size?: number; className?: string }>;
 
@@ -29,7 +31,9 @@ const TextRequestCard: React.FC<Props> = ({
     handleOpenQtsSettings,
 }) => {
     const stato = item.quotazione?.stato as RigaStato | undefined;
-    const statoLabel = stato ? stateProductLabels[stato] : "Stato non definito";
+    const statoLabel = stato ? (productStateTransitions[stato] ?
+        CapitalizeFirstLetter(productStateTransitions[stato].replace("_", " "))
+        : stateProductLabels[stato]) : "Stato non definito";
 
     const hasPrice = item.quotazione?.prezzo_finale != null;
     const prezzoFinale = hasPrice ? Number(item.quotazione!.prezzo_finale) : null;
@@ -85,7 +89,7 @@ const TextRequestCard: React.FC<Props> = ({
                                     <span
                                         className={clsx(
                                             "mr-1 h-1.5 w-1.5 rounded-full",
-                                            `${stateProductOptionsPalette[stato]}`,
+                                            stateProductOptionsPalette[stato]
                                         )}
                                     />
                                     {statoLabel}

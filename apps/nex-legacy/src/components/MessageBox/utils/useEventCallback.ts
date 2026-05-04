@@ -15,7 +15,6 @@ export default function useEventCallback<Args extends unknown[], Return>(
     });
     return React.useCallback(
         (...args: Args) =>
-            // @ts-expect-error hide `this`
             (0, ref.current)(...args),
         []
     );

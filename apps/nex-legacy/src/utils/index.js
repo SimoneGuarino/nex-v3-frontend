@@ -1,6 +1,5 @@
 export { SplitCammelCase } from './splitCammelCase.ts';
 export { CalcPercent } from './percent.ts';
-export { DecompressBrotliObjects } from './brodliDecompress.ts';
 export { DwdFileFromLink, CreateAndDownloadExcel, CreateAndDownloadCSV } from './dwdFile.ts';
 export { RetriveSupplierFromCookies } from './retriveSupplierFromCookies.ts';
 export { ConvertToItalianDate } from './italianDate.ts';
@@ -14,11 +13,16 @@ export { GetDate } from './date/getDate.ts';
 export { StringToHTML } from './stringToHTML.ts';
 export { Notifications } from './notifications/notifications.ts';
 export { DivideName } from './divideName.ts';
-export { saveMessageToIndexedDB, SyncronizeIndexedDB, getMessagesByViewed,
+export {
+    saveMessageToIndexedDB, SyncronizeIndexedDB, getMessagesByViewed,
     getAllBlocks, getMessagesByIdBlock, updateMessagesViewedByIdBlock,
-    findBlock, getOldestMessageDateByIdBlock } from './IndexedDB/chats/message.ts';
+    findBlock, getOldestMessageDateByIdBlock
+} from './IndexedDB/chats/message.ts';
 export { getNestedProperty } from './data/getNestedProperty.ts';
+export { pickFieldInsensitive, toTrimmedText, isFlagOn, toSN } from './data/record.ts';
 export { randomIntFromInterval } from './number/random.ts';
 export { CopyToClipboard } from './string/copy.ts';
 export { TruncateText } from './string/truncate.ts';
 export { getRolesMappedByIndex, getRolesMappedByLabel, getRolesOptionsFromEnv } from './ruoli/index.ts';
+export { FormatNumber } from './number/format.ts';
+export { ConvertToReadableString } from './string/convert.ts';

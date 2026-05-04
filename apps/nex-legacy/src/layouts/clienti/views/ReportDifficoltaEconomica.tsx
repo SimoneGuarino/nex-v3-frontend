@@ -3,34 +3,57 @@ import { TableVirtualized } from "components/Virtualized/table";
 import {
     getData as getDiffEconomicaData,
 } from "../fetchData/reportProfilazione/diffEconomica/getData";
-import {
-    searchCustomers as searchCustomersDiffEconomica,
-} from "../fetchData/reportProfilazione/diffEconomica/searchCustomers";
 import type { ViewComponentProps, SearchParams } from "../types/view";
 import { ConvertToItalianDate } from "utils";
+import { useCustomerOptionsMenu } from "../components/useCustomerOptionsMenu";
 
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import { IoPersonSharp } from "react-icons/io5";
-import { BsPiggyBank, BsBoxSeam } from "react-icons/bs";
-import { LuChartNoAxesCombined } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
+type HeaderSortPayload = {
+    columnKey: string;
+    sortDirection: number;
+};
+
+type ProfilazioneSortDirection = "asc" | "desc";
+type ProfilazioneSortField =
+    | "CODICE_CLIENTE"
+    | "RAGIONE_SOCIALE"
+    | "PARTITA_IVA"
+    | "CODICE_AGENTE"
+    | "AGENTE"
+    | "CLIENTE_RISCHIOSO"
+    | "DATA_ULTIMO_AGG";
+
+const PROFILAZIONE_SORT_FIELD_BY_COLUMN_KEY: Record<string, ProfilazioneSortField> = {
+    CODICE_CLIENTE: "CODICE_CLIENTE",
+    RAGIONE_SOCIALE: "RAGIONE_SOCIALE",
+    PARTITA_IVA: "PARTITA_IVA",
+    CODICE_AGENTE: "CODICE_AGENTE",
+    AGENTE: "AGENTE",
+    CLIENTE_RISCHIOSO: "CLIENTE_RISCHIOSO",
+    DATA_ULTIMO_AGG: "DATA_ULTIMO_AGG",
+};
+
+function normalizeProfilazioneSort(sort: HeaderSortPayload): {
+    profilazioneSortField?: ProfilazioneSortField;
+    profilazioneSortDirection?: ProfilazioneSortDirection;
+} {
+    const field = PROFILAZIONE_SORT_FIELD_BY_COLUMN_KEY[String(sort.columnKey || "").trim()];
+    if (!field) return {};
+
+    if (sort.sortDirection === 1) {
+        return { profilazioneSortField: field, profilazioneSortDirection: "asc" };
+    }
+
+    if (sort.sortDirection === 2) {
+        return { profilazioneSortField: field, profilazioneSortDirection: "desc" };
+    }
+
+    return {};
+}
 
 
 // ——————————————————————————————————————————————————————————
 // TYPES & INTERFACE
 // ——————————————————————————————————————————————————————————
-type CustomerOption = {
-    label: string; //label per select clienti (UI)
-    value: string; //value per select clienti (UI)
-    raw: { codice: string; denominazione: string }; //payload cliente (codice + denominazione)
-};
-
-interface ReportDiffEconomicaProps extends ViewComponentProps {
-    setCustomerOptions?: React.Dispatch<React.SetStateAction<CustomerOption[]>>; //setter opzioni clienti condivise (Topbar)
-    setLoadingCustomers?: React.Dispatch<React.SetStateAction<boolean>>; //setter loading opzioni clienti (Topbar)
-}
-
-
 // ——————————————————————————————————————————————————————————
 // MAIN COMPONENT
 // ——————————————————————————————————————————————————————————
@@ -38,16 +61,13 @@ interface ReportDiffEconomicaProps extends ViewComponentProps {
  * View Report Difficoltà Economica:
  * - visualizza la lista clienti “a rischio”/con difficoltà economiche
  * - formatta la data "DATA_ULTIMO_AGG" in formato italiano
- * - popola la select clienti condivisa in Topbar (FiltersMenu)
  * - gestisce paginazione/infinite scroll tramite getDiffEconomicaData
  * - aggiunge la colonna "Opzioni" con shortcut verso Anagrafica/Fido/Backorders/Fatturati
  * @returns
  */
-export const ReportDiffEconomicaView: React.FC<ReportDiffEconomicaProps> = ({
+export const ReportDiffEconomicaView: React.FC<ViewComponentProps> = ({
     userContext,
     params,
-    setCustomerOptions,
-    setLoadingCustomers,
     onNavigateToCustomerView,
     loadStatus,
     ChangeLoadStatus,
@@ -55,10 +75,27 @@ export const ReportDiffEconomicaView: React.FC<ReportDiffEconomicaProps> = ({
     const [rows, setRows] = React.useState<any[]>([]); //righe tabella (arricchite con OPZIONI + data formattata)
     const [total, setTotal] = React.useState<number>(0); //totale record lato BE
     const [loading, setLoading] = React.useState(false); //loading fetch tabella
+    const [serverSort, setServerSort] = React.useState<HeaderSortPayload>({
+        columnKey: "",
+        sortDirection: 0,
+    });
     const offsetRef = React.useRef(0); //offset per paginazione/infinite scroll
     const abortController = React.useRef<AbortController | null>(null); //abort controller per interrompere fetch pendenti
 
-    const navigate = useNavigate(); //router navigate (per redirect a /contabilita/fatturati)
+    React.useEffect(() => {
+        return () => {
+            abortController.current?.abort();
+            abortController.current = null;
+        };
+    }, []);
+
+    const { renderOptionsTrigger, optionsOverlays } = useCustomerOptionsMenu({
+        currentView: "reportDiffEconomica",
+        userContext,
+        companySelected: params.common.companySelected,
+        agentCode: params.common.agentCode || null,
+        onNavigateToCustomerView,
+    });
 
     /**
      * Wrapper setRows:
@@ -73,81 +110,24 @@ export const ReportDiffEconomicaView: React.FC<ReportDiffEconomicaProps> = ({
                     typeof updater === "function" ? (updater as any)(prev) : updater;
                 if (!Array.isArray(next)) return next;
 
-                return next.map((row) => {
+                return next.map((row, index) => {
                     const codice = String(row?.CODICE_CLIENTE ?? "").trim() || ""; //codice cliente
                     const denominazione =
                         String(row?.RAGIONE_SOCIALE ?? "").trim() || ""; //ragione sociale
-                    const customerPayload = { codice, denominazione }; //payload per jump cross-view
 
                     return {
                         ...row,
                         DATA_ULTIMO_AGG: ConvertToItalianDate(row?.DATA_ULTIMO_AGG, null), //formattazione data ultimo aggiornamento
-                        OPZIONI: (
-                            <div className="w-full flex gap-2 items-center">
-                                {/* 1) Anagrafica */}
-                                <FDIconButton
-                                    icon={IoPersonSharp({})}
-                                    dataTooltipId="customers-tooltip"
-                                    dataTooltipContent="Anagrafica Cliente"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (!codice || !onNavigateToCustomerView) return;
-                                        onNavigateToCustomerView("anagrafica", customerPayload);
-                                    }}
-                                />
-
-                                {/* 2) Fido */}
-                                <FDIconButton
-                                    icon={BsPiggyBank({})}
-                                    dataTooltipId="customers-tooltip"
-                                    dataTooltipContent="Fido Residuo Cliente"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (!codice || !onNavigateToCustomerView) return;
-                                        onNavigateToCustomerView("fido", customerPayload);
-                                    }}
-                                />
-
-                                {/* 3) Backorders */}
-                                <FDIconButton
-                                    icon={BsBoxSeam({})}
-                                    dataTooltipId="customers-tooltip"
-                                    dataTooltipContent="Backorders Cliente"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (!codice || !onNavigateToCustomerView) return;
-                                        onNavigateToCustomerView("backorders", customerPayload);
-                                    }}
-                                />
-
-                                {/* 4) Fatturato */}
-                                <FDIconButton
-                                    icon={LuChartNoAxesCombined({})}
-                                    dataTooltipId="customers-tooltip"
-                                    dataTooltipContent="Fatturato Cliente"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (!codice) return;
-
-                                        const sysInfo = "FOCELDA"; //sistema di riferimento per i fatturati
-                                        const searchParams = new URLSearchParams({
-                                            CLI: codice,
-                                            dimension: "CLIENT",
-                                            sysInfo,
-                                        });
-
-                                        navigate(
-                                            `/contabilita/fatturati?${searchParams.toString()}`
-                                        );
-                                    }}
-                                />
-                            </div>
-                        ),
+                        OPZIONI: renderOptionsTrigger({
+                            codice,
+                            denominazione,
+                            rowKey: `${codice}:${index}`,
+                        }),
                     };
                 });
             });
         },
-        [navigate, onNavigateToCustomerView]
+        [renderOptionsTrigger]
     );
 
     const columns = React.useMemo(
@@ -207,14 +187,16 @@ export const ReportDiffEconomicaView: React.FC<ReportDiffEconomicaProps> = ({
             {
                 key: "CLIENTE_RISCHIOSO",
                 label: "Cliente Rischioso",
-                sort: false,
+                sort: true,
+                sortType: "string",
                 width: 260,
                 sx: { alignItems: "center" },
             },
             {
                 key: "DATA_ULTIMO_AGG",
                 label: "Ultimo Aggiornamento",
-                sort: false,
+                sort: true,
+                sortType: "string",
                 type: "string",
                 width: 200,
                 sx: { alignItems: "center" },
@@ -258,57 +240,31 @@ export const ReportDiffEconomicaView: React.FC<ReportDiffEconomicaProps> = ({
         // filtro “lista clienti”
         if (c.clientFilterCodes?.length) {
             body.cst = 1;
-            body.ccli = c.clientFilterCodes.map((codice) => ({ codice }));
+            body.ccli = c.clientFilterCodes.map((customer) => ({
+                codice: customer.codiceCliente,
+            }));
+        }
+
+        const normalizedSort = normalizeProfilazioneSort(serverSort);
+        if (normalizedSort.profilazioneSortField && normalizedSort.profilazioneSortDirection) {
+            body.profilazioneSortField = normalizedSort.profilazioneSortField;
+            body.profilazioneSortDirection = normalizedSort.profilazioneSortDirection;
         }
 
         return body;
-    }, []);
+    }, [serverSort]);
 
-    /**
-     * Fetch lista clienti per la select condivisa (Topbar).
-     * Nota: usa filtri minimi (cmp + eventuali agentCode/piva/ragsoc) per suggerire clienti coerenti.
-     */
-    const fetchCustomers = React.useCallback(() => {
-        if (!userContext?.token) return;
-        if (!setCustomerOptions || !setLoadingCustomers) return;
-
-        setLoadingCustomers(true);
-
-        const c = params.common;
-        const body: any = { cmp: c.companySelected };
-        if (c.agentCode) body.ccom = c.agentCode;
-        if (c.piva?.trim()) body.piva = c.piva.trim();
-        if (c.ragSoc?.trim()) body.ragsoc = c.ragSoc.trim();
-
-        searchCustomersDiffEconomica({
-            userContext,
-            abortController,
-            body,
-            setOptions: (opts) => {
-                // rimappo aggiungendo raw.denominazione (parsata dalla label)
-                const mapped = (opts || []).map((o: any) => {
-                    const parts = String(o.label ?? "").split(" - ");
-                    const denominazione = parts.slice(1).join(" - ");
-                    return {
-                        ...o,
-                        raw: { codice: o.value, denominazione },
-                    };
-                });
-
-                setCustomerOptions(mapped);
-                setLoadingCustomers(false);
-            },
-            ChangeLoadStatus: () => { },
-        });
-    }, [
-        userContext?.token,
-        params.common.companySelected,
-        params.common.agentCode,
-        params.common.piva,
-        params.common.ragSoc,
-        setCustomerOptions,
-        setLoadingCustomers,
-    ]);
+    const handleServerSortChange = React.useCallback(
+        ({ columnKey, sortDirection }: HeaderSortPayload) => {
+            setServerSort((prev) => {
+                if (prev.columnKey === columnKey && prev.sortDirection === sortDirection) {
+                    return prev;
+                }
+                return { columnKey, sortDirection };
+            });
+        },
+        []
+    );
 
     /**
      * Fetch prima pagina:
@@ -337,13 +293,8 @@ export const ReportDiffEconomicaView: React.FC<ReportDiffEconomicaProps> = ({
 
     // reload tabella quando cambiano i params applicati
     React.useEffect(() => {
-        fetchFirstPage();
+        fetchFirstPage().catch(() => { });
     }, [fetchFirstPage]);
-
-    // aggiorno le opzioni clienti quando cambiano i filtri di base (company/agent/piva/ragsoc)
-    React.useEffect(() => {
-        fetchCustomers();
-    }, [fetchCustomers]);
 
     /**
      * Infinite scroll:
@@ -375,18 +326,26 @@ export const ReportDiffEconomicaView: React.FC<ReportDiffEconomicaProps> = ({
     ]);
 
     return (
-        <TableVirtualized
-            key="reportDiffEconomica"
-            data={rows}
-            setData={setRowsWithOptions}
-            columns={columns}
-            setColumns={() => { }}
-            results={total}
-            loadStatus={loading}
-            whereToFindData={false}
-            footer
-            infiniteScroll={{ func: infiniteScroll }}
-            className="h-full"
-        />
+        <>
+            <TableVirtualized
+                key="reportDiffEconomica"
+                data={rows}
+                setData={setRowsWithOptions}
+                columns={columns}
+                setColumns={() => { }}
+                results={total}
+                loadStatus={loading}
+                whereToFindData={false}
+                footer
+                infiniteScroll={{ func: infiniteScroll }}
+                headerSettings={{
+                    onSortChange: handleServerSortChange,
+                    sortState: serverSort,
+                }}
+                className="h-full"
+            />
+
+            {optionsOverlays}
+        </>
     );
 };

@@ -1,4 +1,3 @@
-// src/layouts/quotazioni/fetchdata/agent/getOwnQuotationsData.ts
 import { FetchData } from "examples/Fetch";
 import type { MutableRefObject } from "react";
 import type { UserState } from "types/UserContext";

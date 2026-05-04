@@ -42,6 +42,21 @@ type UpdateQtsProductStateAPIParams = {
     quotationId: string;
     idDoc: string;
     body: UpdateQtsProductBodyFE;
+    HandleComplete?: (payload?: {
+        updatedAt?: string;
+        quotationState?: string | null;
+        autoCompleted?: boolean;
+        quotationValue?: number | null;
+    }) => void | Promise<void>;
+    HandleError?: (msg: string) => void;
+};
+
+type ReassignQtsProductBuyerAPIParams = {
+    abortController: AbortController;
+    user: any;
+    quotationId: string;
+    idDoc: string;
+    newBuyerCode: string;
     HandleComplete?: () => void | Promise<void>;
     HandleError?: (msg: string) => void;
 };
@@ -132,7 +147,7 @@ const isPositiveInteger = (n: unknown): n is number =>
 // API FUNCTIONS
 // ——————————————————————————————————————————————————————————
 /**
- * Aggiunge prodotti al carrello di una quotazione
+ * Aggiunge prodotti al carrello di una quotazione o modifica quelli esistenti in caso di QuoteProductKind "TEXT_REQUEST"
  * @param abortController Controller per abortire la richiesta
  * @param user Stato utente corrente
  * @param quotationId Id della quotazione
@@ -298,6 +313,51 @@ export async function DeleteProductsToCartAPI({
  * @param HandleError Callback eseguita in caso di errore 
  * @returns void
  */
+export const ReassignQtsProductBuyerAPI = async ({
+    abortController,
+    user,
+    quotationId,
+    idDoc,
+    newBuyerCode,
+    HandleComplete,
+    HandleError,
+}: ReassignQtsProductBuyerAPIParams): Promise<void> => {
+    try {
+        if (!quotationId || !idDoc) {
+            HandleError?.("Identificativi quotazione/prodotto non validi.");
+            return;
+        }
+
+        const buyer = String(newBuyerCode ?? "").trim().toUpperCase();
+        if (!buyer || buyer.length !== 3) {
+            HandleError?.("Seleziona un buyer valido.");
+            return;
+        }
+
+        const base = import.meta.env.VITE_API_ORDER ?? "";
+        const url = new URL(`${base}quotations/${quotationId}/cart/${idDoc}/reassign-buyer`);
+
+        await FetchData(
+            url.toString(),
+            "POST",
+            { newBuyerCode: buyer },
+            abortController,
+        );
+
+        await HandleComplete?.();
+    } catch (err: unknown) {
+        const e = err as { name?: string; message?: any };
+        if (e?.name !== "AbortError") {
+            const backendMsg =
+                typeof e?.message === "string"
+                    ? e.message
+                    : e?.message?.msg || "Errore durante la riassegnazione del buyer.";
+            console.error("[ReassignQtsProductBuyerAPI] errore:", err);
+            HandleError?.(backendMsg);
+        }
+    }
+};
+
 export const UpdateQtsProductStateAPI = async ({
     abortController,
     user,
@@ -340,7 +400,22 @@ export const UpdateQtsProductStateAPI = async ({
             return;
         };
 
-        HandleComplete && (await HandleComplete());
+        let json:
+            | {
+                updatedAt?: string;
+                quotationState?: string | null;
+                autoCompleted?: boolean;
+                quotationValue?: number | null;
+            }
+            | undefined;
+
+        try {
+            json = await res.json();
+        } catch {
+            json = undefined;
+        }
+
+        await HandleComplete?.(json);
     } catch (err: any) {
         if (err?.name === "AbortError") return;
         console.error("[UpdateQtsProductStateAPI] errore:", err);

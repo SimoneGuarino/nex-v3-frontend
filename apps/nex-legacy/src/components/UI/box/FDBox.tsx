@@ -2,7 +2,7 @@
 import React, { forwardRef } from "react";
 import { motion, type HTMLMotionProps } from "framer-motion";
 
-type FDVariant = "solid" | "soft" | "outline" | "ghost" | "gradient";
+type FDVariant = "solid" | "soft" | "outline" | "ghost" | "gradient" | "gradient-simple";
 type FDColor =
     | "primary" | "secondary" | "info" | "success" | "warning" | "error"
     | "light" | "dark" | "purple" | "lightPurple" | "teal" | "neutral";
@@ -73,6 +73,7 @@ function variantClasses(variant: FDVariant, color: FDColor, gradientFrom?: strin
         case "soft":
             return clsx(
                 `${c.soft} text-neutral-900`,
+                border ? "border" : ""
             );
 
         case "outline":
@@ -93,6 +94,15 @@ function variantClasses(variant: FDVariant, color: FDColor, gradientFrom?: strin
                 color === "light" ? "text-neutral-900 dark:text-gray-200" : `text-${c.textOnSolid}`,
                 border ? "border border-black/5 dark:border-white/10" : "",
                 "backdrop-blur supports-[backdrop-filter]:backdrop-blur",
+            );
+
+        case "gradient-simple":
+            return clsx(
+                "bg-gradient-to-br",
+                gradientFrom ?? `from-${c.bg}`,
+                gradientTo ?? (color === "primary" ? "to-indigo-600" : `to-${c.bg}`),
+                color === "light" ? "text-neutral-900 dark:text-gray-200" : `text-${c.textOnSolid}`,
+                border ? "border border-black/5 dark:border-white/10" : "",
             );
     }
 }

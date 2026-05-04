@@ -14,14 +14,11 @@ import DeleteImage from "assets/images/delete-concept-tiny-people.webp";
 
 import fetchGroups from "./fetch/fetchGroups";
 import fetchTotalGroups from "./fetch/fetchTotalsGroups";
-import { useMaterialUIController } from "context/index";
-import { MainTheme } from "assets/settingsTheme";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import editGroup from "./fetch/editGroup";
 import Allert from "examples/Allert";
 import { CheckAdminPermissions } from "utils/checkAdminPermissions";
-import { UserContextType } from "types/UserContext";
 import { useNexTheme } from "@nex/theme-system";
 
 // Types & interfaces
@@ -194,9 +191,8 @@ export const GruppiMailUpClienti: React.FC<{}> = () => {
     };
 
     // Dark mode
-    const [controller, dispatch] = useMaterialUIController();
-    const { darkMode } = controller;
-    const palette = MainTheme().palette;
+    const { preferences } = useNexTheme();
+    const darkMode = preferences.mode === "dark";
 
     // Main table
     const [groupsTable, setGroupsTable]: [groupTableInterface[], React.Dispatch<React.SetStateAction<groupTableInterface[]>>] = React.useState([{}]);

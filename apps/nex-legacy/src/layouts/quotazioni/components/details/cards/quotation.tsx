@@ -12,25 +12,43 @@ import { CopyToClipboard } from "utils";
 import { BsBoxSeam } from "react-icons/bs";
 import { IoCopyOutline } from "react-icons/io5";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { PiInvoiceLight } from "react-icons/pi";
+
 import { MdEuro } from "react-icons/md";
+import { UserAvatar } from "examples/Navbars/components/userInfo";
+import { toLocalDateTimeInputValue } from "utils/date/getDate";
+import { ConvertToReadableString } from "utils/string/convert";
 
 const BsBoxSeamIcon = BsBoxSeam as React.FC<{ size?: number; className?: string }>;
 const IoCopyOutlineIcon = IoCopyOutline as React.FC<{ size?: number; className?: string }>;
 const FiChevronDownIcon = FiChevronDown as React.FC<{ size?: number; className?: string }>;
 const FiChevronUpIcon = FiChevronUp as React.FC<{ size?: number; className?: string }>;
 const MdEuroIcon = MdEuro as React.FC<{ size?: number; className?: string }>;
+const PiInvoiceLightIcon = PiInvoiceLight as React.FC<{ size?: number; className?: string }>;
+
 
 // ——————————————————————————————————————————————————————————
 // TYPES
 // ——————————————————————————————————————————————————————————
 type QuotationDetailsCardProps = {
     quotation: QuotazioneDTO | null;
-    quotationId: string;
     prog_num?: number;
     /** true se l'utente può vedere valori economici (buyer/admin/dev) */
-    canSeePrices?: boolean;
+    isAdmin?: boolean;
+    /** true se l'utente è un agente */
+    isAgent?: boolean;
+    /** callback per aprire il pannello Ok Links */
+    setOpenOkLinksPanel: (open: boolean) => void;
+    /** callback per aggiornare i dati degli Ok Links */
+    fetchQuotationOkLinks: () => void;
     /** totale netto o lordo corrente della quotazione */
     totalAmount?: number | null;
+
+    /** stato di loading per azioni asincrone (es. aggiornamento finestra di validità) */
+    loading: {
+        [key: string]: boolean | Map<string, boolean>;
+    };
+    setLoading: React.Dispatch<React.SetStateAction<{ [key: string]: boolean | Map<string, boolean> }>>;
 
     /**
      * Callback opzionale: salva la finestra di validità.
@@ -56,20 +74,12 @@ function formatDecimal(val?: string | number | null): string {
     return num.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-/** Converte un valore (Date/string/number/undefined) nel formato input="date" (YYYY-MM-DD). */
-function toDateInputValue(v: unknown): string | undefined {
-    if (!v) return undefined;
-    const d = v instanceof Date ? v : new Date(v as any);
-    if (Number.isNaN(d.getTime())) return undefined;
-    return d.toISOString().slice(0, 10);
-};
-
 /** Converte in data leggibile (it-IT) oppure null. */
 function toHumanDate(v: unknown): string | null {
     if (!v) return null;
     const d = v instanceof Date ? v : new Date(v as any);
     if (Number.isNaN(d.getTime())) return null;
-    return d.toLocaleDateString("it-IT");
+    return d.toLocaleString("it-IT");
 };
 
 function startOfDayLocal(d: Date) {
@@ -90,7 +100,7 @@ const InfoRow = React.memo(function InfoRow(props: {
 }) {
     return (
         <div className={props.className ?? ""} data-tooltip-content={props.tooltip} data-tooltip-id="general-quotations-tooltip">
-            <span className="font-medium text-neutral-700 dark:text-neutral-200">{props.label} </span>
+            <span className="text-xs text-neutral-400 dark:text-neutral-700">{props.label} </span>
             <span className="text-neutral-700 dark:text-neutral-300">{props.children}</span>
         </div>
     );
@@ -102,19 +112,22 @@ const InfoRow = React.memo(function InfoRow(props: {
 // ——————————————————————————————————————————————————————————
 export default function QuotationDetailsCard({
     quotation,
-    quotationId,
-    canSeePrices,
+    isAdmin,
     totalAmount,
     prog_num,
+    loading,
+    isAgent,
+    setLoading,
+    setOpenOkLinksPanel,
+    fetchQuotationOkLinks,
     onUpdateValidityWindow,
 }: QuotationDetailsCardProps) {
-    const [isOpen, setIsOpen] = React.useState(true);
-
+    const [isOpen, setIsOpen] = React.useState<boolean>(true);
+    const [editMode, setEditMode] = React.useState<boolean>(false);
 
     // ——————————————————————————————————————————————————————————
     // FLAGS
     // ——————————————————————————————————————————————————————————
-    const isDraft = quotation?.stato === "BOZZA";
     const isMepa = (quotation as any)?.tipologia === "MEPA";
 
 
@@ -137,9 +150,8 @@ export default function QuotationDetailsCard({
     const validToHuman = React.useMemo(() => toHumanDate(rawValidTo), [rawValidTo]);
 
     // BOZZA: editiamo SOLO "fine"
-    const initialEnd = React.useMemo(() => toDateInputValue(rawValidTo), [rawValidTo]);
+    const initialEnd = React.useMemo(() => toLocalDateTimeInputValue(rawValidTo), [rawValidTo]);
     const [validEnd, setValidEnd] = React.useState<string | undefined>(initialEnd);
-    const [isSavingValidity, setIsSavingValidity] = React.useState(false);
     const hasUserEditedEndRef = React.useRef(false);
 
     const endDirty = React.useMemo(() => validEnd !== initialEnd, [validEnd, initialEnd]);
@@ -168,11 +180,12 @@ export default function QuotationDetailsCard({
         if (!endDirty) return;
 
         try {
-            setIsSavingValidity(true);
+            setLoading((prev) => ({ ...prev, change_validity_window: true }));
             await onUpdateValidityWindow({ fine: validEnd });
             hasUserEditedEndRef.current = false;
         } finally {
-            setIsSavingValidity(false);
+            setEditMode(false);
+            setLoading((prev) => ({ ...prev, change_validity_window: false }));
         }
     }, [onUpdateValidityWindow, endDirty, validEnd]);
 
@@ -221,7 +234,7 @@ export default function QuotationDetailsCard({
                     </div>
 
                     {/* Totale quotazione – solo buyer/admin/dev */}
-                    {canSeePrices && typeof totalAmount === "number" && (
+                    {isAdmin && typeof totalAmount === "number" && (
                         <motion.div
                             layout
                             className="inline-flex items-center gap-2 rounded-full mt-2 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-700 px-3 py-[4px] shadow-sm"
@@ -297,26 +310,24 @@ export default function QuotationDetailsCard({
                         transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
                         className="overflow-hidden"
                     >
-                        <div className="mt-3 text-sm text-neutral-500 dark:text-neutral-400 space-y-2">
+                        <FDBox variant="ghost" className="mt-3 text-sm space-y-2">
                             <InfoRow label="Titolo:">{quotation.titolo || "N/A"}</InfoRow>
                             <InfoRow label="Stato:">{quotation.stato}</InfoRow>
                             <InfoRow label="Note:">{quotation.note ?? "N/A"}</InfoRow>
 
                             {/* Codice quotazione + copia */}
-                            <div className="flex items-center gap-2 pt-1">
+                            <div className="flex items-center gap-2">
                                 {/* <InfoRow label="ID:" tooltip={`Codice univoco assegnato alla quotazione ${quotationId}`}>#{quotationId.slice(0, 8) + "..."}</InfoRow> */}
-                                <InfoRow label="ID:" tooltip={`Codice univoco progressivo assegnato alla quotazione ${progressiveCode}.`}
-                                >
+                                <InfoRow label="ID Progressivo:" tooltip={`Codice univoco progressivo assegnato alla quotazione ${progressiveCode}.`}>
                                     {progressiveCode}
                                 </InfoRow>
 
                                 <FDIconButton
-                                    variant="text"
                                     size="small"
-                                    icon={<IoCopyOutlineIcon />}
+                                    icon={<IoCopyOutlineIcon size={18} />}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        CopyToClipboard(String(quotationId));
+                                        CopyToClipboard(String(progressiveCode));
                                     }}
                                     className="inline-flex"
                                     dataTooltipContent="Copia codice"
@@ -324,9 +335,59 @@ export default function QuotationDetailsCard({
                                 />
                             </div>
 
+                            {quotation.final_outcome && quotation.final_outcome.ok_links_stats && quotation.final_outcome.ok_links_stats.links_count && (
+                                <div className="flex items-center gap-2">
+                                    <InfoRow label="FB & OC inseriti:" tooltip={`Il Commerciale ha inserito ${quotation.final_outcome.ok_links_stats.links_count} FB & OC.`}>
+                                        {quotation.final_outcome.ok_links_stats.links_count}
+                                    </InfoRow>
+
+                                    <FDIconButton
+                                        size="small"
+                                        icon={<PiInvoiceLightIcon size={20} />}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenOkLinksPanel(true);
+                                            fetchQuotationOkLinks();
+                                        }}
+                                        className="inline-flex"
+                                        dataTooltipContent="Apri il dettaglio dei prodotti collegati a OC/FB"
+                                        dataTooltipId="general-quotations-tooltip"
+                                    />
+                                </div>
+                            )}
+
+                            {quotation.agente && Object.keys(quotation.agente).length > 0 && (
+                                <div className="text-xs border border-dashed border-gray-700 p-2 rounded space-y-2"
+                                    data-tooltip-id="general-quotations-tooltip"
+                                    data-tooltip-content="Agente che ha creato la quotazione"
+                                >
+                                    <p>Agente creatore della quotazione:</p>
+                                    <div className="flex gap-2 items-center">
+                                        <UserAvatar
+                                            src={quotation.agente?.immagini?.avatar || ""}
+                                            cover={{
+                                                src: quotation.agente?.immagini?.cover || "",
+                                                active: true,
+                                            }}
+                                            name={quotation.agente?.nome || "Sconosciuto"}
+                                            cognome={quotation.agente?.cognome || ""}
+                                        />
+                                        <div>
+                                            <p className="">
+                                                {quotation.agente?.nome || "Sconosciuto"} {quotation.agente?.cognome || ""}
+                                            </p>
+                                            <p className="text-neutral-500">
+                                                {quotation.agente?.username}
+                                            </p>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Finestra di validità */}
                             {shouldShowValidityBox && (
-                                <div className="mt-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/50 p-4">
+                                <div className="relative mt-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/50 p-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0">
                                             <div className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
@@ -356,8 +417,23 @@ export default function QuotationDetailsCard({
                                         )}
                                     </div>
 
+                                    {(isAgent || isAdmin) && <FDButton
+                                        variant="outline"
+                                        color={editMode ? "primary" : "neutral"}
+                                        size="xs"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditMode(!editMode);
+                                        }}
+                                        className="mt-2 rounded-xl absolute top-3 right-3"
+                                        data-tooltip-id="general-quotations-tooltip"
+                                        data-tooltip-content="Modifica la data fine della finestra di validità della quotazione"
+                                    >
+                                        Estendi
+                                    </FDButton>}
+
                                     {/* NON BOZZA: read-only, mostra inizio+fine */}
-                                    {!isDraft && (
+                                    {!editMode && (
                                         <div className="mt-3 text-sm text-neutral-700 dark:text-neutral-200 space-y-1">
                                             <div>
                                                 <span className="font-medium">Inizio:</span>{" "}
@@ -371,7 +447,7 @@ export default function QuotationDetailsCard({
                                     )}
 
                                     {/* BOZZA: inizio read-only, fine editabile */}
-                                    {isDraft && (
+                                    {(editMode && (isAgent || isAdmin)) && (
                                         <div className="mt-3">
                                             <div className="text-sm text-neutral-700 dark:text-neutral-200">
                                                 <span className="font-medium">Inizio:</span>{" "}
@@ -380,17 +456,18 @@ export default function QuotationDetailsCard({
 
                                             <div className="mt-3" onClick={(e) => e.stopPropagation()}>
                                                 <FDDate
+                                                    type="datetime-local"
                                                     size="sm"
                                                     label="Fine validità"
-                                                    value={validEnd}
+                                                    value={toLocalDateTimeInputValue(validEnd) ?? undefined}
                                                     onChange={(v) => {
                                                         hasUserEditedEndRef.current = true;
-                                                        setValidEnd(v);
+                                                        setValidEnd(v ? new Date(v).toISOString() : '');
                                                     }}
                                                     radius="xl"
                                                     variant="outline"
                                                     color="neutral"
-                                                    disabled={isSavingValidity}
+                                                    disabled={loading.change_validity_window as boolean}
                                                     helperText={isMepa ? "Seleziona la data di scadenza della gara." : "Opzionale."}
                                                     className="w-full"
                                                 />
@@ -398,8 +475,9 @@ export default function QuotationDetailsCard({
 
                                             <div className="mt-3 flex items-center justify-end gap-2">
                                                 <FDButton
-                                                    variant="ghost"
-                                                    disabled={!endDirty || isSavingValidity}
+                                                    variant="outline"
+                                                    size="sm"
+                                                    disabled={!endDirty || loading.change_validity_window as boolean}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         hasUserEditedEndRef.current = false; // torna "non editato"
@@ -413,16 +491,20 @@ export default function QuotationDetailsCard({
                                                 </FDButton>
 
                                                 <FDButton
-                                                    disabled={!onUpdateValidityWindow || !endDirty || isSavingValidity || !isValidDate}
+                                                    variant="solid"
+                                                    color="primary"
+                                                    size="sm"
+                                                    disabled={!onUpdateValidityWindow || !endDirty || loading.change_validity_window as boolean || !isValidDate}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         void onSaveValidityEnd();
                                                     }}
+                                                    loading={loading.change_validity_window as boolean}
                                                     className="rounded-xl"
                                                     data-tooltip-id="general-quotations-tooltip"
                                                     data-tooltip-content={!isValidDate ? "La data di fine deve essere sempre più grande della data attuale di almeno 1 giorno" : "Salva la data"}
                                                 >
-                                                    {isSavingValidity ? "Salvataggio..." : "Salva"}
+                                                    {loading.change_validity_window as boolean ? "Salvataggio..." : "Salva"}
                                                 </FDButton>
                                             </div>
                                         </div>
@@ -430,18 +512,42 @@ export default function QuotationDetailsCard({
                                 </div>
                             )}
 
+                            {(((quotation.extra && (
+                                Object.keys(quotation.extra.details || {}).length > 0) 
+                                || (quotation.extra.type?.CIG || quotation.extra.type?.RDO || quotation.extra.type?.ACCORDO_QUADRO)
+                            ))) && <div className="mt-6 flex gap-1 flex-col">
+                                <span className="text-[11px] uppercase tracking-[0.16em] text-neutral-400">Dettagli extra:</span>
+                                
+                                {(quotation.extra.type?.CIG || quotation.extra.type?.RDO || quotation.extra.type?.ACCORDO_QUADRO) && <div>
+                                    {quotation.extra.type?.CIG && <InfoRow label="CIG:">{quotation.extra.type?.CIG || "N/A"}</InfoRow>}
+                                    {quotation.extra.type?.RDO && <InfoRow label="RDO:">{quotation.extra.type?.RDO || "N/A"}</InfoRow>}
+                                    {quotation.extra.type?.ACCORDO_QUADRO && <InfoRow label="Accordo Quadro:">{quotation.extra.type?.ACCORDO_QUADRO || "N/A"}</InfoRow>}
+                                </div>}
+
+                                {
+                                    Object.keys(quotation.extra.details || {}).map((key) => {
+                                        return (
+                                            <InfoRow key={key} label={`${ConvertToReadableString(key)}:`}>
+                                                {String((quotation.extra.details as any)[key])}
+                                            </InfoRow>
+                                        );
+                                    })
+                                }
+
+                            </div>}
+
                             <div className="pt-1 flex items-center justify-between gap-2">
                                 <span className="text-[11px] text-neutral-500">
                                     Creato il <span className="text-neutral-800 dark:text-neutral-200">{createdAt}</span>
                                 </span>
 
-                                {canSeePrices && typeof totalAmount === "number" && (
+                                {isAdmin && typeof totalAmount === "number" && (
                                     <span className="text-[11px] text-neutral-600 dark:text-neutral-300">
                                         Valore attuale: <span className="font-semibold">{formatDecimal(totalAmount)} €</span>
                                     </span>
                                 )}
                             </div>
-                        </div>
+                        </FDBox>
                     </motion.div>
                 )}
             </AnimatePresence>

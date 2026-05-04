@@ -6,7 +6,7 @@ import { BackordersView } from "./BackordersView";
 import { ReportCambioAgenteView } from "./ReportCambioAgente";
 import { ReportDiffEconomicaView } from "./ReportDifficoltaEconomica";
 import { ReportAltriProblemiView } from "./ReportAltriProblemi";
-import { ReportNoteClientiView } from "./ReportNoteClienti";
+import { CustomerNotesManagerView } from "components/UI/panels/customerNotes/CustomerNotesManagerView";
 
 export const viewsRegistry: ViewDefinition<any>[] = [
     { id: "anagrafica", label: "Anagrafica", Component: AnagraficaView },
@@ -15,5 +15,5 @@ export const viewsRegistry: ViewDefinition<any>[] = [
     { id: "reportCambioAgente", label: "Clienti con richiesta cambio agente", Component: ReportCambioAgenteView },
     { id: "reportDiffEconomica", label: "Clienti con difficoltà economica", Component: ReportDiffEconomicaView },
     { id: "reportAltriProblemi", label: "Clienti con altri problemi", Component: ReportAltriProblemiView },
-    { id: "reportNoteClienti", label: "Note clienti", Component: ReportNoteClientiView },
+    { id: "reportNoteClienti", label: "Note clienti", Component: CustomerNotesManagerView },
 ];

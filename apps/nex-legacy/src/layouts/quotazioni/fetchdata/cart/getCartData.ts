@@ -1,6 +1,5 @@
 import { FetchData } from "examples/Fetch";
 import type { MutableRefObject } from "react";
-import type { UserState } from "types/UserContext";
 import type { CartProductDTO } from "../../types/qts_product";
 
 // ——————————————————————————————————————————————————————————

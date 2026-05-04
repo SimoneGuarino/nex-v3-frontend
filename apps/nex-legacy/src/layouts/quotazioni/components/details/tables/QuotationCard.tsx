@@ -8,11 +8,13 @@ import { clsx } from "components/UI/box/FDBox";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 
 import {
+    productStateTransitions,
     RigaStato,
     stateProductLabels,
     stateProductOptionsPalette,
 } from "layouts/quotazioni/types/quotations";
 import { CartProductDTO, ContropropostaDTO } from "layouts/quotazioni/types/qts_product";
+import { CapitalizeFirstLetter } from "utils/string/capitalize";
 
 const FiChevronDownIcon = FiChevronDown as React.FC<{ size?: number; className?: string }>;
 const FiAlertCircleIcon = FiAlertCircle as React.FC<{ size?: number; className?: string }>;
@@ -47,7 +49,7 @@ const Pill = memo(function Pill({
     variant?: PillVariant;
     className?: string;
 }) {
-    // NOTE: dynamic Tailwind classes safelist in build config; kept consistent with existing codebase.
+    // NOTE: dynamic Tailwind classes require safelist in build config; kept consistent with existing codebase.
     const base =
         variant === "outline"
             ? `border text-${color}-400`
@@ -174,6 +176,7 @@ interface Props {
     item: CartProductDTO;
     expanded?: boolean;
     isQBozza: boolean;
+    isBIDPassivo: boolean;
     menuRef: React.MutableRefObject<HTMLDivElement | null>;
     handleOpenQtsSettings: (item: CartProductDTO) => void;
     onToggle: () => void;
@@ -190,6 +193,7 @@ const QuotationCard: React.FC<Props> = ({
     item,
     expanded,
     isQBozza,
+    isBIDPassivo,
     menuRef,
     handleOpenQtsSettings,
     onToggle,
@@ -208,7 +212,9 @@ const QuotationCard: React.FC<Props> = ({
         const effectiveDetails = getEffectiveDetails(item, accepted);
         const originalDetails = item?.dettagli_prodotto;
 
-        const statoLabel = stato ? stateProductLabels[stato] : "Stato non definito";
+        const statoLabel = stato ? (productStateTransitions[stato] ?
+            CapitalizeFirstLetter(productStateTransitions[stato].replace("_", " "))
+            : stateProductLabels[stato]) : "Stato non definito";
 
         const substitutedToLabel =
             isCounterAccepted && accepted?.dettagli_prodotto
@@ -256,24 +262,6 @@ const QuotationCard: React.FC<Props> = ({
         },
         [handleOpenQtsSettings, item, menuRef]
     );
-
-    /*const onViewProposalDetails = useCallback(
-        (e: React.MouseEvent, proposal: AnyObj) => {
-            e.stopPropagation();
-            const productId = proposal?.product_id ?? item?.product_id;
-            if (!productId) return;
-            onViewProductDetails?.(productId, item);
-        },
-        [item, onViewProductDetails]
-    );
-
-    const onOpenSubstitutionFlow = useCallback(
-        (e: React.MouseEvent) => {
-            e.stopPropagation();
-            handleOpenQtsSettings(item);
-        },
-        [handleOpenQtsSettings, item]
-    );*/
 
     const originalCode = original?.codiceProduttore ?? null;
     const originalDesc = original?.descrizione ?? null;
@@ -326,6 +314,43 @@ const QuotationCard: React.FC<Props> = ({
                                 </p>
                             </div>
 
+                            {isBIDPassivo && <>
+                                <div className="truncate">
+                                    <p className="text-[11px] text-neutral-500">Prefisso</p>
+                                    <p
+                                        className={clsx(
+                                            "text-xs w-fit",
+                                            !item?.dettagli_prodotto.prefisso && "text-red-500 bg-red-100 dark:bg-red-900/20 p-1 rounded-md"
+                                        )}
+                                    >
+                                        {item?.dettagli_prodotto.prefisso ?? "Non Definito"}
+                                    </p>
+                                </div>
+
+                                <div className="truncate">
+                                    <p className="text-[11px] text-neutral-500">Linea</p>
+                                    <p
+                                        className={clsx(
+                                            "text-xs w-fit",
+                                            !item?.dettagli_prodotto.linea && "text-red-500 bg-red-100 dark:bg-red-900/20 p-1 rounded-md"
+                                        )}
+                                    >
+                                        {item?.dettagli_prodotto.linea ?? "Non Definito"}
+                                    </p>
+                                </div>
+
+                                <div className="truncate">
+                                    <p className="text-[11px] text-neutral-500">Gruppo</p>
+                                    <p
+                                        className={clsx(
+                                            "text-xs w-fit",
+                                            !item?.dettagli_prodotto.gruppo && "text-red-500 bg-red-100 dark:bg-red-900/20 p-1 rounded-md"
+                                        )}
+                                    >
+                                        {item?.dettagli_prodotto.gruppo ?? "Non Definito"}
+                                    </p>
+                                </div>
+                            </>}
                             {!isQBozza && derived.stato && (
                                 <Pill
                                     title="Stato della quotazione"
@@ -463,99 +488,6 @@ const QuotationCard: React.FC<Props> = ({
                     </div>
                 </div>
             </div>
-
-            {/* Expanded proposals */}
-            {/*<AnimatePresence initial={false}>
-                {item?.quotazione && derived.hasProposals && expanded && (
-                    <motion.div
-                        key="expanded"
-                        layout
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{
-                            height: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
-                            opacity: { duration: 0.18 },
-                        }}
-                        className="w-full -mx-2 px-2 pb-2"
-                    >
-                        <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/70 dark:bg-neutral-900/60 p-3 shadow-sm">
-                            <h4 className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 mb-2">
-                                Proposte alternative dei buyer
-                            </h4>
-
-                            <div className="space-y-2">
-                                {derived.controproposte.map((proposal: AnyObj, idx: number) => {
-                                    const p = proposal?.dettagli_prodotto ?? {};
-                                    const pLabel = p?.descrizione ?? "Prodotto proposto";
-                                    const pCode = p?.codiceProduttore ?? "—";
-                                    const pPrice =
-                                        proposal?.quotazione?.prezzo_finale != null ? Number(proposal.quotazione.prezzo_finale) : null;
-
-                                    const isAccepted = proposal?.stato === "CONTROPROPOSTA_ACCETTATA" || proposal?.approvato === true;
-
-                                    return (
-                                        <div
-                                            key={proposal?._id ?? `${idx}`}
-                                            className={clsx(
-                                                "flex items-center gap-3 rounded-lg border p-2",
-                                                "border-neutral-200 dark:border-neutral-700",
-                                                isAccepted && "bg-emerald-50/70 dark:bg-emerald-500/10"
-                                            )}
-                                        >
-                                            <div className="shrink-0 w-10 h-10 rounded-md bg-white dark:bg-neutral-800 grid place-items-center overflow-hidden">
-                                                <span className="text-[10px] text-neutral-500">{idx + 1}</span>
-                                            </div>
-
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-medium truncate">{pLabel}</p>
-                                                <p className="text-[11px] text-neutral-500 truncate">
-                                                    Cod. {pCode}
-                                                    {pPrice != null ? ` • Prezzo: ${NumberToEuro({ convert: pPrice })}` : ""}
-                                                </p>
-                                            </div>
-
-                                            {derived.isCounterAccepted ? (
-                                                <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                                                    {isAccepted ? "Accettata" : "Non selezionata"}
-                                                </span>
-                                            ) : derived.canActOnProposals ? (
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        type="button"
-                                                        className={clsx(
-                                                            "inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium",
-                                                            "border-neutral-200 dark:border-neutral-700",
-                                                            "text-neutral-700 dark:text-neutral-100 bg-white/80 dark:bg-neutral-900/80",
-                                                            "hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
-                                                        )}
-                                                        onClick={(e) => onViewProposalDetails(e, proposal)}
-                                                    >
-                                                        Dettaglio prodotto
-                                                    </button>
-
-                                                    <button
-                                                        type="button"
-                                                        className={clsx(
-                                                            "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold",
-                                                            "bg-amber-500 text-white hover:bg-amber-600 transition"
-                                                        )}
-                                                        onClick={onOpenSubstitutionFlow}
-                                                    >
-                                                        Sostituisci
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Controproposta chiusa.</span>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>*/}
 
             {/* Nudge when proposals exist and not expanded */}
             {derived.hasProposals && !expanded && !derived.isCounterAccepted && !derived.isCounterRejected && (

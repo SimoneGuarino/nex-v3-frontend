@@ -54,11 +54,20 @@ function RetriveElement(props: HeaderFiledProps): JSX.Element {
 
     const changeSortStatus = (index: number) => {
         const newArr = [...listOfStatus];
-        newArr[index].sortStatus = sortStatus >= statusAvaible.length - 1 ? 0 : sortStatus + 1;
+        let resolvedIndex = index >= 0 && newArr[index] ? index : newArr.findIndex((item) => item.label === label);
+        if (resolvedIndex < 0) {
+            if (!label) return;
+            newArr.push({ label, sortStatus: 0 });
+            resolvedIndex = newArr.length - 1;
+        }
+
+        const currentSortStatus = newArr[resolvedIndex]?.sortStatus ?? 0;
+        const nextSortStatus = currentSortStatus >= statusAvaible.length - 1 ? 0 : currentSortStatus + 1;
+        newArr[resolvedIndex].sortStatus = nextSortStatus;
 
         // reset altri
         for (let i = 0; i < newArr.length; i++) {
-            if (i !== index) newArr[i].sortStatus = 0;
+            if (i !== resolvedIndex) newArr[i].sortStatus = 0;
         }
         setSortStatus(() => newArr);
 
@@ -69,7 +78,7 @@ function RetriveElement(props: HeaderFiledProps): JSX.Element {
                 ? [column.key as string, column.secKey]
                 : column.key;
 
-        sortBy(column.sortType, fieldArg, sortStatus);
+        sortBy(column.sortType, fieldArg, currentSortStatus);
     };
 
     return (

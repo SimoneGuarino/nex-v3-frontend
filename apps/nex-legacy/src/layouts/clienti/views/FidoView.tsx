@@ -3,12 +3,7 @@ import { TableVirtualized } from "components/Virtualized/table";
 import { InfoPanel } from "../components/InfoPanel";
 import { getData as getFidoData } from "../fetchData/fido/getData";
 import type { ViewComponentProps, SearchParams } from "../types/view";
-
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import { IoPersonSharp } from "react-icons/io5";
-import { LuChartNoAxesCombined } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
-import { BsBoxSeam } from "react-icons/bs";
+import { useCustomerOptionsMenu } from "../components/useCustomerOptionsMenu";
 
 
 // ——————————————————————————————————————————————————————————
@@ -17,6 +12,48 @@ import { BsBoxSeam } from "react-icons/bs";
 type FidoExtra = {
     searchType?: { tp: number; val: string | null }; //filtro extra fido (tipologia + valore filtro)
 };
+
+type HeaderSortPayload = {
+    columnKey: string;
+    sortDirection: number;
+};
+
+type FidoSortField =
+    | "codiceCliente"
+    | "ragioneSociale"
+    | "residuoFB"
+    | "residuoNFB"
+    | "totale"
+    | "fatturatoAnnuale";
+
+type FidoSortDirection = "asc" | "desc";
+
+const FIDO_SORT_FIELD_BY_COLUMN_KEY: Record<string, FidoSortField> = {
+    codiceCliente: "codiceCliente",
+    ragioneSociale: "ragioneSociale",
+    "fido.residuoFB": "residuoFB",
+    "fido.residuoNFB": "residuoNFB",
+    "fido.totale": "totale",
+    fatturatoAnnuale: "fatturatoAnnuale",
+};
+
+function normalizeFidoSort(sort: HeaderSortPayload): {
+    fidoSortField?: FidoSortField;
+    fidoSortDirection?: FidoSortDirection;
+} {
+    const field = FIDO_SORT_FIELD_BY_COLUMN_KEY[String(sort.columnKey || "").trim()];
+    if (!field) return {};
+
+    if (sort.sortDirection === 1) {
+        return { fidoSortField: field, fidoSortDirection: "asc" };
+    }
+
+    if (sort.sortDirection === 2) {
+        return { fidoSortField: field, fidoSortDirection: "desc" };
+    }
+
+    return {};
+}
 
 export const FidoFilters: React.FC<{
     value: FidoExtra | undefined; //valore filtri extra (per la view fido)
@@ -63,10 +100,27 @@ export const FidoView: React.FC<ViewComponentProps<FidoExtra>> = ({
         sftot: 0,
     }); //totali extra restituiti dal BE (usati in InfoPanel)
     const [loading, setLoading] = React.useState(false); //loading fetch tabella
+    const [serverSort, setServerSort] = React.useState<HeaderSortPayload>({
+        columnKey: "",
+        sortDirection: 0,
+    });
     const offsetRef = React.useRef(0); //offset per paginazione/infinite scroll
     const abortController = React.useRef<AbortController | null>(null); //abort controller per interrompere fetch pendenti
 
-    const navigate = useNavigate(); //router navigate (per redirect a /contabilita/fatturati)
+    React.useEffect(() => {
+        return () => {
+            abortController.current?.abort();
+            abortController.current = null;
+        };
+    }, []);
+
+    const { renderOptionsTrigger, optionsOverlays } = useCustomerOptionsMenu({
+        currentView: "fido",
+        userContext,
+        companySelected: params.common.companySelected,
+        agentCode: params.common.agentCode || null,
+        onNavigateToCustomerView,
+    });
 
     /**
      * Wrapper setRows:
@@ -81,68 +135,22 @@ export const FidoView: React.FC<ViewComponentProps<FidoExtra>> = ({
 
                 if (!Array.isArray(next)) return next;
 
-                return next.map((row) => {
+                return next.map((row, index) => {
                     const codice = String(row?.codiceCliente ?? "").trim() || ""; //codice cliente
                     const denominazione = String(row?.ragioneSociale ?? "").trim() || ""; //ragione sociale
 
-                    const customerPayload = { codice, denominazione }; //payload per jump cross-view
-
                     return {
                         ...row,
-                        OPZIONI: (
-                            <div className="w-full flex gap-2 items-center">
-                                {/* 1) Anagrafica (stessa pagina, cambio tab) */}
-                                <FDIconButton
-                                    icon={IoPersonSharp({})}
-                                    dataTooltipId="customers-tooltip"
-                                    dataTooltipContent="Anagrafica Cliente"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (!codice || !onNavigateToCustomerView) return;
-                                        onNavigateToCustomerView("anagrafica", customerPayload);
-                                    }}
-                                />
-
-                                {/* 2) Backorders (stessa pagina, cambio tab) */}
-                                <FDIconButton
-                                    icon={BsBoxSeam({})}
-                                    dataTooltipId="customers-tooltip"
-                                    dataTooltipContent="Backorders Cliente"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (!codice || !onNavigateToCustomerView) return;
-                                        onNavigateToCustomerView("backorders", customerPayload);
-                                    }}
-                                />
-
-                                {/* 3) Fatturato (pagina /contabilita/fatturati) */}
-                                <FDIconButton
-                                    icon={LuChartNoAxesCombined({})}
-                                    dataTooltipId="customers-tooltip"
-                                    dataTooltipContent="Fatturato Cliente"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (!codice) return;
-
-                                        const sysInfo = "FOCELDA"; //stesso approccio usato in Anagrafica/Backorders
-                                        const searchParams = new URLSearchParams({
-                                            CLI: codice,
-                                            dimension: "CLIENT",
-                                            sysInfo,
-                                        });
-
-                                        navigate(
-                                            `/contabilita/fatturati?${searchParams.toString()}`
-                                        );
-                                    }}
-                                />
-                            </div>
-                        ),
+                        OPZIONI: renderOptionsTrigger({
+                            codice,
+                            denominazione,
+                            rowKey: `${codice}:${index}`,
+                        }),
                     };
                 });
             });
         },
-        [onNavigateToCustomerView, navigate]
+        [renderOptionsTrigger]
     );
 
     const columns = React.useMemo(
@@ -170,6 +178,43 @@ export const FidoView: React.FC<ViewComponentProps<FidoExtra>> = ({
                 sortType: "string",
                 width: 250,
                 type: "string",
+                sx: { alignItems: "center" },
+            },
+            {
+                key: "fido.residuoFB",
+                sort: true,
+                sortType: "number",
+                type: "eur",
+                sx: { alignItems: "center" },
+                label: "Saldo (con FB)",
+                width: 200,
+            },
+            {
+                key: "fido.residuoNFB",
+                sort: true,
+                sortType: "number",
+                type: "eur",
+                sx: { alignItems: "center" },
+                label: "Saldo (senza FB)",
+                width: 200,
+            },
+            {
+                key: "fido.totale",
+                sort: true,
+                sortType: "number",
+                type: "eur",
+                sx: { alignItems: "center" },
+                label: "Fido Totale",
+                width: 200,
+            },
+            {
+                key: "fatturatoAnnuale",
+                label: "Fatturato annuale",
+                sort: true,
+                sortType: "number",
+                width: 150,
+                type: "eur",
+                sx: { alignItems: "center" },
             },
             {
                 key: ["tipiFido.Cliente"],
@@ -281,42 +326,9 @@ export const FidoView: React.FC<ViewComponentProps<FidoExtra>> = ({
                 width: 200,
                 sx: { alignItems: "center" },
             },
-            {
-                key: "fatturatoAnnuale",
-                label: "Fatturato annuale",
-                sort: true,
-                sortType: "number",
-                width: 150,
-                type: "eur",
-                sx: { alignItems: "center" },
-            },
-            {
-                key: "fido.residuoFB",
-                sort: true,
-                sortType: "number",
-                type: "eur",
-                sx: { alignItems: "center" },
-                label: "Saldo (con FB)",
-                width: 200,
-            },
-            {
-                key: "fido.residuoNFB",
-                sort: true,
-                sortType: "number",
-                type: "eur",
-                sx: { alignItems: "center" },
-                label: "Saldo (senza FB)",
-                width: 200,
-            },
-            {
-                key: "fido.totale",
-                sort: true,
-                sortType: "number",
-                type: "eur",
-                sx: { alignItems: "center" },
-                label: "Fido Totale",
-                width: 200,
-            },
+
+
+
         ],
         []
     ); //definizione colonne tabella fido
@@ -363,8 +375,26 @@ export const FidoView: React.FC<ViewComponentProps<FidoExtra>> = ({
             if (st.val) body.tp.flt = st.val;
         }
 
+        const normalizedSort = normalizeFidoSort(serverSort);
+        if (normalizedSort.fidoSortField && normalizedSort.fidoSortDirection) {
+            body.fidoSortField = normalizedSort.fidoSortField;
+            body.fidoSortDirection = normalizedSort.fidoSortDirection;
+        }
+
         return body;
-    }, []);
+    }, [serverSort]);
+
+    const handleServerSortChange = React.useCallback(
+        ({ columnKey, sortDirection }: HeaderSortPayload) => {
+            setServerSort((prev) => {
+                if (prev.columnKey === columnKey && prev.sortDirection === sortDirection) {
+                    return prev;
+                }
+                return { columnKey, sortDirection };
+            });
+        },
+        []
+    );
 
     /**
      * Fetch prima pagina:
@@ -396,7 +426,7 @@ export const FidoView: React.FC<ViewComponentProps<FidoExtra>> = ({
 
     // reload tabella quando cambiano i params applicati
     React.useEffect(() => {
-        fetchFirstPage();
+        fetchFirstPage().catch(() => { });
     }, [fetchFirstPage]);
 
     /**
@@ -442,8 +472,14 @@ export const FidoView: React.FC<ViewComponentProps<FidoExtra>> = ({
                     func: infiniteScroll,
                     loadStatus: loadStatus.infiniteScroll
                 }}
+                headerSettings={{
+                    onSortChange: handleServerSortChange,
+                    sortState: serverSort,
+                }}
                 className="h-full"
             />
+
+            {optionsOverlays}
         </div>
     );
 };

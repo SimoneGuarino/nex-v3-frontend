@@ -1,4 +1,5 @@
-import React, { memo, useState } from 'react';
+// footerTable/index.tsx
+import React, { memo, useCallback, useMemo, useState } from 'react';
 
 import Stack from '@mui/material/Stack';
 import MDTypography from 'components/MDTypography';
@@ -7,8 +8,8 @@ import SettingsTable from './settingsTable';
 import MinLoader from '../../../../minLoader';
 import { Skeleton } from '@mui/material';
 import theme from 'assets/theme';
+import { useMaterialUIController } from 'context/index';
 import { icon_warehouse } from 'config/icons';
-import { useNexTheme } from '@nex/theme-system';
 
 /** tipi */
 
@@ -73,8 +74,11 @@ export interface FooterTableProps {
 
 function FooterTable(props: FooterTableProps): JSX.Element {
     const [colSettingsOpen, setColSettingsOpen] = useState(false);
-    const { preferences } = useNexTheme();
-    const darkMode = preferences.mode === "dark";
+    const [controller] = useMaterialUIController() as unknown as [
+        { darkMode?: boolean },
+        unknown
+    ];
+    const { darkMode } = controller ?? {};
 
     const {
         data,

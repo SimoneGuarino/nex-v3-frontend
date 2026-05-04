@@ -27,24 +27,15 @@ export default function QuoteProgressCard({
     const clamped = Math.min(100, Math.max(0, value));
 
     // Etichetta e colori SOLO a scopo visivo, basati sulla percentuale aggregata
-    let chipLabel = "In attesa";
-    let chipClass =
-        "bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200 border-amber-100 dark:border-amber-700";
     let gaugeLabel = "In attesa";
     let gaugeStrokeClass = "stroke-amber-500";
 
     if (clamped > 0 && clamped < 100) {
-        chipLabel = "Valutazione in corso";
-        chipClass =
-            "bg-sky-50 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200 border-sky-100 dark:border-sky-700";
         gaugeLabel = "In corso";
         gaugeStrokeClass = "stroke-sky-500";
     }
 
     if (clamped >= 100) {
-        chipLabel = "Valutazione completata";
-        chipClass =
-            "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 border-emerald-100 dark:border-emerald-700";
         gaugeLabel = "Completata";
         gaugeStrokeClass = "stroke-emerald-500";
     }

@@ -15,7 +15,7 @@ export type Tipologia = "STANDARD" | "BID_ATTIVO" | "BID_PASSIVO" | "MEPA" | "CT
 export interface CreateQuotationDataProps {
     abortController: AbortLike;
     user?: UserState | null;
-    payload: OnCreateRequestType;
+    payload: OnCreateRequestType & { extraForm: Record<string, any> };
     HandleComplete: (payload: { _id: string; msg: string; titolo?: string; prog_num?: number }) => void; // il BE può restituire anche 'titolo'
     HandleError: (errorMessage: string) => void;
     ChangeLoadStatus?: (args: { from: string; bool: boolean }) => void;
@@ -104,7 +104,7 @@ export async function createQuotationData({
         let body: Record<string, any> = {
             titolo: payload.titolo,
             tipologia: payload.type.replace(" ", "_") || "", // allinea con la nomenclatura standard
-            // cliente: clienteCode,
+            extra: payload.extraForm
         };
 
         // controllo ruolo
@@ -123,12 +123,6 @@ export async function createQuotationData({
             HandleError('parametro "titolo" deve essere lungo almeno 3 caratteri.');
             return;
         };
-
-        //condizione di presenza del cliente
-        // if (body.cliente === null) {
-        //     HandleError('parametro "cliente" è obbligatorio.');
-        //     return;
-        // };
 
         // validazione tipologia
         if (!isValidTipologia(body.tipologia)) {
@@ -219,5 +213,3 @@ export async function createQuotationData({
         ChangeLoadStatus?.({ from: FROM, bool: false });
     };
 };
-
-

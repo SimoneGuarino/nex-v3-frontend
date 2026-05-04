@@ -1,9 +1,10 @@
+import { User } from "types/user";
 import { Customer } from "./customers";
 
 export type SortDir = 'asc' | 'desc';
-export type LoadStatusKeys = "req_customersList" | "get_own_quotations" | "get_all_quotations" | "get_quotation_details" | "create_quotation" | "update_quotation" | "delete_quotation" | "get_cart_products";
-export type Tipologia = "STANDARD" | "BID_ATTIVO" | "BID_PASSIVO" | "MEPA" | "CTO" | "ALTRA_GARA";
-export const filterTypeOptions = ["STANDARD", "BID_ATTIVO", "BID_PASSIVO", "MEPA", "CTO", "ALTRA_GARA"];
+export type LoadStatusKeys = "req_customersList" | "get_own_quotations" | "get_all_quotations" | "get_quotation_details" | "create_quotation" | "update_quotation" | "delete_quotation" | "get_cart_products" | "get_quotation_ok_links" ;
+export type Tipologia = "STANDARD" | "BID_ATTIVO" | "BID_PASSIVO" | "MEPA" | "CTO" | "LICENZE";
+export const filterTypeOptions = ["STANDARD", "BID_ATTIVO", "BID_PASSIVO", "MEPA", "CTO", "LICENZE"];
 
 export type Scope = "TUTTI" | Tipologia;
 export type Stato = "BOZZA" | "VALIDAZIONE" | "APERTA" | "ANNULLATA" | "DA_CHIUDERE" | "OK" | "KO";
@@ -20,16 +21,6 @@ export const STATE_COLOR_STYLES: Record<Stato, { text: string; bg: string; dot: 
 
 export type RigaStato = "ATTESA_VALUTAZIONE" | "VALUTAZIONE_COMPLETATA" | "VALUTAZIONE_RIFIUTATA" | "ATTESA_APPROVAZIONE"
     | "CONTROPROPOSTA_RICHIESTA" | "CONTROPROPOSTA_INVIATA" | "CONTROPROPOSTA_ACCETTATA" | "CONTROPROPOSTA_RIFIUTATA";
-/*export const stateProductOptionsPalette: { [key in RigaStato]: string } = {
-    "ATTESA_VALUTAZIONE": "gray",
-    "VALUTAZIONE_COMPLETATA": "blue",
-    "VALUTAZIONE_RIFIUTATA": "red",
-    "ATTESA_APPROVAZIONE": "orange",
-    "CONTROPROPOSTA_RICHIESTA": "orange",
-    "CONTROPROPOSTA_INVIATA": "orange",
-    "CONTROPROPOSTA_ACCETTATA": "blue",
-    "CONTROPROPOSTA_RIFIUTATA": "red",
-};*/
 
 export const stateProductOptionsPalette: { [key in RigaStato]: string } = {
     ATTESA_VALUTAZIONE: "bg-neutral-100 text-neutral-700 border-neutral-200 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700",
@@ -58,6 +49,29 @@ export const stateProductLabels: { [key in RigaStato]: string } = {
     CONTROPROPOSTA_RIFIUTATA: "Controproposta rifiutata",
 };
 
+/**Tabella delle conversioni label degli stati prodotto */
+export const productStateTransitions: Record<string, string> = {
+    "VALUTAZIONE_COMPLETATA": "QUOTAZIONE_CONFERMATA",
+    "CONTROPROPOSTA_ACCETTATA": "QUOTAZIONE_CONFERMATA",
+};
+
+type ExtraProps = {
+    isEndUser?: boolean;
+    type?: {
+        CIG?: string;
+        RDO?: string;
+        ACCORDO_QUADRO?: string;
+    };
+    details?: {
+        nome: string;
+        partitaIva: string;
+        riferimento?: string;
+        telefono?: string;
+        email?: string;
+        sedeLegale?: string;
+    };
+};
+
 export interface IQuotationBuyerProgress {
     buyerCode: string;
     total: number;
@@ -75,6 +89,7 @@ export interface QuotazioneDTO {
     tipologia: Tipologia;
     stato: Stato;
     agenteId: string;
+    agente: Pick<User, "nome" | "cognome" | "username" | "immagini" | "biografia">;
     cliente: {
         ragione_sociale: string;
         codice: {
@@ -103,19 +118,36 @@ export interface QuotazioneDTO {
         inizio?: Date;
         fine: Date;
     };
+
+    extra: ExtraProps;
+
+    /** 
+     * Definsice il risultato finale se la controproposta è stata accettata e ha generato un link "OK" (es. ordine, MEPA, ecc.)
+     * Può essere usato per mostrare un link diretto all'ordine creato o alla RDO MEPA, se applicabile.
+    */
+    okLinkedProducts?: {
+        _id: string;
+        final_ok_link: {
+            oc?: string;
+            fb?: string;
+            linked_by: string; // userId di chi ha effettuato il link
+            linked_at: Date;   // ISO
+        }
+    }[];
     [k: string]: any;
 };
 
-export interface PaginationInfo {
+type InfinitePaginationState = {
     total: number;
     page: number;
     limit: number;
-    pages: number;
+    hasMore: boolean;
+    nextPage: number | null;
 };
 
 export interface QuotazioniListResponse {
     data: QuotazioneDTO[];
-    pagination: PaginationInfo;
+    pagination: InfinitePaginationState;
 };
 
 export interface QuotazioneDetailsResponse {
@@ -141,7 +173,7 @@ export interface BaseQtsFilters {
     valoreMax?: number; // valore massimo quotazione
     buyerCode?: string; // filtro buyer (codice univoco)
     agenteId?: string;  // filtro agente (id Mongo)
-
+    osf?: number; // offset for infinite scroll, se usato come filtro viene passato come "page" al BE, altrimenti è un parametro a parte per le API di infinite scroll che usano offset invece di page number
 };
 
 export interface GetOwnQtsFilters extends BaseQtsFilters {
@@ -162,6 +194,8 @@ export type Pagination = {
     limit: number;
     mode: "offset" | "cursor";
     offset: number;
+    totale?: number;
+    page?: number;
 
     nextOffset: number | null;
     hasMore: boolean;

@@ -1,13 +1,9 @@
-//src\components\UI\panels\customersPanel\components\SidePanelShell.tsx
 import React from "react";
 import FDBox, { type FDBoxProps, clsx } from "components/UI/box/FDBox";
 import { motion, type Variants } from "framer-motion";
 import { FiX } from "react-icons/fi";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 
-const FiXIcon = FiX as React.FC<{ className?: string }>;
-
-// Variants del guscio
 const slideFromRightVariants: Variants = {
     hidden: {
         x: "100%",
@@ -45,7 +41,6 @@ const slideFromRightVariants: Variants = {
     },
 };
 
-// Variants contenuto interno (fade/blur)
 const contentVariants: Variants = {
     front: {
         opacity: 1,
@@ -61,21 +56,29 @@ const contentVariants: Variants = {
 
 export interface SidePanelShellProps extends Omit<FDBoxProps, "title"> {
     title?: React.ReactNode;
+    headerActions?: React.ReactNode;
     footer?: React.ReactNode;
     onClose?: () => void;
-    /** "visible" → pannello in primo piano, "background" → pannello rimpicciolito */
     animateVariant?: "visible" | "background";
-    /** Stato del contenuto interno per il fade */
     contentState?: "front" | "background";
+    bodyScrollable?: boolean;
+    bodyClassName?: string;
     children: React.ReactNode;
 }
 
+/**
+ * Shell riusabile dei pannelli laterali (primario e secondario).
+ * Centralizza animazioni, header, body scrollabile e footer opzionale.
+ */
 export const SidePanelShell: React.FC<SidePanelShellProps> = ({
     title,
+    headerActions,
     onClose,
     animateVariant = "visible",
     contentState = "front",
     footer,
+    bodyScrollable = true,
+    bodyClassName,
     className,
     children,
     ...rest
@@ -106,7 +109,6 @@ export const SidePanelShell: React.FC<SidePanelShellProps> = ({
             )}
             {...rest}
         >
-            {/* HEADER */}
             <header className="flex items-center justify-between px-5 py-4 border-b border-white/10 dark:border-neutral-800/80">
                 <div className="min-w-0">
                     {title && (
@@ -116,17 +118,19 @@ export const SidePanelShell: React.FC<SidePanelShellProps> = ({
                     )}
                 </div>
 
-                {onClose && (
-                    <FDIconButton
-                        icon={FiX({})}
-                        onClick={onClose}
-                        disabled={!onClose}
-                    />
-                )}
+                <div className="flex items-center gap-2">
+                    {headerActions}
+                    {onClose && (
+                        <FDIconButton
+                            icon={FiX({})}
+                            onClick={onClose}
+                            disabled={!onClose}
+                        />
+                    )}
+                </div>
             </header>
 
-            {/* BODY */}
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className={clsx("flex-1 px-5 py-4", bodyScrollable ? "overflow-y-auto" : "overflow-hidden", bodyClassName)}>
                 <motion.div
                     initial={false}
                     animate={contentState}
@@ -137,7 +141,6 @@ export const SidePanelShell: React.FC<SidePanelShellProps> = ({
                 </motion.div>
             </div>
 
-            {/* FOOTER */}
             {footer && footer}
         </FDBox>
     );

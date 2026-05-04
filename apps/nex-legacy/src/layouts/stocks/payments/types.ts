@@ -1,5 +1,18 @@
 /** Tipi condivisi per il modulo payments */
 
+export type PaymentsSortField =
+    | "NUMOV"
+    | "DAMOV"
+    | "CDCLI"
+    | "CLIFO"
+    | "RASCL"
+    | "CDAGE"
+    | "IMPMO"
+    | "CAUSA"
+    | "DERIG";
+
+export type PaymentsSortDirection = "asc" | "desc";
+
 export type UserChoose = {
     nmv?: string;
     acd?: string | null;
@@ -9,6 +22,8 @@ export type UserChoose = {
     dateRange?: boolean;
     ofs?: number;
     limit?: number;
+    sortField?: PaymentsSortField;
+    sortDirection?: PaymentsSortDirection;
 };
 
 export interface Customer {

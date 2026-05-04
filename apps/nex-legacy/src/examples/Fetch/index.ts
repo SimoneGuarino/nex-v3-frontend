@@ -11,8 +11,8 @@ export type JSONValue = JSONPrimitive | { [k: string]: JSONValue } | JSONValue[]
 
 type AbortLike = MutableRefObject<AbortController | null> | AbortController;
 
-function ensureController(abortLike: AbortLike): AbortController {
-    if (typeof (abortLike as any).current !== "undefined") {
+function ensureController(abortLike: AbortLike | undefined): AbortController {
+    if (typeof (abortLike as any).current !== "undefined" || !abortLike) {
         const ref = abortLike as MutableRefObject<AbortController | null>;
         if (!ref.current) ref.current = new AbortController();
         return ref.current;
@@ -29,7 +29,7 @@ export async function FetchData<T = unknown>(
     url: string | URL | RequestInfo,
     method: HttpMethod,
     body: unknown,
-    abortLike: AbortLike
+    abortLike?: AbortLike
 ): Promise<any> {
     const controller = ensureController(abortLike);
 

@@ -15,7 +15,6 @@ export function DataRetrive(setSearchDataContext, userContext, handleMainLoadCha
     FetchData(import.meta.env.VITE_API_SEARCH_ENDPOINT + 'contribution/gt?disp=1&', 'POST', bodyToSend, 
     abortController).then(res => {
         const response = res.data;
-        //const decompress = await DecompressBrotliObjects(response);
         setSearchDataContext(response)
         setImpTableStatus(false);
         // 0 => Compare && 1 => Exclude => Stabilire in che modalità si trova il pannello

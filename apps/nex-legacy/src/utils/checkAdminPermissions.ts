@@ -1,6 +1,6 @@
 //src\utils\checkAdminPermissions.ts
 interface NumberToEuroProp {
-    userRole: string;
+    userRole: string | undefined | null;
     permissions: any;
     panelToCheck: string;
     where?: 0 | 1;
@@ -36,6 +36,8 @@ function CheckRoleAdmin({ role, rolesToCheck }: { role: string; rolesToCheck: an
 export function CheckAdminPermissions({ userRole, permissions, panelToCheck, where = 0, rolesToCheck }: NumberToEuroProp): boolean {
     //prendi in considerazione i ruoli passati in modo da stabilire il Target Ruoli oppure
     //utilizza quelli di default ovvero 0 & 1.
+    if(!userRole) return false; // se non c'è un ruolo definito, non mostriamo i contenuti admin
+
     const rolesToCheck_ = rolesToCheck !== undefined ? rolesToCheck : [0, 1];
 
     if (Boolean(permissions && panelToCheck && where !== undefined)) {

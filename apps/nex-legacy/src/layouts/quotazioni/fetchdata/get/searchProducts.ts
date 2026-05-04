@@ -5,19 +5,19 @@ import { ChangeLoadStatusArgs } from "layouts/quotazioni/types/quotations";
 
 type GetCustomersDataAPIProps = {
     abortController: AbortController;
+    quotationId: string;
     query: string;
     ChangeLoadStatus: ({ from, bool }: ChangeLoadStatusArgs) => void;
 }
 export async function SearchProductsAPI({
-    abortController, ChangeLoadStatus, query
+    abortController, ChangeLoadStatus, quotationId, query
 }: GetCustomersDataAPIProps): Promise<SearchResponse | undefined> {
     try {
         ChangeLoadStatus({ from: "req_customersList", bool: true });
 
-        const base = import.meta.env.VITE_API_SEARCH_ENDPOINT ?? "";
-        const baseUrl = new URL(`${base}v1/search`);
+        const base = import.meta.env.VITE_API_ORDER ?? "";
+        const baseUrl = new URL(`${base}quotations/${quotationId}/search/global`);
         const incomingParams = new URLSearchParams(query);
-        baseUrl.searchParams.set("scope", "assigned");
 
         incomingParams.forEach((value, key) => {
             baseUrl.searchParams.set(key, value);

@@ -64,10 +64,7 @@ const HeaderBar: React.FC<FiltersProps> = ({
             </div>
             {scope !== "descrivi_necessita" && <div className="flex gap-2 ml-auto">
                 <FDIconButton variant='text' rounded='md'
-                    dataTooltipContent={`Ricerca Mirata ${scope === "prodotti"
-                        ? "sui Prodotti"
-                        : "o sui prodotti della quotazione"}
-                    `}
+                    dataTooltipContent="Ricerca mirata globale prodotti"
                     dataTooltipId='general-quotations-tooltip'
                     size='small' className='border border-neutral-200 dark:border-neutral-800'
                     onClick={() => setOpenSearch(scope === "prodotti"

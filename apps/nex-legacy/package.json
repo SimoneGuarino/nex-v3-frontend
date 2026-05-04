@@ -7,7 +7,7 @@
     "description": "Front-end NEX Dashboard",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/SimoneGuarino/nex-frontend"
+        "url": "git+https://github.com/SimoneGuarino/nex-v3-frontend"
     },
     "engines": {
         "node": "18",
@@ -70,6 +70,7 @@
         "dev": "vite --host 0.0.0.0 --port 3000 --strictPort",
         "build": "vite build",
         "preview": "vite preview --host 0.0.0.0 --port 3000 --strictPort",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
         "install:clean": "rm -rf node_modules/ && rm -rf package-lock.json && npm install && npm start",
         "start:mfe": "cross-env BUILD_TARGET=mfe craco start",
         "build:mfe": "cross-env BUILD_TARGET=mfe react-scripts build"

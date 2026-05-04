@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 
 // Global State Hook User
 import { UserContext } from "context/UserContext";
@@ -22,7 +22,7 @@ const stringToHsl = (str: string) => {
     return `hsl(${h} 70% 40%)`;
 };*/
 
-const CoverWithAvatar: React.FC<{ coverSrc?: string; src?: string; nome?: string; cognome?: string; bio?: string }> =
+const CoverWithAvatar: React.FC<{ coverSrc?: string | null; src?: string | null; nome?: string; cognome?: string; bio?: string }> =
     ({ coverSrc, src, nome, cognome, bio }) => {
         return <div className="w-full h-40 flex flex-col relative mb-4">
             <FDBox
@@ -56,8 +56,8 @@ const CoverWithAvatar: React.FC<{ coverSrc?: string; src?: string; nome?: string
 const StarIcon = BsStars as React.FC<{ size?: number; className?: string }>;
 
 export const UserAvatar: React.FC<{
-    src?: string; className?: string; textSize?: 'xs' | 'md' | 'lg'; cover?: {
-        src: string | undefined;
+    src?: string | null; className?: string; textSize?: 'xs' | 'md' | 'lg'; cover?: {
+        src: string | undefined | null;
         active: boolean;
     };
     name?: string; cognome?: string; size?: number; bio?: string;

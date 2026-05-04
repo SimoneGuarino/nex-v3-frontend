@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { MutableRefObject, useEffect, useMemo, useState } from "react";
 import FDButton from "components/UI/buttons/FDButton";
 import { SidePanelShell } from "layouts/quotazioni/sidePanel/SidePanelShell";
 import { HeaderSection } from "./components/HeaderSection";
@@ -36,6 +36,7 @@ type ProductDetailsReportingProps = {
         patch: Record<string, any>;
     }) => void;
     reportingAnomaly?: boolean;
+    abortController: MutableRefObject<AbortController | null>;
 };
 
 type EditableAttribute = {
@@ -191,6 +192,7 @@ export const ProductDetailsReporting: React.FC<ProductDetailsReportingProps> = (
     productId,
     onReportProductAnomaly,
     reportingAnomaly = false,
+    abortController,
 }) => {
     const {
         product,
@@ -205,7 +207,7 @@ export const ProductDetailsReporting: React.FC<ProductDetailsReportingProps> = (
         setVariationRange,
         selectedSupplier,
         selectSupplier,
-    } = useProductDetails(productId);
+    } = useProductDetails(productId, abortController);
 
     const [reportMode, setReportMode] = useState(false);
     const [note, setNote] = useState("");
@@ -235,7 +237,7 @@ export const ProductDetailsReporting: React.FC<ProductDetailsReportingProps> = (
         return deepDiff(originalDraft, draft);
     }, [originalDraft, draft]);
 
-    const canSubmitReport = !!note.trim() && !!patch && !reportingAnomaly;
+    //const canSubmitReport = !!note.trim() && !!patch && !reportingAnomaly;
 
     const submit = async () => {
         if (!onReportProductAnomaly || !originalDraft || !draft) return;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ProductDetailsDTO,
     ProductDetailsApiResponse,
@@ -48,7 +48,73 @@ export const formatMoney = (val?: number, currency = "€") => {
 // ——————————————————————————————————————————————————————————
 // HOOK
 // ——————————————————————————————————————————————————————————
-export const useProductDetails = (productId: string | null) => {
+const PRODUCT_DETAILS_CACHE_MAX = 10;
+const productDetailsCache = new Map<string, ProductDetailsDTO>();
+const productDetailsInflight = new Map<string, Promise<ProductDetailsDTO | null>>();
+
+const getCachedProductDetails = (id: string): ProductDetailsDTO | null => {
+    const cached = productDetailsCache.get(id) ?? null;
+    if (!cached) return null;
+
+    // Touch in stile LRU
+    productDetailsCache.delete(id);
+    productDetailsCache.set(id, cached);
+    return cached;
+};
+
+const setCachedProductDetails = (id: string, product: ProductDetailsDTO) => {
+    if (productDetailsCache.has(id)) {
+        productDetailsCache.delete(id);
+    }
+    productDetailsCache.set(id, product);
+
+    if (productDetailsCache.size > PRODUCT_DETAILS_CACHE_MAX) {
+        const oldestKey = productDetailsCache.keys().next().value as
+            | string
+            | undefined;
+        if (oldestKey) productDetailsCache.delete(oldestKey);
+    }
+};
+
+const fetchProductDetailsShared = async (
+    id: string,
+    abortController?: MutableRefObject<AbortController | null>
+): Promise<ProductDetailsDTO | null> => {
+    const cached = getCachedProductDetails(id);
+    if (cached) return cached;
+
+    const inflight = productDetailsInflight.get(id);
+    if (inflight) return inflight;
+
+    const requestPromise = (async () => {
+        console.log(`Fetching details for product ${id} with abortController:`, abortController);
+        const data: ProductDetailsApiResponse | undefined =
+            await ProductDetailsAPI({
+                abortController: abortController ?? undefined,
+                ChangeLoadStatus: () => { },
+                id_product: id,
+            });
+
+        if (!data?.items?.length) {
+            return null;
+        }
+
+        const hit = data.items[0];
+        const mapped = mapProductDetailsHitToDTO(hit);
+        setCachedProductDetails(id, mapped);
+        return mapped;
+    })();
+
+    productDetailsInflight.set(id, requestPromise);
+
+    try {
+        return await requestPromise;
+    } finally {
+        productDetailsInflight.delete(id);
+    }
+};
+
+export const useProductDetails = (productId: string | null, abortController?: MutableRefObject<AbortController | null>) => {
     const [product, setProduct] = useState<ProductDetailsDTO | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -68,6 +134,7 @@ export const useProductDetails = (productId: string | null) => {
 
     // Abort controller per lo storico
     const variationAbortRef = useRef<AbortController | null>(null);
+    const loadProductSeqRef = useRef(0);
 
     const [userState] = useUserContext();
 
@@ -84,9 +151,20 @@ export const useProductDetails = (productId: string | null) => {
     // DETTAGLI PRODOTTO
     // ---------------------------
     const loadProduct = useCallback(async () => {
+        const requestSeq = ++loadProductSeqRef.current;
+
         if (!productId) {
             setProduct(null);
             setError(null);
+            setIsLoading(false);
+            return;
+        }
+
+        const cached = getCachedProductDetails(productId);
+        if (cached) {
+            setProduct(cached);
+            setError(null);
+            setIsLoading(false);
             return;
         }
 
@@ -94,32 +172,28 @@ export const useProductDetails = (productId: string | null) => {
         setError(null);
 
         try {
-            const abortController = new AbortController();
+            const mapped = await fetchProductDetailsShared(productId, abortController);
+            if (loadProductSeqRef.current !== requestSeq) return;
 
-            const data: ProductDetailsApiResponse | undefined =
-                await ProductDetailsAPI({
-                    abortController,
-                    ChangeLoadStatus: () => { },
-                    id_product: productId,
-                });
-
-            if (!data?.items?.length) {
+            if (!mapped) {
                 setProduct(null);
                 setError("Nessun dettaglio prodotto trovato.");
                 return;
             }
 
-            const hit = data.items[0];
-            const mapped = mapProductDetailsHitToDTO(hit);
             setProduct(mapped);
+            setError(null);
         } catch (err) {
+            if (loadProductSeqRef.current !== requestSeq) return;
             console.error("Errore nel fetch dei dettagli prodotto", err);
             setError("Errore nel recupero dei dettagli prodotto.");
             setProduct(null);
         } finally {
-            setIsLoading(false);
+            if (loadProductSeqRef.current === requestSeq) {
+                setIsLoading(false);
+            }
         }
-    }, [productId]);
+    }, [productId, abortController]);
 
     useEffect(() => {
         void loadProduct();
@@ -235,8 +309,9 @@ export const useProductDetails = (productId: string | null) => {
             if (!canSeePrices) return;
             //void loadVariationHistory(supplierName);
         },
-        [canSeePrices, loadVariationHistory]
+        [canSeePrices]
     );
+
 
     // ---------------------------
     // API esposta all'esterno

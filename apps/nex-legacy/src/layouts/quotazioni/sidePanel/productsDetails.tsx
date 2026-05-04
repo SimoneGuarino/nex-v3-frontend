@@ -16,6 +16,9 @@ import {
     stateProductLabels,
     stateProductOptionsPalette,
     Stato,
+    RigaStato,
+    productStateTransitions,
+    Tipologia,
 } from "layouts/quotazioni/types/quotations";
 //icons
 import {
@@ -25,18 +28,21 @@ import {
     MdSwapHoriz,
     MdOutlineRequestQuote,
 } from "react-icons/md";
-import { FiChevronRight, FiChevronLeft } from "react-icons/fi";
+import { FiChevronRight, FiChevronLeft, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { ProductSubstitutionSearch } from "./ProductSubstitutionSearch";
-import { /*GoAlert,*/ GoInfo, GoPlus } from "react-icons/go";
+import { GoInfo, GoPlus } from "react-icons/go";
+import { LuSend } from "react-icons/lu";
 
-// In Quotazioni usiamo ProductDetailsReporting (non ProductDetailsPanel) perché
-// nello stesso pannello gestiamo sia consultazione sia segnalazione anomalia.
 import { ProductDetailsReporting } from "examples/productDetails/ProductDetailsReporting";
-import FDSelect from "components/UI/input/FDSelect";
+import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
 import FDButton from "components/UI/buttons/FDButton";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import FDDate from "components/UI/input/FDDate";
 import { useExpiryCountdown } from "../hook/useQuotationClosureGate";
+import { UserState } from "types/UserContext";
+import { formatISODate, toLocalDateTimeInputValue } from "utils/date/getDate";
+import { CapitalizeFirstLetter } from "utils/string/capitalize";
+import { CategoryIndex, normalizeKey } from "../hook/useDetailsQuotation";
 
 const MdDoneIcon = MdDone as React.FC<{ className?: string }>;
 const MdCloseIcon = MdClose as React.FC<{ className?: string; size?: number }>;
@@ -45,10 +51,11 @@ const MdSwapHorizIcon = MdSwapHoriz as React.FC<{ className?: string }>;
 const MdOutlineRequestQuoteIcon =
     MdOutlineRequestQuote as React.FC<{ className?: string }>;
 const FiChevronRightIcon = FiChevronRight as React.FC<{ className?: string }>;
-const FiChevronLeftIcon = FiChevronLeft as React.FC<{ className?: string }>;
 //const GoAlertIcon = GoAlert as React.FC<{ className?: string }>;
 const GoInfoIcon = GoInfo as React.FC<{ size?: number; className?: string }>;
 const GoPlusIcon = GoPlus as React.FC<{ size?: number; className?: string }>;
+const LuSendIcon = LuSend as React.FC<{ size?: number; className?: string }>;
+
 
 // ——————————————————————————————————————————————————————————
 // TYPES
@@ -59,12 +66,14 @@ type ProductsDetailsProps = {
     product: CartProductDTO | TextRequestCartDTO;
     /** true se Buyer/Admin/Dev (CheckAdminDev) */
     isBuyer: boolean;
+    /** true se Agent */
+    isAgent: boolean;
     qtsState: Stato | null;
 
     searchQuery: string;
     searchDebounced: (value: string) => void;
     searchItems: CartProductDTO[];
-    loading: { [key: string]: boolean };
+    loading: { [key: string]: boolean | Map<string, boolean> };
 
     // Buyer side
     /** Funzione che permettere di ricercare il prodotto in base alla descrizione, all'apertura del pannello SECONDARY dedicato alla ricerca */
@@ -81,6 +90,7 @@ type ProductsDetailsProps = {
     onChangeProposalNote: (value: string) => void;
     /** nota corrente (se esiste) */
     currentProposalNote?: string;
+    sendProductNote: () => void;
 
     // Agent side
     onAccept: () => void;
@@ -97,6 +107,7 @@ type ProductsDetailsProps = {
 
     /** true se la quotazione padre è in stato BOZZA */
     isDraftQuotation?: boolean;
+    isPassiveBid?: boolean;
 
     /** elenco buyer selezionabili dal commerciale */
     buyerOptions?: {
@@ -105,11 +116,15 @@ type ProductsDetailsProps = {
         description?: string;
     }[];
 
+    categoryIndex: CategoryIndex;
+
     /** loading durante la chiamata di assegnazione */
     assigningBuyer?: boolean;
 
     /** callback per assegnare il buyer alla riga corrente */
-    onAssignBuyer?: (buyerCode: string) => void;
+    onAssignBuyer?: (buyerCode: string) => void | Promise<any>;
+    /** callback per assegnare le categorie alla riga corrente */
+    onAssignCategories: (from: "prefisso" | "linea" | "gruppo", value: string | null) => void;
     /** callback invocata quando l'utente invia la segnalazione anomalia scheda prodotto */
     onReportProductAnomaly?: (payload: {
         note: string;
@@ -130,6 +145,8 @@ type ProductsDetailsProps = {
     onSelectCounterProposal: (proposalId: string) => void;
     /** Stato che definisce un ulteriore condizione di blocco per interagire con il prodotto */
     locked?: boolean;
+    userState?: UserState | null;
+    CheckAdminDev: boolean;
 };
 
 type CounterProposalSectionProps = {
@@ -153,6 +170,7 @@ type CounterProposalSectionProps = {
     isRefusedState: boolean;
     /** Indica se la quotazione è in stato COMPLETATO (lato commerciale) */
     isCompletedState: boolean;
+    currentState?: RigaStato;
 };
 
 
@@ -179,6 +197,7 @@ const productEventTypeUI: Record<
     NOTA: { label: "Nota", tone: "neutral" },
     SEGNALAZIONE_ANOMALIA_SCHEDA: { label: "Segnalazione anomalia scheda", tone: "alert" },
     CAMBIO_BUYER: { label: "Cambio buyer", tone: "neutral" },
+    CAMBIO_DETTAGLI_PRODOTTO: { label: "Cambio dettagli prodotto", tone: "neutral" },
     SUGGERIMENTO_ALTERNATIVA_AGGIUNTO: { label: "Alternativa commerciale aggiunta", tone: "highlight" },
     SUGGERIMENTO_ALTERNATIVA_RIMOSSO: { label: "Alternativa commerciale rimossa", tone: "negative" },
     ALTRO: { label: "Aggiornamento", tone: "neutral" },
@@ -231,13 +250,6 @@ function formatDecimal(val?: string | number): string {
     });
 };
 
-function formatISODate(val?: string | Date): string {
-    if (!val) return "-";
-    const d = new Date(val);
-    if (typeof val === "string" && Number.isNaN(d.getTime())) return val;
-    return d.toLocaleString("it-IT");
-};
-
 function formatISODateTime(val?: string | Date): string {
     if (!val) return "-";
     const d = new Date(val);
@@ -252,19 +264,12 @@ function isExpiredDateTime(val?: string | Date | null): boolean {
     return d.getTime() < Date.now();
 };
 
-function toLocalDateTimeInputValue(val?: string | Date | null): string {
-    if (!val) return "";
-    const d = new Date(val);
-    if (Number.isNaN(d.getTime())) return "";
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
-
 
 // ——————————————————————————————————————————————————————————
 // SUB COMPONENT
 // ——————————————————————————————————————————————————————————
 const ProductSummaryHeader: React.FC<{
+    isPassiveBid?: boolean;
     document: CartProductDTO | TextRequestCartDTO;
     proposals: ContropropostaDTO[];
     fetchProductDetails: (id_product: string) => void;
@@ -277,14 +282,21 @@ const ProductSummaryHeader: React.FC<{
         label: string;
         description?: string;
     }[];
-    assigningBuyer?: boolean; onAssignBuyer?: (buyerCode: string) => void;
+    assigningBuyer?: boolean; onAssignBuyer?: (buyerCode: string) => void | Promise<any>;
+    /** callback per assegnare le categorie alla riga corrente */
+    onAssignCategories: (from: "prefisso" | "linea" | "gruppo", value: string | null) => void;
+
+    /** Indice delle categorie, costruito a partire da categoryData con useMemo nel parent */
+    categoryIndex: CategoryIndex;
+
     /** Indica se la richiesta è di tipo testo */
     isTextRequest?: boolean;
     isRefusedState: boolean;
     isCompletedState: boolean;
-}> = ({ document, proposals, fetchProductDetails, canShowBuyerSelect, canChangeBuyer, buyerOptions,
-    assigningBuyer, onAssignBuyer, isTextRequest, isRefusedState, isCompletedState }) => {
+}> = ({ isPassiveBid, document, proposals, fetchProductDetails, canShowBuyerSelect, canChangeBuyer, buyerOptions,
+    categoryIndex, assigningBuyer, onAssignBuyer, onAssignCategories, isTextRequest, isRefusedState, isCompletedState }) => {
         const [editingBuyer, setEditingBuyer] = useState(false);
+        const [extendedDescription, setExtendedDescription] = React.useState(false)
 
         const { quotazione } = document;
         const stato = quotazione?.stato;
@@ -302,6 +314,82 @@ const ProductSummaryHeader: React.FC<{
         useEffect(() => {
             setEditingBuyer(false);
         }, [document._id]);
+
+        const selectedLinea = normalizeKey(
+            (document as CartProductDTO)?.dettagli_prodotto?.linea
+        );
+
+        const selectedGruppo = normalizeKey(
+            (document as CartProductDTO)?.dettagli_prodotto?.gruppo
+        );
+
+        const prefissoOptions = categoryIndex.prefissoOptions;
+        const lineaOptions = useMemo<FDSelectOption[]>(() => {
+            if (!isPassiveBid) return [];
+
+            const lineaByGruppo = Array.from(
+                categoryIndex.lineeByGruppo.get(selectedGruppo)?.values() ?? []
+            );
+
+            if (selectedGruppo && lineaByGruppo.length > 0) {
+                return lineaByGruppo;
+            }
+
+            return categoryIndex.allLineaOptions;
+        }, [categoryIndex, selectedGruppo, isPassiveBid]);
+        const gruppoOptions = useMemo<FDSelectOption[]>(() => {
+            if (!isPassiveBid) return [];
+
+            const gruppiByLinea = Array.from(
+                categoryIndex.gruppiByLinea.get(selectedLinea)?.values() ?? []
+            );
+            if (selectedLinea && gruppiByLinea.length > 0) {
+                return gruppiByLinea;
+            }
+
+            return categoryIndex.allGruppoOptions;
+        }, [categoryIndex, selectedLinea, isPassiveBid]);
+
+        //dati che permetto la creazione dei select a filtraggio.
+        const dataSelects = [
+            {
+                label: "Prefisso",
+                ref: "label",
+                stateRef: (document as CartProductDTO)?.dettagli_prodotto?.prefisso,
+                noneOnClick: () => {
+                    onAssignCategories("prefisso", null);
+                },
+                menuItemOnClick: (item: string) => {
+                    onAssignCategories("prefisso", item);
+                },
+                dataArray: prefissoOptions
+            },
+            {
+                label: "Linea",
+                ref: "label",
+                stateRef: selectedLinea,
+                noneOnClick: () => {
+                    onAssignCategories("linea", null);
+                },
+                menuItemOnClick: (item: string) => {
+                    onAssignCategories("linea", item);
+                },
+                dataArray: lineaOptions
+            },
+            {
+                label: "Gruppo",
+                ref: "label",
+                stateRef: selectedGruppo,
+                noneOnClick: () => {
+                    onAssignCategories("gruppo", null);
+                },
+                menuItemOnClick: (item: string) => {
+                    onAssignCategories("gruppo", item);
+                },
+                multiSelect: true,
+                dataArray: gruppoOptions
+            },
+        ];
 
 
         // ─────────────────────────────────────────────────────────────
@@ -339,7 +427,7 @@ const ProductSummaryHeader: React.FC<{
                         className="flex items-center gap-2"
                     >
                         <FDSelect
-                            size="xs"
+                            size="xs" radius="md"
                             placeholder="Seleziona il buyer…"
                             options={buyerOptions}
                             value={document.codice_buyer ?? undefined}
@@ -404,8 +492,13 @@ const ProductSummaryHeader: React.FC<{
             );
         };
 
-        const renderStatusChip = () => (
-            <span
+        const renderStatusChip = () => {
+            //controlla se lo stato è definito e se è presente nella mappa productStateTransitions, altrimenti usa uno stato di default
+            const displayStato = stato ? (productStateTransitions[stato] ?
+                CapitalizeFirstLetter(productStateTransitions[stato].replace("_", " "))
+                : stateProductLabels[stato]) : "Stato non definito";
+
+            return <span
                 className={[
                     "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium",
                     chipClass,
@@ -413,10 +506,10 @@ const ProductSummaryHeader: React.FC<{
             >
                 <span className="w-1.5 h-1.5 rounded-full bg-current/40" />
                 <span>
-                    {stato ? stateProductLabels[stato] : "Stato non definito"}
+                    {displayStato}
                 </span>
             </span>
-        );
+        };
 
 
         // ─────────────────────────────────────────────────────────────
@@ -434,21 +527,31 @@ const ProductSummaryHeader: React.FC<{
                     className="mb-4 flex flex-col gap-3 bg-white/80 dark:bg-neutral-900/80 border border-neutral-200/80 dark:border-neutral-700/80"
                 >
                     {/* Header: titolo + stato */}
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div className="min-w-0 space-y-1">
-                            <div className="inline-flex items-center gap-2">
+                    <div className="flex flex-col items-start justify-between gap-2">
+                        <div className="w-full space-y-1">
+                            <div className="flex w-full justify-between gap-2 mb-2">
                                 <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-700 px-2 py-[2px] text-[10px] text-sky-700 dark:text-sky-200">
                                     <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
                                     <span className="font-semibold tracking-[0.08em] uppercase">
                                         Richiesta descrittiva
                                     </span>
                                 </span>
+                                {/** Mostra FDIconButton solo se c'è effettivamente la necessità di espandere/contrarre la descrizione */}
+                                {textRequest?.descrizione && textRequest.descrizione.length > 100 && (
+                                    <FDIconButton
+                                        icon={extendedDescription ? FiChevronUp({}) : FiChevronDown({})}
+                                        size="small"
+                                        onClick={extendedDescription ? () => setExtendedDescription(false) : () => setExtendedDescription(true)}
+                                    />
+                                )}
                             </div>
+
                             <h2 className="text-[14px] font-semibold text-neutral-800 dark:text-neutral-100 line-clamp-2">
                                 {textRequest?.titolo || "Richiesta senza titolo"}
                             </h2>
+
                             {textRequest?.descrizione && (
-                                <p className="text-[12px] text-neutral-600 dark:text-neutral-300 line-clamp-3">
+                                <p className={`text-[12px] text-neutral-600 dark:text-neutral-300 ${extendedDescription ? "" : "line-clamp-3"}`}>
                                     {textRequest.descrizione}
                                 </p>
                             )}
@@ -487,6 +590,94 @@ const ProductSummaryHeader: React.FC<{
 
 
         // ─────────────────────────────────────────────────────────────
+        // COMPONENT RENDER
+        // ─────────────────────────────────────────────────────────────
+        const renderCategorySection = () => {
+            if (!isPassiveBid) return null;
+            return dataSelects.map((elements, index) => {
+                return <div key={elements.label + ":__" + index} className="flex flex-col gap-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-500 dark:text-neutral-400">
+                        {elements.label}
+                    </span>
+                    {buyerOptions && onAssignBuyer &&
+                        (canShowBuyerSelect || (canChangeBuyer && editingBuyer)) ? (
+                        // Modalità SELECT (prima assegnazione o cambio)
+                        <div
+                            onClick={(e) => {
+                                // evita di aprire il dettaglio prodotto
+                                e.stopPropagation();
+                            }}
+                            className="flex items-center gap-2"
+                        >
+
+                            <FDSelect
+                                options={elements?.dataArray}
+                                value={(document as CartProductDTO).dettagli_prodotto[elements.label.toLocaleLowerCase() as keyof CartProductDTO['dettagli_prodotto']] ?? null}
+                                onChange={(v: any) => elements.menuItemOnClick(v)}
+                                placeholder="Seleziona..."
+                                size="xs" variant="outline" color="dark" radius="md" fullWidth searchable
+                                disabled={!elements.dataArray || elements.dataArray.length === 0}
+                                virtualized={false}
+                                menuMaxHeight={240}
+                                className="min-w-60"
+                            />
+
+                            {canChangeBuyer && (
+                                <button
+                                    type="button"
+                                    onClick={(ev) => {
+                                        ev.stopPropagation();
+                                        setEditingBuyer(false);
+                                    }}
+                                    className="text-[10px] text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 underline-offset-2 hover:underline"
+                                >
+                                    Annulla
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        // Modalità "pill" (read-only o con pulsante Cambia)
+                        <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 dark:bg-neutral-900 text-[11px] text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 px-2.5 py-[3px]">
+                                {product?.dettagli_prodotto?.linea ? (
+                                    <>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                        <span className="font-medium">
+                                            {product.dettagli_prodotto[elements.label.toLocaleLowerCase() as keyof typeof product.dettagli_prodotto] ?? "N/A"}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                        <span className="font-medium">
+                                            Non assegnato
+                                        </span>
+                                    </>
+                                )}
+                            </span>
+
+                            {canChangeBuyer && (
+                                <button
+                                    type="button"
+                                    onClick={(ev) => {
+                                        ev.stopPropagation();
+                                        setEditingBuyer(true);
+                                    }}
+                                    className="text-[10px] font-medium text-sky-600 dark:text-sky-300 hover:text-sky-700 dark:hover:text-sky-200"
+                                >
+                                    Cambia {elements.label}
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+
+                </div>
+            })
+        };
+
+        
+        // ─────────────────────────────────────────────────────────────
         // KIND = PRODUCT
         // ─────────────────────────────────────────────────────────────
         const product = document as CartProductDTO;
@@ -515,7 +706,6 @@ const ProductSummaryHeader: React.FC<{
                 data-tooltip-id="general-quotations-tooltip" data-tooltip-content="Visualizza dettagli prodotto"
                 onClick={() => canOpenProductDetails && fetchProductDetails(product.product_id)}
             >
-
                 <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="flex flex-col gap-1">
                         <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-500 dark:text-neutral-400">
@@ -582,18 +772,18 @@ const ProductSummaryHeader: React.FC<{
                                         className="flex items-center gap-2"
                                     >
                                         <FDSelect
-                                            size="xs"
+                                            size="xs" radius="md"
                                             placeholder="Seleziona il buyer…"
                                             options={buyerOptions}
-                                            value={product.codice_buyer ?? undefined}
+                                            value={product.codice_buyer ?? null}
                                             onChange={(value) => {
                                                 if (typeof value === "string") {
                                                     onAssignBuyer(value);
                                                     // se stavo cambiando il buyer, torno in modalità "pill"
                                                     if (canChangeBuyer) {
                                                         setEditingBuyer(false);
-                                                    }
-                                                }
+                                                    };
+                                                };
                                             }}
                                             disabled={assigningBuyer}
                                             virtualized={false}
@@ -648,6 +838,8 @@ const ProductSummaryHeader: React.FC<{
                                     </div>
                                 )}
                             </div>
+
+                            {renderCategorySection()}
                         </div>
 
                         {/* Riepilogo quantità e prezzo */}
@@ -683,6 +875,7 @@ const ProductSummaryHeader: React.FC<{
                     </div>
                 </div>
             </FDBox>
+
             {(hasProposals && !isRefusedState) && <div className="hidden md:flex items-center justify-center">
                 <div className="inline-flex items-center gap-2 rounded-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 shadow-sm px-3 py-1.5 text-[11px] text-neutral-500 dark:text-neutral-300">
                     <MdSwapHorizIcon className="text-neutral-500 dark:text-neutral-300" />
@@ -706,11 +899,15 @@ const CounterProposalSection: React.FC<CounterProposalSectionProps> = ({
     onSelectProposal,
     isRefusedState,
     isCompletedState,
+    currentState,
 }) => {
     if (!proposals.length) return null;
 
     // euristica: l’ultima controproposta è quella “attiva”
     const previousProposals = proposals.slice(0, -1);
+    const submitProposalLabel = currentState === "CONTROPROPOSTA_INVIATA"
+        ? "Aggiorna proposta al commerciale"
+        : "Invia proposta al commerciale";
 
     // determina se selezionabile per la scelta del commerciale
     const isSelectable = !!selectionEnabled && typeof onSelectProposal === "function";
@@ -874,8 +1071,8 @@ const CounterProposalSection: React.FC<CounterProposalSectionProps> = ({
                                             fetchProductDetails(proposal.product_id);
                                         }}
                                         className="ml-auto inline-flex items-center gap-1 rounded-full px-2 py-[3px] text-[10px]
-                         bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700
-                         text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+                                        bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700
+                                        text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
                                     >
                                         <span>Dettagli</span>
                                         <FiChevronRightIcon className="w-3 h-3" />
@@ -906,7 +1103,7 @@ const CounterProposalSection: React.FC<CounterProposalSectionProps> = ({
                         text-sky-700 dark:text-sky-200 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition"
                     >
                         <MdSwapHorizIcon className="w-4 h-4" />
-                        <span>Cambia prodotti proposti</span>
+                        <span>{currentState === "CONTROPROPOSTA_INVIATA" ? "Modifica prodotti proposti" : "Cambia prodotti proposti"}</span>
                     </button>
 
                     {previousProposals.length > 0 && (
@@ -918,17 +1115,17 @@ const CounterProposalSection: React.FC<CounterProposalSectionProps> = ({
                         </p>
                     )}
 
-                    {isBuyer ? (
-                        <button
-                            type="button"
-                            onClick={onSubmitProposal}
-                            disabled={sendDisabled}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 bg-sky-500 text-[13px] font-semibold text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:grayscale hover:brightness-110 active:brightness-95 transition"
-                        >
-                            <MdDoneIcon className="w-4 h-4" />
-                            <span>Invia proposta al commerciale</span>
-                        </button>
-                    ) : null}
+
+                    <button
+                        type="button"
+                        onClick={onSubmitProposal}
+                        disabled={sendDisabled}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 bg-sky-500 text-[13px] 
+                            font-semibold text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:grayscale hover:brightness-110 active:brightness-95 transition"
+                    >
+                        <MdDoneIcon className="w-4 h-4" />
+                        <span>{submitProposalLabel}</span>
+                    </button>
                 </div>
             </div>}
         </FDBox>
@@ -942,6 +1139,11 @@ const BuyerActions: React.FC<{
     onPriceChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onDirectQuoteExpiryChange: (value: string) => void;
     onSubmitPrice: () => void;
+    onRefuse: () => void;
+    currentState: RigaStato;
+    buyerOptions?: Array<{ label: string; value: string }>;
+    assigningBuyer?: boolean;
+    onAssignBuyer?: (buyerCode: string) => void | Promise<any>;
 }> = ({
     document,
     isTextRequest,
@@ -949,9 +1151,44 @@ const BuyerActions: React.FC<{
     onPriceChange,
     onDirectQuoteExpiryChange,
     onSubmitPrice,
+    onRefuse,
+    currentState,
+    buyerOptions,
+    assigningBuyer,
+    onAssignBuyer,
 }) => {
-        // modalità classica: solo prezzo + bottone per aprire la ricerca
         const prezzoProposto = document.quotazione?.prezzo_finale ?? "";
+        const [isReassignMode, setIsReassignMode] = useState(false);
+        const [selectedBuyerCode, setSelectedBuyerCode] = useState<string>("");
+        const availableBuyerOptions = useMemo(
+            () => (buyerOptions ?? []).filter((opt) => opt.value !== document.codice_buyer),
+            [buyerOptions, document.codice_buyer],
+        );
+        const isEditingSubmittedPrice = currentState === "ATTESA_APPROVAZIONE";
+        const submitPriceLabel = isEditingSubmittedPrice ? "Aggiorna quotazione" : "Invia quotazione";
+        const substitutionLabel = currentState === "CONTROPROPOSTA_INVIATA"
+            ? "Modifica prodotti proposti"
+            : "Proponi prodotto in sostituzione";
+
+        useEffect(() => {
+            if (!isReassignMode) setSelectedBuyerCode("");
+        }, [isReassignMode]);
+
+        const enterReassignMode = useCallback(() => {
+            setIsReassignMode(true);
+            setSelectedBuyerCode("");
+        }, []);
+
+        const exitReassignMode = useCallback(() => {
+            if (assigningBuyer) return;
+            setIsReassignMode(false);
+            setSelectedBuyerCode("");
+        }, [assigningBuyer]);
+
+        const submitReassign = useCallback(() => {
+            if (!selectedBuyerCode || typeof onAssignBuyer !== "function") return;
+            onAssignBuyer(selectedBuyerCode);
+        }, [onAssignBuyer, selectedBuyerCode]);
 
         return (
             <FDBox
@@ -972,15 +1209,92 @@ const BuyerActions: React.FC<{
                         </p>
                     </div>
                     <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
-                        {isTextRequest ? "Gestisci richiesta di testo proponendo prodotti" : "Proponi prezzo o prodotto in sostituzione"}
+                        {isReassignMode
+                            ? "Seleziona il buyer destinatario e conferma l'invio"
+                            : isTextRequest
+                                ? "Gestisci richiesta di testo proponendo prodotti"
+                                : isEditingSubmittedPrice
+                                    ? "Correggi la proposta inviata prima che il commerciale la lavori"
+                                    : currentState === "CONTROPROPOSTA_INVIATA"
+                                        ? "Correggi la controproposta inviata prima che il commerciale la lavori"
+                                        : "Proponi prezzo, sostituzione o rifiuta la riga"}
                     </span>
                 </div>
 
-                {!isTextRequest && <div className="grid grid-cols-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,2.1fr)] gap-3 items-end">
-                    {/* input prezzo */}
+                {!!document?.codice_buyer && !!availableBuyerOptions.length && typeof onAssignBuyer === "function" && (
+                    <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50/80 dark:bg-neutral-950/40 p-3 space-y-3 w-full">
+                        <div className="flex items-center justify-between gap-2">
+                            <div>
+                                <p className="text-[11px] font-semibold tracking-[0.08em] uppercase text-neutral-500 dark:text-neutral-400">
+                                    Gira ad altro buyer
+                                </p>
+                                <p className="text-[11px] text-neutral-600 dark:text-neutral-300 mt-1">
+                                    Buyer corrente: <span className="font-medium text-neutral-800 dark:text-neutral-100">{document.codice_buyer}</span>
+                                </p>
+                            </div>
+                            {!isReassignMode && (
+                                <FDButton
+                                    size="sm"
+                                    variant="outline"
+                                    color="info"
+                                    icon={<MdSwapHorizIcon className="w-4 h-4" />}
+                                    onClick={enterReassignMode}
+                                >
+                                    Gira ad altro buyer
+                                </FDButton>
+                            )}
+                        </div>
+
+                        {!isReassignMode ? (
+                            <p className="text-[11px] text-neutral-600 dark:text-neutral-300">
+                                Attivando questa modalità nascondi temporaneamente le altre azioni buyer e confermi manualmente la riassegnazione con Invio.
+                            </p>
+                        ) : (
+                            <>
+                                <p className="text-[11px] text-neutral-600 dark:text-neutral-300">
+                                    Seleziona il nuovo buyer destinatario. Finché questa modalità è attiva, le azioni di proposta prezzo e sostituzione vengono sospese per evitare invii ambigui.
+                                </p>
+                                <FDSelect
+                                    size="sm"
+                                    placeholder="Seleziona il nuovo buyer…"
+                                    options={availableBuyerOptions}
+                                    value={selectedBuyerCode || undefined}
+                                    onChange={(value) => {
+                                        if (typeof value === "string") setSelectedBuyerCode(value);
+                                    }}
+                                    disabled={assigningBuyer}
+                                    virtualized={false}
+                                    className="min-w-60"
+                                />
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <FDButton
+                                        size="sm"
+                                        color="info"
+                                        icon={<MdDoneIcon className="w-4 h-4" />}
+                                        disabled={!selectedBuyerCode || assigningBuyer}
+                                        onClick={submitReassign}
+                                    >
+                                        Invia
+                                    </FDButton>
+                                    <FDButton
+                                        size="sm"
+                                        variant="outline"
+                                        color="neutral"
+                                        disabled={assigningBuyer}
+                                        onClick={exitReassignMode}
+                                    >
+                                        Annulla
+                                    </FDButton>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {!isReassignMode && !isTextRequest && <div className="grid grid-cols-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,2.1fr)] gap-3 items-end w-full">
                     <div className="space-y-1.5 col-span-1 flex-start">
                         <label className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
-                            <span>Tale Prezzo Netto verrà proposto al commerciale come quotazione del prodotto in dettaglio</span>
+                            <span>{isEditingSubmittedPrice ? "Aggiorna il prezzo netto già inviato al commerciale" : "Tale Prezzo Netto verrà proposto al commerciale come quotazione del prodotto in dettaglio"}</span>
                         </label>
                         <div className="flex items-center gap-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 px-3 py-2 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/30 transition">
                             <MdEuroIcon className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
@@ -999,14 +1313,14 @@ const BuyerActions: React.FC<{
 
                     <div className="col-span-1 space-y-1.5 col-span-1 flex-start">
                         <label className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
-                            <span>Tale Prezzo Netto verrà proposto al commerciale come quotazione del prodotto in dettaglio</span>
+                            <span>Fissa una scadenza di validità della quotazione monetaria che sta per essere proposta al commerciale</span>
                         </label>
                         <FDDate
                             type="datetime-local"
                             value={toLocalDateTimeInputValue(document.quotazione?.scadenza)}
                             onChange={(value) => onDirectQuoteExpiryChange(value as any)}
                             range={false}
-                            min={toLocalDateTimeInputValue(new Date(Date.now() - 60 * 60 * 1000))} // non permettere di impostare scadenze nel passato
+                            min={toLocalDateTimeInputValue(new Date(Date.now() - 60 * 60 * 1000))}
                             size="sm"
                             color="neutral"
                             containerClassName="dark:text-white"
@@ -1016,7 +1330,6 @@ const BuyerActions: React.FC<{
                         />
                     </div>
 
-                    {/* btn invia quotazione */}
                     <button
                         type="button"
                         disabled={
@@ -1031,20 +1344,38 @@ const BuyerActions: React.FC<{
                         active:brightness-95 transition"
                     >
                         <MdDoneIcon className="w-4 h-4" />
-                        <span>Invia quotazione</span>
+                        <span>{submitPriceLabel}</span>
                     </button>
                 </div>}
 
-                <div className="flex flex-wrap gap-2">
-                    <button
-                        type="button"
-                        onClick={onOpenSubstitutionSearch}
-                        className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-[11px] text-sky-700 dark:text-sky-200 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition"
-                    >
-                        <MdSwapHorizIcon className="w-4 h-4" />
-                        <span>Proponi prodotto in sostituzione</span>
-                    </button>
-                </div>
+                {!isReassignMode && (
+                    <div className="flex flex-wrap gap-2 w-full">
+                        <button
+                            type="button"
+                            onClick={onOpenSubstitutionSearch}
+                            className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-[11px] text-sky-700 dark:text-sky-200 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition"
+                        >
+                            <MdSwapHorizIcon className="w-4 h-4" />
+                            <span>{substitutionLabel}</span>
+                        </button>
+
+                        <FDButton
+                            variant="outline"
+                            color="error"
+                            icon={<MdCloseIcon className="w-4 h-4" />}
+                            onClick={onRefuse}
+                            className="ml-auto"
+                        >
+                            Rifiuta quotazione
+                        </FDButton>
+                    </div>
+                )}
+
+                {isReassignMode && (
+                    <div className="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-3 text-[11px] text-amber-800 dark:text-amber-200 w-full">
+                        Modalità riassegnazione attiva: finché non confermi o annulli, le azioni di proposta standard restano nascoste.
+                    </div>
+                )}
             </FDBox>
         );
     };
@@ -1168,7 +1499,7 @@ const AgentActions: React.FC<{
 */
 const AdvancedPanel: React.FC<{
     document: CartProductDTO | TextRequestCartDTO; proposals: ContropropostaDTO[];
-    isBuyer: boolean, isTextRequest: boolean, showBuyerActions: boolean,
+    isBuyer: boolean, isAdmin: boolean, isTextRequest: boolean, showBuyerActions: boolean,
     onChangeProposalQuantity: (quantity: number, _id: string) => void, onChangeProposalPrice: (e: React.ChangeEvent<HTMLInputElement>, _id: string) => void;
     getFilteredEventsForCurrentProduct: ({ includeTypes, excludeTypes }: { includeTypes?: ProductEventType[]; excludeTypes?: ProductEventType[] }) => ProductEventDTO[];
     /** Azione quando scegli un prodotto come controproposta */
@@ -1178,7 +1509,7 @@ const AdvancedPanel: React.FC<{
 }> = ({
     document,
     proposals,
-    isBuyer,
+    isBuyer, isAdmin,
     isTextRequest,
     showBuyerActions,
     onChangeProposalQuantity,
@@ -1300,7 +1631,7 @@ const AdvancedPanel: React.FC<{
                 </>}
 
                 {/* blocco economico */}
-                {isBuyer && <FDBox border={true} radius="md" className="border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-sm p-4 space-y-3">
+                {(isBuyer || isAdmin) && <FDBox border={true} radius="md" className="border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-sm p-4 space-y-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500 dark:text-neutral-400">
                         Riepilogo quotazione {isTextRequest ? "(richiesta di testo)" : tag_requested_product}
                     </p>
@@ -1345,7 +1676,7 @@ const AdvancedPanel: React.FC<{
                     <div className="grid grid-cols-1 md:grid-cols-1 gap-3 max-h-160 overflow-y-auto ">
                         {activeProposal ? (
                             proposals.map((prod: ContropropostaDTO, idx: number) => (
-                                <FDBox key={`${prod.dettagli_prodotto.codiceProduttore}:${idx}`} border={true} radius="xl"
+                                <FDBox key={prod._id ?? `${prod.dettagli_prodotto?.codiceProduttore ?? "proposal"}:${idx}`} border={true} radius="xl"
                                     className="border-gray-200 dark:border-neutral-700 bg-gray-50/80 dark:bg-neutral-800/40 p-3 space-y-2">
                                     <p className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 line-clamp-2">
                                         {prod.dettagli_prodotto?.descrizione ?? "Prodotto proposto"}
@@ -1368,7 +1699,7 @@ const AdvancedPanel: React.FC<{
                                             <span className="text-neutral-500 dark:text-neutral-400">
                                                 Quantità proposta
                                             </span>
-                                            {isBuyer ? (
+                                            {(isBuyer || isAdmin) ? (
                                                 <div className="flex items-center gap-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 
                                                 px-2 py-1.5 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/30 transition">
                                                     <input
@@ -1397,7 +1728,7 @@ const AdvancedPanel: React.FC<{
                                             <span className="text-neutral-500 dark:text-neutral-400">
                                                 Prezzo proposto
                                             </span>
-                                            {isBuyer ? (
+                                            {(isBuyer || isAdmin) ? (
                                                 <div className="flex items-center gap-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 px-2 py-1.5 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/30 transition">
                                                     <MdEuroIcon className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
                                                     <input
@@ -1421,7 +1752,7 @@ const AdvancedPanel: React.FC<{
                                             )}
                                         </div>
 
-                                        {isBuyer && showBuyerActions && (
+                                        {(isBuyer || isAdmin) && showBuyerActions && (
                                             <div className="mt-2 space-y-1 col-span-2">
                                                 <label className="text-[10px] text-neutral-500 dark:text-neutral-400">Scadenza controproposta (opzionale)</label>
                                                 <FDDate
@@ -1645,7 +1976,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     onClose,
     product,
     qtsState,
-    isBuyer,
+    isBuyer, isAgent,
     searchQuery,
     searchDebounced,
     searchItems,
@@ -1667,13 +1998,13 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     onChangeProposalNote,
     onChangeProposalPrice,
     onChangeProposalExpiry,
-    currentProposalNote,
+    currentProposalNote, sendProductNote,
     getFilteredEventsForCurrentProduct,
     // elementi decisionali per buyers
-    isDraftQuotation,
+    isDraftQuotation, isPassiveBid,
     buyerOptions,
     assigningBuyer,
-    onAssignBuyer,
+    onAssignBuyer, onAssignCategories,
     onReportProductAnomaly,
     reportingAnomaly,
     //nuovo wiring per il pannello 3
@@ -1681,6 +2012,9 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     onAutoOpenProductDetailsHandled,
     onSelectCounterProposal,
     locked,
+    userState,
+    CheckAdminDev,
+    categoryIndex
 }) => {
     const [selectedIdProduct, setSelectedIdProduct] = useState<string | null>(null); // prodotto selezionato per i dettagli
     const [isProductDetailsOpen, setIsProductDetailsOpen] = useState(false); // pannello dedicato ai dettagli prodotto
@@ -1689,6 +2023,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     const isSubstitutionMode = secondaryOpen && substitutionOpen;
     const isWideLayout = isSubstitutionMode || isProductDetailsOpen; // layout più ampio se sono aperti i pannelli secondari
 
+    const productDetailsAbortController = React.useRef<AbortController | null>(null); //abort Controller per il fetch dei dettagli prodotto, così da poter annullare la richiesta se l'utente chiude il pannello prima che arrivi la risposta
 
 
     // ——————————————————————————————————————————————————————————
@@ -1728,15 +2063,18 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     // ——————————————————————————————————————————————————————————
     // chiudi avanzato quando chiudi il principale
     useEffect(() => {
-        if (!open) setSecondaryOpen(false);
+        if (!open) {
+            setSecondaryOpen(false);
+        };
+        productDetailsAbortController.current && productDetailsAbortController.current.abort(); // annulla eventuale richiesta in corso dei dettagli prodotto quando si chiude il pannello
+        productDetailsAbortController.current = null; // resetta il ref dell'abort controller
     }, [open]);
 
     // apre automaticamente i dettagli prodotto se passato l'id
     useEffect(() => {
         if (autoOpenProductDetailsId) {
-            setSelectedIdProduct(autoOpenProductDetailsId);
-            setIsProductDetailsOpen(true);
-        }
+            handleOpenProductDetails(autoOpenProductDetailsId);
+        };
     }, [autoOpenProductDetailsId, product?.kind]);
 
     // ESC → prima pannello avanzato, poi principale
@@ -1774,7 +2112,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     - riga ancora senza buyer */
     const canShowBuyerSelect =
         !!product &&
-        !isBuyer &&
+        (isAgent || CheckAdminDev) &&
         (isDraftQuotation ?? false) &&
         !product.codice_buyer &&
         !!buyerOptions &&
@@ -1789,7 +2127,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     - ed è stato assegnato partendo da null (non da catalogo) */
     const canChangeBuyer =
         !!product &&
-        !isBuyer &&
+        (isAgent || CheckAdminDev) &&
         (isDraftQuotation ?? false) &&
         !!product.codice_buyer &&
         hasBuyerAssignmentFromNull &&
@@ -1803,10 +2141,26 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     const hasActiveProposal = controproposte.length > 0;
 
     const stato = product?.quotazione?.stato ?? "ATTESA_VALUTAZIONE";
-    const isBuyerFlowState = stato === "ATTESA_VALUTAZIONE" || stato === "CONTROPROPOSTA_RICHIESTA";
+    /** Definisce lo stato di lock della quotazione quando la quotazione assume questi stati esplicitati */
+    const isQtsLockedState = ['OK', 'KO', 'VALIDAZIONE', 'BOZZA'].includes(qtsState ?? '');
+    const isBuyerFlowState =
+        stato === "ATTESA_VALUTAZIONE" ||
+        stato === "CONTROPROPOSTA_RICHIESTA" ||
+        stato === "ATTESA_APPROVAZIONE" ||
+        stato === "CONTROPROPOSTA_INVIATA";
 
-    const showBuyerActions = !locked && isBuyer && isBuyerFlowState && !(['APPROVATA', 'VALIDAZIONE', 'RIFIUTATA', 'BOZZA'].includes(qtsState ?? ''));
-    const showAgentActions = !isBuyer && !locked;
+
+    /**
+     * Mostra le azioni del buyer quando:
+     - la quotazione è in uno stato di flusso buyer (ATTESA_VALUTAZIONE, CONTROPROPOSTA_RICHIESTA, ATTESA_APPROVAZIONE, CONTROPROPOSTA_INVIATA)
+     - l'utente è un buyer con lo stesso codice buyer o un admin/dev
+     - e non è in stato di blocco (es. APPROVATA, VALIDAZIONE, RIFIUTATA, BOZZA)
+     */
+    const showBuyerActions = !locked && !isAgent && (CheckAdminDev || (
+        (product && product.codice_buyer === userState?.details?.codici.buyer && isBuyer)
+    )) && isBuyerFlowState && !isQtsLockedState;
+
+    const showAgentActions = (CheckAdminDev || isAgent) && !locked && !isBuyer && !isQtsLockedState;
     const ruoloLabel = isBuyer ? "Buyer / Admin / Dev" : "Commerciale";
     const lastEvent = (product?.eventi ?? [])
         .slice()
@@ -1828,7 +2182,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     // logica alternative commerciali
     const commercialAlternativeSuggestions = ((product as CartProductDTO)?.alternativeSuggestions ?? []) as CommercialAlternativeSuggestionDTO[];
     const hasCommercialAlternatives = commercialAlternativeSuggestions.length > 0;
-    const canManageCommercialAlternatives = !isBuyer && isDraftQuotation && !locked && !isTextRequest;
+    const canManageCommercialAlternatives = (isAgent || CheckAdminDev) && isDraftQuotation && !locked && !isTextRequest;
     const canBuyerUseCommercialAlternatives = showBuyerActions && hasCommercialAlternatives;
 
 
@@ -1921,14 +2275,19 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                     </span>
                     {canManageCommercialAlternatives && (
                         <FDButton
-                            variant="outlined"
+                            variant={(substitutionOpen && secondaryOpen) ? "solid" : "outlined"}
+                            color={(substitutionOpen && secondaryOpen) ? "primary" : "neutral"}
                             radius="full"
                             size="sm"
                             textSize="xs"
                             onClick={() => {
-                                onOpenSubstitutionSearch();
-                                setSecondaryOpen(true);
-                                setSubstitutionOpen(true);
+                                if (!substitutionOpen || !secondaryOpen) {
+                                    onOpenSubstitutionSearch();
+                                    setSecondaryOpen(true);
+                                    setSubstitutionOpen(true);
+                                } else {
+                                    setSubstitutionOpen(false);
+                                }
                             }}
                             rightIcon={<FiChevronRightIcon />}
                         >Aggiungi alternativa</FDButton>
@@ -1940,6 +2299,8 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                 <div className="mt-4 grid grid-cols-1 gap-3 max-h-48 overflow-y-auto">
                     {commercialAlternativeSuggestions.map((suggestion) => {
                         const isAlreadyProposed = isAlternativeAlreadyProposed(suggestion.product_id);
+                        const _loading = !!(loading.agents_alternatives as Map<string, boolean>).get(suggestion._id);
+
                         return <div key={suggestion._id}
                             className="rounded-2xl border border-amber-400/80 dark:border-amber-900/70 bg-amber-50/70 dark:bg-amber-950/20 p-3">
                             <div className="flex items-start justify-between gap-3">
@@ -1974,7 +2335,14 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                             textSize="xs"
                                             border={true}
                                             shadow="md"
-                                            onClick={() => toggleCommercialAlternativeForCurrent({ _id: suggestion.product_id } as any)}
+                                            disabled={_loading}
+                                            loading={_loading}
+                                            onClick={() =>
+                                                toggleCommercialAlternativeForCurrent({
+                                                    _id: suggestion.product_id,
+                                                    suggestionId: suggestion._id,
+                                                } as any)
+                                            }
                                         >
                                             Rimuovi
                                         </FDButton>
@@ -1987,8 +2355,10 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
             )}
         </FDBox>
     );
+
     /**
-     * Permette di avere l'informazione sulle alternative commerciali anche quando si visualizzano i dettagli di un prodotto sostitutivo, senza dover aprire il pannello dedicato alle sostituzioni.
+     * Permette di avere l'informazione sulle alternative commerciali anche quando si visualizzano i dettagli di un prodotto sostitutivo, 
+     * senza dover aprire il pannello dedicato alle sostituzioni.
      * @returns 
      */
     const RenderResumeCommercialAlternativesSection = () => (
@@ -2006,7 +2376,11 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                     </p>
                 </div>
                 <FDButton variant="outlined" radius="full" size="md" textSize="xs"
-                    onClick={() => setSecondaryOpen(true)}
+                    onClick={() => {
+                        onOpenSubstitutionSearch();
+                        setSecondaryOpen(true);
+                        setSubstitutionOpen(true);
+                    }}
                     rightIcon={<FiChevronRightIcon className="w-3.5 h-3.5" />}
                     asMotion={false}
                     dataTooltipId="general-quotations-tooltip"
@@ -2103,6 +2477,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                         )}
 
                                         <ProductSummaryHeader
+                                            isPassiveBid={isPassiveBid}
                                             document={product} // intero oggetto integrale ("PRODUCT" | "TEXT_REQUEST")
                                             proposals={controproposte}
                                             fetchProductDetails={handleOpenProductDetails}
@@ -2112,19 +2487,21 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                             buyerOptions={buyerOptions}
                                             assigningBuyer={assigningBuyer}
                                             onAssignBuyer={onAssignBuyer}
+                                            onAssignCategories={onAssignCategories}
                                             isRefusedState={isRefusedState}
                                             isCompletedState={isCompletedState}
+                                            categoryIndex={categoryIndex}
                                         />
 
                                         {!isTextRequest && <RenderResumeCommercialAlternativesSection />}
 
                                         {/* NOTE ACTION-PHASE */}
-                                        {(showBuyerActions || (showAgentActions && (![
-                                            "ATTESA_VALUTAZIONE",
-                                            "CONTROPROPOSTA_RICHIESTA",
+                                        {((![
+                                            "CONTROPROPOSTA_RIFIUTATA",
                                             "CONTROPROPOSTA_ACCETTATA",
                                             "VALUTAZIONE_COMPLETATA",
-                                        ].includes(stato))) && !isRefusedState) && (
+                                            "VALUTAZIONE_RIFIUTATA"
+                                        ].includes(stato)) && !isRefusedState) && (
                                                 <FDBox
                                                     variant="soft"
                                                     color="neutral"
@@ -2150,6 +2527,10 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                                         La nota verrà salvata insieme alla controproposta quando invii la
                                                         proposta al commerciale.
                                                     </p>
+                                                    <FDButton icon={<LuSendIcon />} variant="outline" size="sm" className="mt-2 float-right" onClick={sendProductNote} disabled={loading.add_product_note as boolean} loading={loading.add_product_note as boolean}
+                                                        dataTooltipId="general-quotations-tooltip" dataTooltipContent="Invia solo la nota (le note verranno inviate, se compilate, anche nel momento in cui si compie l'azione)">
+                                                        Invia la nota
+                                                    </FDButton>
                                                 </FDBox>
                                             )}
 
@@ -2171,6 +2552,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                             onSelectProposal={onSelectCounterProposal}
                                             isRefusedState={isRefusedState}
                                             isCompletedState={isCompletedState}
+                                            currentState={stato}
                                         />}
 
                                         {/* AZIONI BUYER */}
@@ -2186,6 +2568,11 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                                 onPriceChange={onPriceChange}
                                                 onDirectQuoteExpiryChange={onDirectQuoteExpiryChange}
                                                 onSubmitPrice={onSubmitPrice}
+                                                onRefuse={onRefuse}
+                                                currentState={stato}
+                                                buyerOptions={buyerOptions}
+                                                assigningBuyer={assigningBuyer}
+                                                onAssignBuyer={onAssignBuyer}
                                             />
                                         )}
 
@@ -2246,20 +2633,12 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                                                 valutazioni e operazioni
                                                             </span>
                                                         </p>
-                                                        <button
-                                                            type="button"
-                                                            onClick={closeSecondaryPanel}
-                                                            className="inline-flex items-center gap-1 rounded-full px-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-[10px] text-neutral-700 dark:text-neutral-200 shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer transition"
-                                                        >
-                                                            <FiChevronLeftIcon className="w-3 h-3" />
-                                                            <span>Torna al pannello</span>
-                                                        </button>
                                                     </div>
 
                                                     <AdvancedPanel
                                                         document={product}
                                                         proposals={controproposte}
-                                                        isBuyer={isBuyer}
+                                                        isBuyer={isBuyer} isAdmin={CheckAdminDev}
                                                         isTextRequest={isTextRequest}
                                                         onChangeProposalQuantity={onChangeProposalQuantity}
                                                         onChangeProposalPrice={onChangeProposalPrice}
@@ -2284,7 +2663,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                                             query={searchQuery ?? ""}
                                                             onQueryChange={searchDebounced}
                                                             results={searchItems ?? []}
-                                                            loading={loading.search_replace_products}
+                                                            loading={loading}
                                                             mode={canManageCommercialAlternatives ? "COMMERCIAL_SUGGESTION" : "BUYER_COUNTERPROPOSAL"}
                                                             selectedIds={(canManageCommercialAlternatives ? commercialAlternativeSuggestions.map((item) => item.product_id ?? "") : controproposte.map((cp => cp.product_id ?? ""))) ?? []}
                                                             mapResultToView={(item: any) => ({
@@ -2327,8 +2706,13 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                                                     item.pictureUrl ??
                                                                     undefined,
                                                             })}
-                                                            onSelectProduct={(selected) => canManageCommercialAlternatives ?
+                                                            onSelectProduct={(selected: CartProductDTO) => canManageCommercialAlternatives ?
                                                                 toggleCommercialAlternativeForCurrent(selected as any) : selectSubstitutionProductForCurrent(selected as any)}
+                                                            onOpenProductDetails={(selected) => {
+                                                                const selectedProductId = String((selected as any)?._id ?? (selected as any)?.id ?? "").trim();
+                                                                if (!selectedProductId) return;
+                                                                handleOpenProductDetails(selectedProductId);
+                                                            }}
                                                         />
                                                     </div>
                                                 )}
@@ -2353,6 +2737,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                             productId={selectedIdProduct}
                                             onReportProductAnomaly={onReportProductAnomaly}
                                             reportingAnomaly={reportingAnomaly}
+                                            abortController={productDetailsAbortController}
                                         />
                                     </div>
                                 )}

@@ -1,17 +1,20 @@
+//src\components\Virtualized\table\headerVirtualized\index.tsx
 import React, { useEffect, useState, memo, useCallback, useRef } from 'react';
 // #Internal Components
 import { Filters } from './filters';
+import InfoMenu from '../infoPoupUpMenu';
 // #External Components
+import Stack from '@mui/material/Stack';
 import HeaderFiled from './headerFIled';
 // --@Mui icons
-import { Tooltip as MuiTooltip } from '@mui/material';
+import { useMaterialUIController } from 'context/index';
+import { Card, Tooltip as MuiTooltip } from '@mui/material';
 import { ContextMenu } from 'components/UI/menu/ContextMenu';
 
 import { IoArrowUpCircleOutline } from "react-icons/io5";
 import { BsFillExclamationTriangleFill } from 'react-icons/bs';
 import { HeaderSettings } from '../types/headerSettings';
 import FDBox from 'components/UI/box/FDBox';
-import { useNexTheme } from '@nex/theme-system';
 
 const IoArrowUpCircleOutlineIcon = IoArrowUpCircleOutline as React.FC<{ size?: number; className?: string }>;
 
@@ -37,7 +40,7 @@ export type Column = {
     fieldToTake?: FieldToTakeItem[];
 };
 
-type SortStatusItem = { label: string; sortStatus: number };
+type SortStatusItem = { label: string; sortStatus: number; columnKey?: string };
 
 interface HeaderVirtualizedProps<T = any> {
     setData: React.Dispatch<React.SetStateAction<T>>;
@@ -68,6 +71,9 @@ const normalizeKey = (s: string) =>
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '');
 
+const normalizeSortToken = (s: unknown): string =>
+    String(s ?? '').trim().toLowerCase();
+
 function HeaderVirtualized<T>({
     setData,
     copyData,
@@ -82,8 +88,12 @@ function HeaderVirtualized<T>({
         }
     },
 }: HeaderVirtualizedProps<T>): JSX.Element {
-    const { preferences } = useNexTheme();
-    const darkMode = preferences.mode === "dark";
+    const [controller] = useMaterialUIController() as unknown as [
+        { darkMode?: boolean },
+        unknown
+    ];
+    const { darkMode } = controller ?? {};
+    void darkMode;
 
     const [openContextMenu, setOpenContextMenu] = useState(false);
     const anchorEl = useRef<HTMLDivElement | null>(null);
@@ -98,12 +108,35 @@ function HeaderVirtualized<T>({
         []
     );
 
+    const resolveColumnKey = useCallback((field: unknown): string => {
+        if (Array.isArray(field)) {
+            return field.map((item) => String(item ?? '')).join('.');
+        }
+        if (field && typeof field === 'object') {
+            return String((field as any).key ?? (field as any).label ?? '');
+        }
+        return String(field ?? '');
+    }, []);
+
     const sortBy = useCallback(
         (type: string | number | unknown[], field: any, status: number, multiplay?: any) => {
+            if (headerSettings?.onSortChange) {
+                const nextSortDirection = status >= 2 ? 0 : status + 1;
+                headerSettings.onSortChange({
+                    columnKey: resolveColumnKey(field),
+                    sortDirection: nextSortDirection,
+                });
+                return;
+            }
+
             Filters(type as any, field, status, multiplay, setData as any, copyData as any, whereToFindData);
         },
-        [copyData, setData, whereToFindData]
+        [copyData, headerSettings, resolveColumnKey, setData, whereToFindData]
     );
+
+    const onSortChange = headerSettings?.onSortChange;
+    const externalSortColumnKey = headerSettings?.sortState?.columnKey ?? '';
+    const externalSortDirection = Number(headerSettings?.sortState?.sortDirection ?? 0);
 
     const [test, setTest] = useState<SortStatusItem[]>([]);
 
@@ -114,16 +147,25 @@ function HeaderVirtualized<T>({
         listofRowElements: FieldToTakeItem[]
     ) => {
         const newArr = [...test];
-
         const statusAvaible = ['disabled', 'up', 'down'];
-        const sortStatus = newArr.find((el) => el.label === label)?.sortStatus ?? 0;
+        const indexByLabel = newArr.findIndex((el) => el.label === label);
 
-        newArr[index].sortStatus = sortStatus >= statusAvaible.length - 1 ? 0 : sortStatus + 1;
+        let resolvedIndex = index >= 0 && newArr[index] ? index : indexByLabel;
+
+        if (resolvedIndex < 0) {
+            if (!label) return;
+            newArr.push({ label, sortStatus: 0 });
+            resolvedIndex = newArr.length - 1;
+        }
+
+        const sortStatus = newArr[resolvedIndex]?.sortStatus ?? 0;
+        const nextSortStatus = sortStatus >= statusAvaible.length - 1 ? 0 : sortStatus + 1;
+        newArr[resolvedIndex].sortStatus = nextSortStatus;
 
         const multiplay = (listofRowElements.find((elm) => elm.label === label)?.key as MultiPlayObject | undefined)?.multiplay;
 
         for (let i = 0; i < newArr.length; i++) {
-            if (i !== index) newArr[i].sortStatus = 0;
+            if (i !== resolvedIndex) newArr[i].sortStatus = 0;
         }
         setTest(() => newArr);
 
@@ -131,15 +173,25 @@ function HeaderVirtualized<T>({
     };
 
     const trovaOggettiConSortTrue = useCallback(
-        (arr: Column[]): SortStatusItem[] => {
+        (arr: Column[], sortState?: HeaderSettings['sortState']): SortStatusItem[] => {
             const risultato: SortStatusItem[] = [];
+            const currentSortKey = normalizeSortToken(sortState?.columnKey);
+            const currentSortDirection = Number(sortState?.sortDirection ?? 0);
+            const hasCurrentSort = (currentSortDirection === 1 || currentSortDirection === 2) && currentSortKey.length > 0;
 
             function esaminaElemento(elemento: Column | FieldToTakeItem) {
                 if ((elemento as any).sort === true && !(elemento as any).fieldToTake) {
                     const lbl = (elemento as any).label ?? (elemento as any).key;
+                    const field = (elemento as any).key ?? (elemento as any).label;
+                    const columnKey = resolveColumnKey(field);
+                    const isCurrentSort =
+                        hasCurrentSort &&
+                        (normalizeSortToken(columnKey) === currentSortKey || normalizeSortToken(lbl) === currentSortKey);
+
                     risultato.push({
                         label: String(lbl),
-                        sortStatus: 0,
+                        columnKey,
+                        sortStatus: isCurrentSort ? currentSortDirection : 0,
                     });
                 }
                 const ft = (elemento as any).fieldToTake;
@@ -151,13 +203,30 @@ function HeaderVirtualized<T>({
             arr.forEach(esaminaElemento as any);
             return risultato;
         },
-        []
+        [resolveColumnKey]
     );
 
     useEffect(() => {
-        setTest(() => trovaOggettiConSortTrue(columns));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        setTest((prev) => {
+            const next = trovaOggettiConSortTrue(columns, {
+                columnKey: externalSortColumnKey,
+                sortDirection: externalSortDirection,
+            });
+
+            // In modalità server-side la source of truth è lo stato esterno.
+            if (onSortChange) {
+                return next;
+            }
+
+            if (prev.length === 0) return next;
+
+            const prevByLabel = new Map(prev.map((item) => [item.label, item.sortStatus]));
+            return next.map((item) => ({
+                ...item,
+                sortStatus: prevByLabel.get(item.label) ?? 0,
+            }));
+        });
+    }, [columns, externalSortColumnKey, externalSortDirection, onSortChange, trovaOggettiConSortTrue]);
 
     const RenderLeftHeaderCell = ({
         columnIndex,
@@ -167,6 +236,8 @@ function HeaderVirtualized<T>({
         style?: React.CSSProperties;
     }) => {
         const col = columns[columnIndex];
+        if (!col) return null;
+
         const label = visibleColumns.find((elm) => elm === col.label) ?? '';
 
         const sortStatus = test.find((el) => el.label === label)?.sortStatus ?? 0;

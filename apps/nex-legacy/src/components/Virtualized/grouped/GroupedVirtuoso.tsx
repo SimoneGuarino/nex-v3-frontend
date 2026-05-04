@@ -10,8 +10,8 @@ import { Stack } from '@mui/material';
 
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useMaterialUIController } from 'context/index';
 import { MainTheme } from 'assets/settingsTheme';
-import { useNexTheme } from '@nex/theme-system';
 
 /** tipi di supporto **/
 
@@ -134,8 +134,11 @@ export function GroupedVI<T>({
     isGroupedItems,
 }: GroupedVIProps<T>): JSX.Element {
     // tipizziamo vagamente il controller per non rompere dipendenze interne del tuo progetto
-    const { preferences } = useNexTheme();
-    const darkMode = preferences.mode === "dark";
+    const [controller] = useMaterialUIController() as unknown as [
+        { darkMode?: boolean },
+        unknown
+    ];
+    const darkMode = controller?.darkMode;
     const palette = MainTheme().palette;
     void darkMode;
     void palette;

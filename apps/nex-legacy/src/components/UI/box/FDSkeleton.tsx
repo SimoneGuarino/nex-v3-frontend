@@ -1,4 +1,5 @@
 import React, { memo, useMemo } from "react";
+import { randomIntFromInterval } from "utils";
 
 /**
  * clsx minimale (coerente con gli altri componenti FD).
@@ -386,8 +387,8 @@ export const FDSkeletonPresets = {
      * Preset: singola riga input/select/button (il tuo caso tipico h-9 w-full).
      * NOTE: se cambi altezza o rounding, lo fai qui e si propaga ovunque usato.
      */
-    fieldRow(className?: string): React.ReactNode {
-        return <FDSkeleton className={clsx("h-9 w-full", className)} />;
+    fieldRow(className?: string, h?: number | string): React.ReactNode {
+        return <FDSkeleton className={clsx(`h-${h ?? 9} w-full`, className)} />;
     },
 
     /**
@@ -417,7 +418,7 @@ export const FDSkeletonPresets = {
      * Preset: lista di card (es. 3 righe).
      * - ottimo per pagine che caricano collezioni.
      */
-    cardList(rows: number = 3): FDSkeletonNode {
+    avatarCardList(rows: number = 3): FDSkeletonNode {
         return {
             type: "col",
             gap: 0.75,
@@ -430,6 +431,45 @@ export const FDSkeletonPresets = {
                     this.avatarWithText(),
                     { type: "block", shape: "text", className: "h-3 w-full opacity-80" },
                     { type: "block", shape: "text", className: "h-3 w-5/6 opacity-70" },
+                ],
+            })),
+        };
+    },
+
+    /**
+     * Preset: lista di card (es. 3 righe).
+     * - ottimo per pagine che caricano collezioni.
+     */
+    cardList(rows: number = 3, settings: {
+        /**
+         * Se true, randomizza l'altezza di ogni riga entro un range (es. 12-30px) per un effetto più “organico” e meno “rigido”.
+         * Default: false (altezza fissa per tutte le righe).
+         * Nota: se usi rangeRowHeight, randomizeHeight è implicito.
+         */
+        randomizeHeight?: boolean;
+        /**
+         * Range di altezza in pixel per ogni riga quando randomizeHeight è true (es. [12, 30]).
+         * dove il valore 1 è il min e il valore 2 è il max. Il range è chiuso: include entrambi i valori.
+         * Default: [12, 30].
+         */
+        rangeRowHeight?: [number, number];
+        /**
+         * Altezza fissa di ogni riga quando randomizeHeight è false (es. 20px).
+         * Default: 20.
+         */
+        rowHeight: number;
+    } = { rowHeight: 60, rangeRowHeight: [12, 30] }): FDSkeletonNode {
+        return {
+            type: "col",
+            gap: 0.75,
+            children: Array.from({ length: rows }).map((_, i) => ({
+                type: "col",
+                key: `card-${i}`,
+                gap: 0.75,
+                children: [
+                    { type: "block", shape: "rect", style: { height: `${(settings.randomizeHeight && settings.rangeRowHeight) ? 
+                        randomIntFromInterval(settings.rangeRowHeight[0], settings.rangeRowHeight[1]) : settings.rowHeight}px` }, 
+                    className: `w-full opacity-80` },
                 ],
             })),
         };

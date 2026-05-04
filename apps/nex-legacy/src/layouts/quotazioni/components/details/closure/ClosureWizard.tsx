@@ -108,6 +108,10 @@ export const ClosureWizard: React.FC<Props> = ({
         return draft.finalOutcome === "OK";
     }, [isMepa, draft.mepaOutcome, draft.finalOutcome]);
 
+    const isFinalNoteRequired = useMemo(() => {
+        return !isMepa && draft.finalOutcome === "KO";
+    }, [isMepa, draft.finalOutcome]);
+
     /**
      * Calcolo dei prodotti per cui manca ancora l’associazione OC/FB (solo se serve il mapping, cioè esito positivo). Uso questo array per validare lo step di mapping e per dare un feedback all’utente sui prodotti mancanti.
      */
@@ -137,8 +141,25 @@ export const ClosureWizard: React.FC<Props> = ({
         }
 
         if (!draft.finalOutcome) return "Seleziona l’esito finale (OK o KO).";
+        if (draft.finalOutcome === "KO" && !(draft.finalNote ?? "").trim()) {
+            return "Con esito KO la nota di chiusura è obbligatoria.";
+        }
+        
+        // se la quotazione selezionata è OK e se nei prodotti della quotazione non è presente nemmeno 1 prodotto con esito quotazione positivo allora mostro 
+        // un messaggio di warning che avvisa l'utente che non potrà associare OC/FB ai prodotti (perché non ci sono prodotti con esito positivo) e che quindi la chiusura avverrà senza associazione OC/FB DONE_PRODUCT_STATES
+        if(draft.finalOutcome === "OK" && (!productRows || (productRows && Array.isArray(productRows) && productRows.length === 0))) {
+            return "Hai selezionato esito OK ma nessun prodotto quotato ha esito positivo. Seleziona KO per chiudere la quotazione senza associazione OC/FB.";
+        };
+
         return null;
-    }, [isRequester, isMepa, draft.mepaOutcome, draft.mepaLostReasonCode, draft.finalOutcome]);
+    }, [
+        isRequester,
+        isMepa,
+        draft.mepaOutcome,
+        draft.mepaLostReasonCode,
+        draft.finalOutcome,
+        draft.finalNote,
+    ]);
 
     /**
      * Validazione step B (Mapping OC/FB): se l’esito è positivo, verifico che per ogni prodotto quotato sia stata associata almeno un’OC o FB.
@@ -413,7 +434,7 @@ export const ClosureWizard: React.FC<Props> = ({
 
                                                         <div>
                                                             <div className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
-                                                                Note (opzionale)
+                                                                {isFinalNoteRequired ? "Note (obbligatoria per KO)" : "Note (opzionale)"}
                                                             </div>
                                                             <FDInput
                                                                 size="sm"
@@ -424,7 +445,7 @@ export const ClosureWizard: React.FC<Props> = ({
                                                                         finalNote: e?.target?.value ?? "",
                                                                     }))
                                                                 }
-                                                                placeholder="Note finali (opzionale)"
+                                                                placeholder={isFinalNoteRequired ? "Inserisci la motivazione della chiusura KO" : "Note finali (opzionale)"}
                                                                 disabled={!isRequester}
                                                             />
                                                         </div>

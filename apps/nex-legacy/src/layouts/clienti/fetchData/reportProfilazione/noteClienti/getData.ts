@@ -1,58 +1,93 @@
-//src\layouts\clienti\fetchData\reportProfilazione\noteClienti\getData.ts
 import { isKeyInObject } from "vdck";
 import { enqueueSnackbar } from "components/MessageBox";
 import { FetchData } from "examples/Fetch";
-import { ChangeLoadStatusArgs } from "layouts/clienti/types/load";
+import { ChangeLoadArgs, ImpaginationState, NotesFederatedCursor } from "components/UI/panels/customerNotes";
 
 export function getData({
     userContext,
     abortController,
     body,
     offset,
+    cursor,
+    useCursor,
     setData,
     setErr,
     ChangeLoadStatus,
-    setTotal,
+    changeMainLoadStatus,
+    setPagination,
 }: {
     userContext: { [key: string]: any };
     abortController: any;
     body: { [key: string]: any };
     offset: React.MutableRefObject<number>;
+    cursor: React.MutableRefObject<NotesFederatedCursor | null>;
+    useCursor: boolean;
     setData: (updater: any) => void;
     setErr: (prev: boolean) => void;
-    ChangeLoadStatus: (args: ChangeLoadStatusArgs) => void;
-    setTotal?: (n: number) => void;
+    ChangeLoadStatus: ({ from, bool }: ChangeLoadArgs) => void;
+    changeMainLoadStatus?: any;
+    setPagination: React.Dispatch<React.SetStateAction<ImpaginationState>>;
 }): Promise<any> {
-    // ✅ gate autenticazione
     if (!isKeyInObject(userContext, "token", "s", { minLength: 1 })) {
         return Promise.resolve(false);
     }
 
     const PAGE_SIZE = 50;
-
+    const hasCursor = !!cursor?.current;
     const ofs =
         offset && typeof offset.current === "number" && offset.current >= 0
             ? offset.current
             : 0;
 
-    const url = `${import.meta.env.VITE_API_CUSTOMERSFIDO}customers/report/note-clienti/list?ofs=${ofs}`;
-    const payload = { ...body, limit: PAGE_SIZE };
+    const url = hasCursor
+        ? `${import.meta.env.VITE_API_CUSTOMERSFIDO}customers/report/note-clienti/list`
+        : `${import.meta.env.VITE_API_CUSTOMERSFIDO}customers/report/note-clienti/list?ofs=${ofs}`;
+
+    const payload = hasCursor
+        ? { ...body, limit: PAGE_SIZE, cursor: cursor.current }
+        : { ...body, limit: PAGE_SIZE };
 
     return FetchData(url, "POST", payload, abortController)
         .then((res: any) => {
             const items = Array.isArray(res?.items) ? res.items : [];
+            const nextCursor = res?.nextCursor ?? null;
+            const hasMore = !!res?.hasMore;
 
-            if (typeof setTotal === "function" && Number.isFinite(res?.total)) {
-                setTotal(Number(res.total));
+            setPagination((prev) => ({
+                ...prev,
+                hasMore,
+                nextOffset: hasCursor ? prev?.nextOffset : ofs + items.length,
+                cursor: nextCursor,
+            }));
+
+            setData((prev: any[]) => {
+                if (useCursor) {
+                    return cursor?.current ? [...(prev || []), ...items] : items;
+                }
+
+                if (ofs > 0) {
+                    return [...(prev || []), ...items];
+                }
+
+                return items;
+            });
+
+            if (nextCursor) {
+                cursor.current = nextCursor;
             }
 
-            setData((prev: any[]) => (ofs === 0 ? items : [...(prev || []), ...items]));
-            // Reset search flag quando la prima pagina finisce (ofs === 0)
-            if (ofs === 0) {
+            if (!hasCursor) {
+                offset.current = ofs + items.length;
+            }
+
+            if (!hasCursor && ofs === 0) {
                 ChangeLoadStatus({ from: "search", bool: false });
+                changeMainLoadStatus?.({ from: "search", bool: false });
+            } else if (hasCursor && !body?.cursor) {
+                ChangeLoadStatus({ from: "search", bool: false });
+                changeMainLoadStatus?.({ from: "search", bool: false });
             }
 
-            offset.current = ofs + items.length;
             return true;
         })
         .catch((error: any) => {
