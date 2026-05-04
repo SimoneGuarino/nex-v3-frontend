@@ -35,4 +35,16 @@ registerApplication({
     activeWhen: MICROFRONTENDS.survey.activeWhen,
 });
 
+registerApplication({
+    name: MICROFRONTENDS.access.name,
+    app: () => {
+        console.log("[SHELL] loading access-builder app...");
+        return import(MICROFRONTENDS.access.name).then((mod) => {
+            console.log("[SHELL] access-builder module loaded:", Object.keys(mod));
+            return mod;
+        });
+    },
+    activeWhen: MICROFRONTENDS.access.activeWhen,
+});
+
 start();

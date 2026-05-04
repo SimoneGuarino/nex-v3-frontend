@@ -7,12 +7,14 @@
         "packages/*"
     ],
     "scripts": {
+        "dev:access": "npm run dev -w @nex/access-builder",
         "dev:survey": "npm run dev -w apps/survey-builder",
         "dev:shell": "npm run dev -w apps/shell",
         "start:survey": "npm run start -w apps/survey-builder",
         "start:legacy": "npm run start -w apps/nex-legacy",
         "build:shell": "npm run build -w apps/shell",
         "build:survey": "npm run build -w apps/survey-builder",
+        "build:access": "npm run build -w @nex/access-builder",
         "build:legacy": "npm run build -w apps/nex-legacy"
     },
     "devDependencies": {

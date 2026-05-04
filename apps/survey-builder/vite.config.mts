@@ -9,18 +9,18 @@ export default defineConfig({
         tailwindcss(),
         vitePluginSingleSpa({
             type: "mife",
-            serverPort: 3002,
+            serverPort: 3003,
             spaEntryPoints: "src/spa.tsx",
         }),
     ],
     server: {
         host: "0.0.0.0",
-        port: 3002,
+        port: 3003,
         strictPort: true,
     },
     preview: {
         host: "0.0.0.0",
-        port: 3002,
+        port: 3003,
         strictPort: true,
     },
 });

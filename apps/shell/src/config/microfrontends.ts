@@ -2,7 +2,7 @@ import type { Location as RouterLocation } from 'react-router-dom';
 
 export type ShellChromeMode = "full" | "minimal" | "hidden";
 
-export type MicrofrontendId = "legacy" | "survey";
+export type MicrofrontendId = "legacy" | "survey" | "access";
 
 type MicrofrontendDefinition = {
     name: string;
@@ -13,6 +13,13 @@ type MicrofrontendDefinition = {
 };
 
 export const MICROFRONTENDS: Record<MicrofrontendId, MicrofrontendDefinition> = {
+    access: {
+        name: "@nex/access-builder",
+        route: "/access-builder",
+        chrome: "full",
+        label: "Access Builder",
+        activeWhen: (location: Location) => location.pathname.startsWith("/access-builder"),
+    },
     survey: {
         name: "@nex/survey-builder",
         route: "/survey-builder",
@@ -35,6 +42,10 @@ export function resolveActiveMicrofrontend(location: Location): MicrofrontendDef
         route: "/",
         chrome: "full" as ShellChromeMode,
         label: "Shell",
-        activeWhen: (location: Location) => location.pathname.startsWith("/") && !location.pathname.startsWith("/survey-builder") && !location.pathname.startsWith("/legacy"),
+        activeWhen: (location: Location) => 
+            location.pathname.startsWith("/") && 
+        !location.pathname.startsWith("/survey-builder") && 
+        !location.pathname.startsWith("/access-builder") &&
+        !location.pathname.startsWith("/legacy"),
     }, ...Object.values(MICROFRONTENDS)].find((definition) => definition.activeWhen(location)) ?? null;
 }

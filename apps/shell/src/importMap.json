@@ -1,6 +1,7 @@
 {
   "imports": {
     "@nex/legacy": "/legacy/spa.js",
-    "@nex/survey-builder": "/survey_builder/spa.js"
+    "@nex/survey-builder": "/survey_builder/spa.js",
+    "@nex/access-builder": "/access-builder/assets/spa.js"
   }
 }

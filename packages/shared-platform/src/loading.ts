@@ -1,4 +1,4 @@
-export type NexLoadingAppId = "legacy" | "survey" | "shell" | "unknown";
+export type NexLoadingAppId = "legacy" | "survey" | "shell" | "access-builder" | "unknown";
 export type NexLoadingReason = "initial-load" | "route-change" | "cross-app-navigation" | "auth" | "manual";
 
 export type ShellLoadingPayload = {

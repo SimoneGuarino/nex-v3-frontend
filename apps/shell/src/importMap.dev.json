@@ -1,6 +1,7 @@
 {
   "imports": {
     "@nex/legacy": "http://localhost:3000/src/spa.tsx",
-    "@nex/survey-builder": "http://localhost:3002/src/spa.tsx"
+    "@nex/survey-builder": "http://localhost:3002/src/spa.tsx",
+    "@nex/access-builder": "http://localhost:3002/src/spa.tsx"
   }
 }
