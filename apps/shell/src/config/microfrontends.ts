@@ -16,7 +16,7 @@ export const MICROFRONTENDS: Record<MicrofrontendId, MicrofrontendDefinition> = 
     access: {
         name: "@nex/access-builder",
         route: "/access-builder",
-        chrome: "full",
+        chrome: "minimal",
         label: "Access Builder",
         activeWhen: (location: Location) => location.pathname.startsWith("/access-builder"),
     },

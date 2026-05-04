@@ -46,9 +46,7 @@ function ShellAppFrame() {
                     element={
                         <AuthGate>
                             <ShellLayout>
-                                <div style={{ position: "absolute", inset: 0 }}>
-                                    <ShellContentHost />
-                                </div>
+                                <ShellContentHost />
                             </ShellLayout>
                         </AuthGate>
                     }

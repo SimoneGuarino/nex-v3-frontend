@@ -3,13 +3,36 @@ import { accessBuilderFixture } from "../fixtures/accessBuilderFixture";
 import type { AccessBuilderSnapshot, EffectiveAccessPreview, ObjectIdString, PendingChange } from "../model/types";
 
 const ADMIN_BASE = normalizeBase(import.meta.env.VITE_API_ADMIN ?? "");
-const AUTH_BASE = normalizeBase(import.meta.env.VITE_API_ENDPOINT ?? import.meta.env.VITE_API_AUTH ?? "");
+const AUTH_BASE = normalizeBase(import.meta.env.VITE_AUTH_API_ENDPOINT ?? import.meta.env.VITE_API_AUTH ?? "");
 const ACCESS_BASE = normalizeBase(import.meta.env.VITE_API_ACCESS_BUILDER ?? ADMIN_BASE);
 const USE_MOCK_FALLBACK = (import.meta.env.VITE_ACCESS_BUILDER_MOCK_FALLBACK ?? "true") !== "false";
 
 function normalizeBase(value: string): string {
     if (!value) return "";
     return value.endsWith("/") ? value : `${value}/`;
+}
+
+function joinUrl(base: string, path: string): string {
+    if (!base) return path.startsWith("/") ? path : `/${path}`;
+    const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+    return `${base}${cleanPath}`;
+}
+
+function accessUrl(path: string): string {
+    const base = ACCESS_BASE;
+    const normalized = path.startsWith("/") ? path : `/${path}`;
+
+    // services/admin mounts admin requests under /requests. If VITE_API_ACCESS_BUILDER
+    // already points directly to /requests, do not duplicate the segment.
+    if (base.endsWith("/requests/") || base.endsWith("/requests")) {
+        return joinUrl(base, normalized.replace(/^\/requests\//, ""));
+    }
+
+    return joinUrl(base, normalized.startsWith("/requests/") ? normalized : `/requests${normalized}`);
+}
+
+function authUrl(path: string): string {
+    return joinUrl(AUTH_BASE, path);
 }
 
 function authHeaders(): HeadersInit {
@@ -34,7 +57,18 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
         throw new Error(`HTTP ${res.status} ${res.statusText}${body ? ` - ${body}` : ""}`);
     }
 
-    return (await res.json()) as T;
+    const data = (await res.json()) as unknown;
+    return unwrapApiEnvelope<T>(data);
+}
+
+function unwrapApiEnvelope<T>(data: unknown): T {
+    if (data && typeof data === "object") {
+        const maybe = data as Record<string, unknown>;
+        if ("payload" in maybe) return maybe.payload as T;
+        if ("data" in maybe && Object.keys(maybe).length <= 3) return maybe.data as T;
+    }
+
+    return data as T;
 }
 
 function withMockFallback<T>(operation: () => Promise<T>, fallback: () => T): Promise<T> {
@@ -47,7 +81,7 @@ function withMockFallback<T>(operation: () => Promise<T>, fallback: () => T): Pr
 
 export async function getAccessBuilderSnapshot(tenant = "Focelda"): Promise<AccessBuilderSnapshot> {
     return withMockFallback(
-        () => requestJson<AccessBuilderSnapshot>(`${ACCESS_BASE}access-builder/snapshot?tenant=${encodeURIComponent(tenant)}`),
+        () => requestJson<AccessBuilderSnapshot>(accessUrl(`/access-builder/snapshot?tenant=${encodeURIComponent(tenant)}`)),
         () => accessBuilderFixture,
     );
 }
@@ -55,16 +89,16 @@ export async function getAccessBuilderSnapshot(tenant = "Focelda"): Promise<Acce
 export async function getEffectiveAccessPreview(args: { userId: ObjectIdString; actorRole: number; tenant?: string }): Promise<EffectiveAccessPreview> {
     const tenant = args.tenant ?? "Focelda";
     return withMockFallback(
-        () => requestJson<EffectiveAccessPreview>(`${AUTH_BASE}auth/entitlements/preview?tenant=${encodeURIComponent(tenant)}&userId=${encodeURIComponent(args.userId)}&actorRole=${args.actorRole}`),
+        () => requestJson<EffectiveAccessPreview>(authUrl(`/entitlements/preview?tenant=${encodeURIComponent(tenant)}&userId=${encodeURIComponent(args.userId)}&actorRole=${args.actorRole}`)),
         () => buildFixturePreview(args.userId, args.actorRole, tenant),
     );
 }
 
-export async function publishAccessBuilderChanges(changes: PendingChange[]): Promise<{ ok: true; applied: number }> {
+export async function publishAccessBuilderChanges(changes: PendingChange[], tenant = "Focelda"): Promise<{ ok: true; applied: number }> {
     return withMockFallback(
-        () => requestJson<{ ok: true; applied: number }>(`${ACCESS_BASE}access-builder/publish`, {
+        () => requestJson<{ ok: true; applied: number }>(accessUrl("/access-builder/publish"), {
             method: "POST",
-            body: JSON.stringify({ changes }),
+            body: JSON.stringify({ tenant, changes }),
         }),
         () => ({ ok: true, applied: changes.length }),
     );

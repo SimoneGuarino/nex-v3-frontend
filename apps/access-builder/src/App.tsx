@@ -50,6 +50,7 @@ function App() {
                     edges={state.snapshot.edges}
                     selectedGroupId={state.selectedGroupId}
                     onSelectGroup={state.setSelectedGroupId}
+                    onCreateGroup={state.createGroup}
                 />
 
                 <div className="ab-center-stack">
@@ -76,12 +77,18 @@ function App() {
                         group={state.selectedGroup}
                         memberships={state.selectedGroupMemberships}
                         grants={state.selectedGroupGrants}
+                        users={state.snapshot.users}
+                        selectedUserId={state.selectedUserId}
+                        onSelectUser={state.setSelectedUserId}
+                        onAddSelectedUser={state.addSelectedUserToSelectedGroup}
+                        onRemoveMembership={state.removeMembership}
+                        onRemoveGrant={state.removeGrant}
                     />
                     <ResourceLibraryPanel resources={state.snapshot.resources} onGrant={state.grantResourceToSelectedGroup} />
                 </div>
             </div>
 
-            <PendingChangesBar changes={state.pendingChanges} />
+            <PendingChangesBar changes={state.pendingChanges} isPublishing={state.isPublishing} onDiscard={state.discardDraft} />
         </div>
     );
 }

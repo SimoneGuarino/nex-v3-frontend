@@ -140,7 +140,7 @@ export default function ShellLayout({ children }: Props) {
     }
 
     return (
-        <div style={{ display: "grid", gridTemplateColumns: showSidebar ? "260px 1fr" : "1fr", width: "100%", height: "100%" }}>
+        <div style={{ /*display: "grid", gridTemplateColumns: showSidebar ? "260px 1fr" : "1fr",*/ width: "100%", height: "100%" }}>
             {showSidebar ? (
                 <aside style={{ background: "#111827", borderRight: "1px solid rgba(148,163,184,0.15)", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>NEX Shell</div>
@@ -150,12 +150,17 @@ export default function ShellLayout({ children }: Props) {
                 </aside>
             ) : null}
 
-            <section style={{ display: "grid", gridTemplateRows: showHeader ? "64px 1fr" : "1fr", minWidth: 0 }}>
+            <ShellHeader chromeMode={chromeMode} />
+            <main style={{ minWidth: 0, minHeight: 0, background: "#020617" }}>
+                {children}
+            </main>
+
+            {/*<section style={{ display: "grid", gridTemplateRows: showHeader ? "64px 1fr" : "1fr", minWidth: 0 }}>
                 <ShellHeader chromeMode={chromeMode} />
                 <main style={{ position: "relative", minWidth: 0, minHeight: 0, background: "#020617" }}>
                     {children}
                 </main>
-            </section>
+            </section>*/}
         </div>
     );
 }
