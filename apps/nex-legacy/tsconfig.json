@@ -23,6 +23,7 @@
     "strict": true,
     "module": "ESNext",
     "moduleResolution": "Node",
+    "ignoreDeprecations": "6.0",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "allowImportingTsExtensions": true,

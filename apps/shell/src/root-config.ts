@@ -1,50 +1,128 @@
-import { addErrorHandler, getAppStatus, registerApplication, start } from "single-spa";
+import {
+    addErrorHandler,
+    getAppStatus,
+    registerApplication,
+    start,
+    triggerAppChange,
+} from "single-spa";
+import { readSharedSessionSnapshot } from "@nex/shared-platform";
 import { MICROFRONTENDS } from "./config/microfrontends";
 
-console.log("[SHELL] root-config loaded", window.location.pathname);
+const MFE_HOST_ID = "mfe-content-root";
 
-addErrorHandler((err) => {
-    console.error("[SHELL][single-spa error]", err);
-});
+let singleSpaConfigured = false;
+let singleSpaStarted = false;
+let errorHandlerRegistered = false;
 
-registerApplication({
-    name: MICROFRONTENDS.legacy.name,
-    app: () => {
-        console.log("[SHELL] loading legacy app...");
-        return import(MICROFRONTENDS.legacy.name).then((mod) => {
-            console.log("[SHELL] legacy module loaded:", Object.keys(mod));
-            return mod;
+function hasMfeHost() {
+    return Boolean(document.getElementById(MFE_HOST_ID));
+}
+
+function hasShellSession() {
+    return Boolean(readSharedSessionSnapshot()?.token);
+}
+
+function guardedActiveWhen(
+    appName: string,
+    routeActiveWhen: (location: Location) => boolean,
+) {
+    return (location: Location) => {
+        const routeActive = routeActiveWhen(location);
+        if (!routeActive) return false;
+
+        if (!hasShellSession()) {
+            return false;
+        }
+
+        if (!hasMfeHost()) {
+            console.warn(
+                `[SHELL] ${appName} route matched, but #${MFE_HOST_ID} is not mounted yet. Mount skipped.`,
+            );
+            return false;
+        }
+
+        return true;
+    };
+}
+
+function registerMicrofrontendsOnce() {
+    if (singleSpaConfigured) return;
+
+    console.log("[SHELL] configuring single-spa root-config", window.location.pathname);
+
+    if (!errorHandlerRegistered) {
+        addErrorHandler((err) => {
+            console.error("[SHELL][single-spa error]", err);
         });
-    },
-    activeWhen: (location) => {
-        const active = MICROFRONTENDS.legacy.activeWhen(location);
-        console.log("[SHELL] legacy activeWhen:", location.pathname, active);
-        return active;
-    },
-});
+        errorHandlerRegistered = true;
+    }
 
-registerApplication({
-    name: MICROFRONTENDS.survey.name,
-    app: () => {
-        console.log("[SHELL] loading survey app...");
-        return import(MICROFRONTENDS.survey.name).then((mod) => {
-            console.log("[SHELL] survey module loaded:", Object.keys(mod));
-            return mod;
-        });
-    },
-    activeWhen: MICROFRONTENDS.survey.activeWhen,
-});
+    registerApplication({
+        name: MICROFRONTENDS.legacy.name,
+        app: () => {
+            console.log("[SHELL] loading legacy app...");
+            return import(MICROFRONTENDS.legacy.name).then((mod) => {
+                console.log("[SHELL] legacy module loaded:", Object.keys(mod));
+                return mod;
+            });
+        },
+        activeWhen: guardedActiveWhen(
+            MICROFRONTENDS.legacy.name,
+            MICROFRONTENDS.legacy.activeWhen,
+        ),
+    });
 
-registerApplication({
-    name: MICROFRONTENDS.access.name,
-    app: () => {
-        console.log("[SHELL] loading access-builder app...");
-        return import(MICROFRONTENDS.access.name).then((mod) => {
-            console.log("[SHELL] access-builder module loaded:", Object.keys(mod));
-            return mod;
-        });
-    },
-    activeWhen: MICROFRONTENDS.access.activeWhen,
-});
+    registerApplication({
+        name: MICROFRONTENDS.access.name,
+        app: () => {
+            console.log("[SHELL] loading access-builder app...");
+            return import(MICROFRONTENDS.access.name).then((mod) => {
+                console.log("[SHELL] access-builder module loaded:", Object.keys(mod));
+                return mod;
+            });
+        },
+        activeWhen: guardedActiveWhen(
+            MICROFRONTENDS.access.name,
+            MICROFRONTENDS.access.activeWhen,
+        ),
+    });
 
-start();
+    singleSpaConfigured = true;
+}
+
+export function ensureSingleSpaRuntimeStarted() {
+    registerMicrofrontendsOnce();
+
+    if (!hasMfeHost()) {
+        console.warn(
+            `[SHELL] single-spa start skipped: #${MFE_HOST_ID} not mounted yet`,
+        );
+        return false;
+    }
+
+    if (!hasShellSession()) {
+        return false;
+    }
+
+    if (!singleSpaStarted) {
+        console.log("[SHELL] starting single-spa runtime");
+        start();
+        singleSpaStarted = true;
+        return true;
+    }
+
+    triggerAppChange();
+    return true;
+}
+
+export function requestSingleSpaReroute() {
+    if (!singleSpaStarted) return;
+    triggerAppChange();
+}
+
+export function getRegisteredMfeStatus() {
+    return {
+        legacy: getAppStatus(MICROFRONTENDS.legacy.name),
+        access: getAppStatus(MICROFRONTENDS.access.name),
+    };
+}

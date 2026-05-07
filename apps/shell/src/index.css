@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 @source "../../../packages";
+@source "../../access-builder/src";
+@source "../../nex-legacy/src";
 
 html,body,#root{height:100%;margin:0;} body{font-family:Inter,system-ui,sans-serif;}

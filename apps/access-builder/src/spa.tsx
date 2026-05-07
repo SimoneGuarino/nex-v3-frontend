@@ -36,36 +36,4 @@ const lifecycles = singleSpaReact({
     },
 });
 
-if (import.meta.env.DEV && import.meta.hot) {
-    let reloadTimer: number | undefined;
-
-    import.meta.hot.on("vite:afterUpdate", (payload) => {
-        const updates = payload.updates ?? [];
-
-        const shouldReload = updates.some((update) => {
-            const path = update.path || update.acceptedPath || "";
-
-            return (
-                path.includes("/src/") &&
-                (
-                    path.endsWith(".tsx") ||
-                    path.endsWith(".ts") ||
-                    path.endsWith(".jsx") ||
-                    path.endsWith(".js") ||
-                    path.endsWith(".css")
-                )
-            );
-        });
-
-        if (!shouldReload) return;
-
-        window.clearTimeout(reloadTimer);
-
-        reloadTimer = window.setTimeout(() => {
-            console.info("[access-builder][hmr] source updated, forcing microfrontend page reload");
-            window.location.reload();
-        }, 80);
-    });
-};
-
 export const { bootstrap, mount, unmount } = lifecycles;

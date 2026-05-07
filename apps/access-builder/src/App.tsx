@@ -9,7 +9,6 @@ import { OrganizationCanvas, type CanvasMode } from "./components/OrganizationCa
 import { PendingChangesBar } from "./components/PendingChangesBar";
 import { ResourceLibraryPanel } from "./components/ResourceLibraryPanel";
 import { useAccessBuilderState } from "./hooks/useAccessBuilderState";
-import "./styles.css";
 import useRootThemeClass from "./bootstrap/useRootThemeClass";
 import { useNexTheme } from "@nex/theme-system";
 
