@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isAuthInvalidationError } from "@nex/shared-platform";
 import { getAccessBuilderSnapshot, getEffectiveAccessPreview, publishAccessBuilderChanges } from "../api/accessBuilderApi";
 import type { AccessBuilderSnapshot, EffectiveAccessPreview, GroupKind, ObjectIdString, PendingChange } from "../model/types";
 
@@ -80,7 +81,9 @@ export function useAccessBuilderState() {
             setSelectedGroupId((current) => current ?? data.groups[0]?._id ?? null);
             setSelectedUserId((current) => current ?? data.users[0]?._id ?? null);
         } catch (e) {
-            setError(String((e as Error)?.message ?? e));
+            if (!isAuthInvalidationError(e)) {
+                setError(String((e as Error)?.message ?? e));
+            }
         } finally {
             setIsLoading(false);
         }
@@ -103,7 +106,11 @@ export function useAccessBuilderState() {
         setIsPreviewLoading(true);
         getEffectiveAccessPreview({ userId: selectedUserId, actorRole: selectedActorRole, tenant: DEFAULT_TENANT })
             .then((data) => mounted && setPreview(data))
-            .catch((e) => mounted && setError(String((e as Error)?.message ?? e)))
+            .catch((e) => {
+                if (mounted && !isAuthInvalidationError(e)) {
+                    setError(String((e as Error)?.message ?? e));
+                }
+            })
             .finally(() => mounted && setIsPreviewLoading(false));
 
         return () => {
@@ -363,6 +370,11 @@ export function useAccessBuilderState() {
             setPendingChanges([]);
             await refreshSnapshot();
             return result;
+        } catch (e) {
+            if (!isAuthInvalidationError(e)) {
+                setError(String((e as Error)?.message ?? e));
+            }
+            throw e;
         } finally {
             setIsPublishing(false);
         }

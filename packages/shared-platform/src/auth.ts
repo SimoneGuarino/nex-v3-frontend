@@ -1,6 +1,6 @@
 import Cookies from "js-cookie";
 import {
-    clearSession,
+    invalidateSharedSession,
     persistCryptoSession,
     persistSessionSnapshot,
     persistToken,
@@ -183,7 +183,11 @@ export async function ensureHydratedSharedSession(args: {
     const vi = Cookies.get("vi");
 
     if (!aes || !vi) {
-        clearSession();
+        invalidateSharedSession({
+            reason: "missing-token",
+            source: "ensure-hydrated-shared-session",
+            message: "Sessione crittografica non disponibile.",
+        });
         return null;
     }
 
@@ -208,11 +212,18 @@ export async function ensureHydratedSharedSession(args: {
         return nextSnapshot;
     } catch (error) {
         console.error("[shared-platform] ensureHydratedSharedSession failed", error);
-        clearSession();
+        invalidateSharedSession({
+            reason: "session-hydration-failed",
+            source: "ensure-hydrated-shared-session",
+            message: String((error as Error)?.message ?? error),
+        });
         return null;
     }
 }
 
 export function logoutSharedSession() {
-    clearSession();
+    invalidateSharedSession({
+        reason: "logout",
+        source: "logout-shared-session",
+    });
 }

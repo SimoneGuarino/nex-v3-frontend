@@ -1,4 +1,4 @@
-import { readToken } from "@nex/shared-platform";
+import { authenticatedFetch, isAuthInvalidationError } from "@nex/shared-platform";
 import { accessBuilderFixture } from "../fixtures/accessBuilderFixture";
 import type { AccessBuilderSnapshot, EffectiveAccessPreview, ObjectIdString, PendingChange } from "../model/types";
 
@@ -35,27 +35,16 @@ function authUrl(path: string): string {
     return joinUrl(AUTH_BASE, path);
 }
 
-function authHeaders(): HeadersInit {
-    const token = readToken?.();
-    return {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-}
-
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-    const res = await fetch(url, {
-        ...init,
-        headers: {
-            ...authHeaders(),
-            ...(init?.headers ?? {}),
-        },
-    });
-
-    if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status} ${res.statusText}${body ? ` - ${body}` : ""}`);
+    const headers = new Headers(init?.headers ?? {});
+    if (!headers.has("Content-Type") && init?.body) {
+        headers.set("Content-Type", "application/json");
     }
+
+    const res = await authenticatedFetch(url, {
+        ...init,
+        headers,
+    }, { source: "access-builder" });
 
     const data = (await res.json()) as unknown;
     return unwrapApiEnvelope<T>(data);
@@ -74,6 +63,10 @@ function unwrapApiEnvelope<T>(data: unknown): T {
 function withMockFallback<T>(operation: () => Promise<T>, fallback: () => T): Promise<T> {
     if (!USE_MOCK_FALLBACK) return operation();
     return operation().catch((error) => {
+        if (isAuthInvalidationError(error)) {
+            throw error;
+        }
+
         console.warn("[access-builder] API non disponibile, uso fixture locale", error);
         return fallback();
     });

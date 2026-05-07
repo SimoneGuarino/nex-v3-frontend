@@ -1,12 +1,49 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { ensureHydratedSharedSession, hydrateSharedSession } from "@nex/shared-platform";
+import {
+    ensureHydratedSharedSession,
+    hydrateSharedSession,
+    SESSION_EVENTS,
+    STORAGE_KEYS,
+    subscribeSessionSnapshot,
+} from "@nex/shared-platform";
 
 type GateState = "checking" | "authorized" | "unauthorized";
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     const [gateState, setGateState] = useState<GateState>("checking");
+
+
+    useEffect(() => {
+        const unsubscribe = subscribeSessionSnapshot((snapshot) => {
+            if (!snapshot?.token) {
+                setGateState("unauthorized");
+            }
+        });
+
+        const onSessionInvalidated = () => {
+            setGateState("unauthorized");
+        };
+
+        const onStorage = (event: StorageEvent) => {
+            if (
+                event.key === STORAGE_KEYS.logoutSignal ||
+                event.key === STORAGE_KEYS.sessionInvalidation
+            ) {
+                setGateState("unauthorized");
+            }
+        };
+
+        window.addEventListener(SESSION_EVENTS.invalidated, onSessionInvalidated);
+        window.addEventListener("storage", onStorage);
+
+        return () => {
+            unsubscribe();
+            window.removeEventListener(SESSION_EVENTS.invalidated, onSessionInvalidated);
+            window.removeEventListener("storage", onStorage);
+        };
+    }, []);
 
     useEffect(() => {
         let cancelled = false;

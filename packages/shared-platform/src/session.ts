@@ -5,7 +5,30 @@ export const STORAGE_KEYS = {
     rememberMe: "rememberMe",
     user: "userData",
     logoutSignal: "logout",
+    sessionInvalidation: "nex:session-invalidation",
 } as const;
+
+export const SESSION_EVENTS = {
+    changed: "nex:session-changed",
+    invalidated: "nex:session-invalidated",
+} as const;
+
+export type SessionInvalidationReason =
+    | "logout"
+    | "missing-token"
+    | "expired"
+    | "unauthorized"
+    | "forbidden-auth"
+    | "session-hydration-failed";
+
+export type SessionInvalidationDetail = {
+    reason: SessionInvalidationReason;
+    source?: string;
+    status?: number;
+    url?: string;
+    message?: string;
+    at: number;
+};
 
 export type SharedSessionDetails = {
     _id?: string;
@@ -200,7 +223,7 @@ export function publishSessionSnapshot(
 
     if (typeof window !== "undefined") {
         window.dispatchEvent(
-            new CustomEvent("nex:session-changed", { detail: snapshot }),
+            new CustomEvent(SESSION_EVENTS.changed, { detail: snapshot }),
         );
     }
 }
@@ -219,4 +242,44 @@ export function subscribeSessionSnapshot(
 export function broadcastLogout(): void {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(STORAGE_KEYS.logoutSignal, Date.now().toString());
+}
+function publishSessionInvalidation(detail: SessionInvalidationDetail): void {
+    if (typeof window === "undefined") return;
+
+    window.dispatchEvent(
+        new CustomEvent(SESSION_EVENTS.invalidated, { detail }),
+    );
+
+    try {
+        window.localStorage.setItem(
+            STORAGE_KEYS.sessionInvalidation,
+            JSON.stringify(detail),
+        );
+    } catch {
+        window.localStorage.setItem(
+            STORAGE_KEYS.sessionInvalidation,
+            String(detail.at),
+        );
+    }
+}
+
+/**
+ * Invalidazione centralizzata della sessione applicativa.
+ *
+ * Va usata da qualunque consumer quando una API autenticata risponde con una
+ * condizione non recuperabile lato client, ad esempio 401/419 per token scaduto.
+ * Pulisce storage/cookie, notifica i listener same-tab e propaga il segnale anche
+ * alle altre tab tramite localStorage.
+ */
+export function invalidateSharedSession(
+    input: Omit<SessionInvalidationDetail, "at">,
+): void {
+    const detail: SessionInvalidationDetail = {
+        ...input,
+        at: Date.now(),
+    };
+
+    clearSession();
+    publishSessionInvalidation(detail);
+    broadcastLogout();
 }

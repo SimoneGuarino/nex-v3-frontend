@@ -87,9 +87,9 @@ function App() {
     if (state.error || !state.snapshot) {
         return (
             <div className="grid min-h-screen place-items-center bg-neutral-100 p-6 text-neutral-800 dark:bg-neutral-950 dark:text-neutral-100">
-                <FDBox radius="2xl" shadow="xl" pad="lg" border className="w-full max-w-xl">
+                <FDBox variant="gradient-simple" radius="2xl" shadow="xl" pad="lg" border className="w-full max-w-xl">
                     <div className="text-xs font-black uppercase tracking-[0.24em] text-red-600">Errore</div>
-                    <h1 className="mt-2 text-2xl font-black tracking-tight">Access Builder non disponibile</h1>
+                    <h1 className="mt-2 text-2xl font-black tracking-tight text-neutral-600 dark:text-neutral-300">Access Builder non disponibile</h1>
                     <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">{state.error ?? "Snapshot non disponibile"}</p>
                 </FDBox>
             </div>
