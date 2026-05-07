@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { NexThemeProvider } from "@nex/theme-system";
+import { NexThemeProvider, useNexTheme } from "@nex/theme-system";
 import { notifyShellLoadingReady } from "@nex/shared-platform";
 import "../root-config";
 import ShellLayout from "./ShellLayout";
@@ -10,12 +10,16 @@ import LoginPage from "../auth/LoginPage";
 import AuthGate from "../auth/AuthGate";
 import ShellSplashHost from "../loading/ShellSplashHost";
 import GlobalPanelHost from "../panels/GlobalPanelHost";
+import useRootThemeClass from "../bootstrap/useRootThemeClass";
 
 function ShellAppFrame() {
     const location = useLocation();
     const navigate = useNavigate();
+    const { preferences } = useNexTheme();
 
     const bootKey = useMemo(() => `${location.pathname}${location.search}${location.hash}`, [location.pathname, location.search, location.hash]);
+
+    useRootThemeClass(preferences.mode === "dark");
 
     React.useEffect(() => {
         const onReady = (event: MessageEvent) => {

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { FDBox, FDButton, FDInput, FDSelect } from "@nex/fd-ui";
 import type { AccessGroup, GroupEdge, GroupKind, ObjectIdString } from "../model/types";
-import { FDBox } from "@nex/fd-ui";
 
 interface Props {
     groups: AccessGroup[];
@@ -9,6 +9,20 @@ interface Props {
     onSelectGroup: (id: ObjectIdString) => void;
     onCreateGroup: (name: string, kind: GroupKind, parentGroupId?: ObjectIdString | null) => void;
 }
+
+const kindOptions = [
+    { value: "ORG_UNIT", label: "Org Unit" },
+    { value: "TEAM", label: "Team" },
+    { value: "ROLE_GROUP", label: "Role Group" },
+    { value: "CAPABILITY_GROUP", label: "Capability Group" },
+] satisfies Array<{ value: GroupKind; label: string }>;
+
+const kindTone: Record<GroupKind, string> = {
+    ORG_UNIT: "bg-blue-500",
+    TEAM: "bg-emerald-500",
+    ROLE_GROUP: "bg-violet-500",
+    CAPABILITY_GROUP: "bg-orange-500",
+};
 
 function groupChildren(groups: AccessGroup[], edges: GroupEdge[], parentId: string | null): AccessGroup[] {
     if (parentId === null) {
@@ -27,10 +41,12 @@ export function GroupTreePanel({ groups, edges, selectedGroupId, onSelectGroup, 
     const [createUnderSelected, setCreateUnderSelected] = useState(true);
 
     const normalizedQuery = query.trim().toLowerCase();
-    const visibleGroups = normalizedQuery
-        ? groups.filter((group) => `${group.name} ${group.key} ${group.kind}`.toLowerCase().includes(normalizedQuery))
-        : groups;
-    const visibleIds = new Set(visibleGroups.map((group) => group._id));
+    const visibleGroups = useMemo(() => {
+        if (!normalizedQuery) return groups;
+        return groups.filter((group) => `${group.name} ${group.key} ${group.kind}`.toLowerCase().includes(normalizedQuery));
+    }, [groups, normalizedQuery]);
+
+    const visibleIds = useMemo(() => new Set(visibleGroups.map((group) => group._id)), [visibleGroups]);
 
     const submitCreate = () => {
         const trimmed = name.trim();
@@ -43,60 +59,90 @@ export function GroupTreePanel({ groups, edges, selectedGroupId, onSelectGroup, 
     const renderNode = (group: AccessGroup, depth = 0) => {
         if (!visibleIds.has(group._id) && normalizedQuery) return null;
         const children = groupChildren(groups, edges, group._id);
+        const selected = selectedGroupId === group._id;
+
         return (
             <div key={group._id}>
                 <button
                     type="button"
-                    className={`ab-tree-node ${selectedGroupId === group._id ? "is-selected" : ""}`}
+                    className={`group flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition ${selected ? "border-blue-500 bg-blue-50 text-blue-800 shadow-sm dark:bg-blue-950/40 dark:text-blue-100" : "border-transparent hover:border-neutral-200 hover:bg-neutral-50 dark:hover:border-neutral-800 dark:hover:bg-neutral-800/60"}`}
                     style={{ paddingLeft: 12 + depth * 18 }}
                     onClick={() => onSelectGroup(group._id)}
                 >
-                    <span className={`ab-kind-dot ${group.kind.toLowerCase()}`} />
-                    <span className="ab-tree-title">{group.name}</span>
-                    <span className="ab-tree-count">{group.membersCount ?? 0}</span>
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${kindTone[group.kind]}`} />
+                    <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-black">{group.name}</span>
+                        <span className="block truncate text-xs font-semibold text-neutral-500">{group.key}</span>
+                    </span>
+                    <span className="grid h-7 min-w-7 place-items-center rounded-full bg-neutral-100 px-2 text-xs font-black text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">{group.membersCount ?? 0}</span>
                 </button>
-                {!normalizedQuery && children.map((child) => renderNode(child, depth + 1))}
+                {!normalizedQuery && children.length > 0 ? <div className="mt-1 space-y-1">{children.map((child) => renderNode(child, depth + 1))}</div> : null}
             </div>
         );
     };
 
     return (
-        <div className="absolute left-0 top-0 bottom-0 w-80 h-full">
-            <FDBox className="flex flex-col h-full" pad="sm" radius="md">
-                <div className="ab-panel-header">
-                    <div>
-                        <div className="ab-eyebrow">Struttura</div>
-                        <h2>Gruppi</h2>
-                    </div>
-                    <button className="ab-icon-button" type="button" title="Nuovo gruppo" onClick={() => setIsCreating((value) => !value)}>+</button>
+        <div className="flex h-full min-h-0 flex-col gap-4">
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500">Organization graph</div>
+                    <div className="text-sm font-bold text-neutral-600 dark:text-neutral-300">Gerarchia gruppi e sotto-gruppi</div>
                 </div>
+                <FDButton size="small" radius="xl" color="primary" variant="solid" onClick={() => setIsCreating((value) => !value)}>
+                    Nuovo
+                </FDButton>
+            </div>
 
-                {isCreating && (
-                    <div className="ab-create-card">
-                        <label>Nome gruppo</label>
-                        <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Es. Buyer Notebook" />
-                        <label>Tipo gruppo</label>
-                        <select value={kind} onChange={(event) => setKind(event.target.value as GroupKind)}>
-                            <option value="ORG_UNIT">Org Unit</option>
-                            <option value="TEAM">Team</option>
-                            <option value="ROLE_GROUP">Role Group</option>
-                            <option value="CAPABILITY_GROUP">Capability Group</option>
-                        </select>
-                        <label className="ab-checkbox-row">
-                            <input type="checkbox" checked={createUnderSelected} onChange={(event) => setCreateUnderSelected(event.target.checked)} />
-                            Crea sotto il gruppo selezionato
-                        </label>
-                        <button type="button" className="ab-button ab-button-primary" onClick={submitCreate}>Crea gruppo</button>
-                    </div>
-                )}
+            {isCreating ? (
+                <FDBox radius="2xl" pad="sm" border className="grid gap-3 bg-neutral-50 dark:bg-neutral-900">
+                    <FDInput
+                        label="Nome gruppo"
+                        animatedLabel={false}
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        placeholder="Es. Buyer Notebook"
+                        fullWidth
+                    />
+                    <FDSelect
+                        label="Tipo gruppo"
+                        animatedLabel={false}
+                        value={kind}
+                        options={kindOptions}
+                        onChange={(value) => setKind((value as GroupKind | null) ?? "TEAM")}
+                        fullWidth
+                    />
+                    <label className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-neutral-700 shadow-sm dark:bg-neutral-950 dark:text-neutral-200">
+                        <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-neutral-300"
+                            checked={createUnderSelected}
+                            onChange={(event) => setCreateUnderSelected(event.target.checked)}
+                        />
+                        Crea sotto il gruppo selezionato
+                    </label>
+                    <FDButton radius="xl" color="primary" variant="solid" disabled={!name.trim()} onClick={submitCreate}>
+                        Crea gruppo
+                    </FDButton>
+                </FDBox>
+            ) : null}
 
-                <input className="ab-search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cerca gruppo, reparto o capability…" />
-                <div className="ab-tree">
+            <FDInput
+                label="Cerca gruppo"
+                animatedLabel={false}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Cerca gruppo, reparto o capability…"
+                clearable
+                fullWidth
+            />
+
+            <div className="min-h-0 flex-1 overflow-auto pr-1">
+                <div className="space-y-1">
                     {normalizedQuery
                         ? visibleGroups.map((group) => renderNode(group, 0))
                         : groupChildren(groups, edges, null).map((group) => renderNode(group))}
                 </div>
-            </FDBox>
+            </div>
         </div>
     );
 }

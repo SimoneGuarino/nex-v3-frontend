@@ -18,6 +18,47 @@ function slugifyGroupKey(value: string): string {
         .replace(/^_+|_+$/g, "") || `group_${Date.now()}`;
 }
 
+function buildLocalPreview(snapshot: AccessBuilderSnapshot, userId: ObjectIdString, actorRole: number): EffectiveAccessPreview {
+    const userMemberships = snapshot.memberships.filter((membership) => membership.userId === userId);
+    const directGroupIds = new Set(userMemberships.map((membership) => membership.groupId));
+    const allGroupIds = new Set(directGroupIds);
+
+    let changed = true;
+    while (changed) {
+        changed = false;
+        for (const edge of snapshot.edges) {
+            if (allGroupIds.has(edge.childGroupId) && !allGroupIds.has(edge.parentGroupId)) {
+                allGroupIds.add(edge.parentGroupId);
+                changed = true;
+            }
+        }
+    }
+
+    const roleMatches = (roles?: number[]) => !roles?.length || roles.includes(actorRole);
+    const relevantGrants = snapshot.grants.filter((grant) => {
+        const principalMatch = grant.principalType === "USER" ? grant.principalId === userId : allGroupIds.has(grant.principalId);
+        return principalMatch && roleMatches(grant.context?.actorRoles);
+    });
+
+    const deniedSet = new Set(relevantGrants.filter((grant) => grant.effect === "DENY").map((grant) => grant.permission));
+    const caps = Array.from(new Set(relevantGrants.filter((grant) => grant.effect === "ALLOW" && !deniedSet.has(grant.permission)).map((grant) => grant.permission))).sort();
+    const panels = snapshot.resources.filter((resource) => resource.status === "ACTIVE" && resource.type === "PANEL" && caps.includes(resource.permission));
+
+    return {
+        tenant: snapshot.tenant,
+        userId,
+        actorRole,
+        version: `draft:${Date.now()}`,
+        groups: snapshot.groups.filter((group) => allGroupIds.has(group._id)).map((group) => ({ ...group, inherited: !directGroupIds.has(group._id) })),
+        caps,
+        panels,
+        grants: relevantGrants,
+        denied: relevantGrants
+            .filter((grant) => grant.effect === "DENY")
+            .map((grant) => ({ permission: grant.permission, source: grant.principalType, sourceId: grant.principalId })),
+    };
+}
+
 export function useAccessBuilderState() {
     const [snapshot, setSnapshot] = useState<AccessBuilderSnapshot | null>(null);
     const [selectedGroupId, setSelectedGroupId] = useState<ObjectIdString | null>(null);
@@ -50,7 +91,14 @@ export function useAccessBuilderState() {
     }, [refreshSnapshot]);
 
     useEffect(() => {
-        if (!selectedUserId) return;
+        if (!selectedUserId || !snapshot) return;
+
+        if (pendingChanges.length > 0) {
+            setIsPreviewLoading(false);
+            setPreview(buildLocalPreview(snapshot, selectedUserId, selectedActorRole));
+            return;
+        }
+
         let mounted = true;
         setIsPreviewLoading(true);
         getEffectiveAccessPreview({ userId: selectedUserId, actorRole: selectedActorRole, tenant: DEFAULT_TENANT })
@@ -61,7 +109,7 @@ export function useAccessBuilderState() {
         return () => {
             mounted = false;
         };
-    }, [selectedUserId, selectedActorRole, pendingChanges.length]);
+    }, [selectedUserId, selectedActorRole, pendingChanges.length, snapshot]);
 
     const selectedGroup = useMemo(() => snapshot?.groups.find((group) => group._id === selectedGroupId) ?? null, [snapshot, selectedGroupId]);
     const selectedGroupMemberships = useMemo(() => snapshot?.memberships.filter((m) => m.groupId === selectedGroupId) ?? [], [snapshot, selectedGroupId]);
@@ -216,6 +264,93 @@ export function useAccessBuilderState() {
         });
     }, [addPendingChange, snapshot]);
 
+    const wouldCreateCycle = useCallback((parentGroupId: ObjectIdString, childGroupId: ObjectIdString) => {
+        if (!snapshot) return true;
+        if (parentGroupId === childGroupId) return true;
+
+        const adjacency = new Map<ObjectIdString, ObjectIdString[]>();
+        for (const edge of snapshot.edges) {
+            const children = adjacency.get(edge.parentGroupId) ?? [];
+            children.push(edge.childGroupId);
+            adjacency.set(edge.parentGroupId, children);
+        }
+
+        const stack = [childGroupId];
+        const visited = new Set<ObjectIdString>();
+        while (stack.length > 0) {
+            const current = stack.pop();
+            if (!current || visited.has(current)) continue;
+            if (current === parentGroupId) return true;
+            visited.add(current);
+            for (const next of adjacency.get(current) ?? []) {
+                stack.push(next);
+            }
+        }
+
+        return false;
+    }, [snapshot]);
+
+    const createEdge = useCallback((parentGroupId: ObjectIdString, childGroupId: ObjectIdString) => {
+        if (!snapshot) return;
+        if (parentGroupId === childGroupId) return;
+        if (snapshot.edges.some((edge) => edge.parentGroupId === parentGroupId && edge.childGroupId === childGroupId)) return;
+        if (wouldCreateCycle(parentGroupId, childGroupId)) return;
+
+        const edgeId = makeDraftId("edge");
+        const parentGroup = snapshot.groups.find((group) => group._id === parentGroupId);
+        const childGroup = snapshot.groups.find((group) => group._id === childGroupId);
+
+        setSnapshot((current) => current ? {
+            ...current,
+            edges: [
+                ...current.edges,
+                {
+                    _id: edgeId,
+                    tenant: DEFAULT_TENANT,
+                    parentGroupId,
+                    childType: "GROUP",
+                    childGroupId,
+                },
+            ],
+            groups: current.groups.map((group) => group._id === childGroupId
+                ? { ...group, parentGroupIds: Array.from(new Set([...(group.parentGroupIds ?? []), parentGroupId])) }
+                : group),
+        } : current);
+
+        addPendingChange({
+            type: "EDGE_CREATE",
+            label: `Collega ${parentGroup?.name ?? parentGroupId} → ${childGroup?.name ?? childGroupId}`,
+            payload: { tenant: DEFAULT_TENANT, parentGroupId, childGroupId },
+        });
+    }, [addPendingChange, snapshot, wouldCreateCycle]);
+
+    const removeEdge = useCallback((edgeId: ObjectIdString) => {
+        if (!snapshot) return;
+        const edge = snapshot.edges.find((item) => item._id === edgeId);
+        if (!edge) return;
+        const parentGroup = snapshot.groups.find((group) => group._id === edge.parentGroupId);
+        const childGroup = snapshot.groups.find((group) => group._id === edge.childGroupId);
+
+        setSnapshot((current) => current ? {
+            ...current,
+            edges: current.edges.filter((item) => item._id !== edgeId),
+            groups: current.groups.map((group) => group._id === edge.childGroupId
+                ? { ...group, parentGroupIds: (group.parentGroupIds ?? []).filter((parentId) => parentId !== edge.parentGroupId) }
+                : group),
+        } : current);
+
+        addPendingChange({
+            type: "EDGE_DELETE",
+            label: `Rimuovi collegamento ${parentGroup?.name ?? edge.parentGroupId} → ${childGroup?.name ?? edge.childGroupId}`,
+            payload: {
+                tenant: DEFAULT_TENANT,
+                edgeId: edge._id,
+                parentGroupId: edge.parentGroupId,
+                childGroupId: edge.childGroupId,
+            },
+        });
+    }, [addPendingChange, snapshot]);
+
     const discardDraft = useCallback(() => {
         setPendingChanges([]);
         void refreshSnapshot();
@@ -254,6 +389,8 @@ export function useAccessBuilderState() {
         addSelectedUserToSelectedGroup,
         removeMembership,
         removeGrant,
+        createEdge,
+        removeEdge,
         grantResourceToSelectedGroup,
         addPendingChange,
         discardDraft,

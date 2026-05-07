@@ -91,20 +91,12 @@ function ShellHeader({ chromeMode }: { chromeMode: ShellChromeMode }) {
     if (chromeMode === "hidden") return null;
 
     return (
-        <header
-            style={{
-                background: "#0f172a",
-                borderBottom: "1px solid rgba(148,163,184,0.15)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "0 20px",
-                gap: 12,
-                minHeight: 64,
-            }}
+        <header className="sticky w-full top-0 py-2 z-1 flex justify-between items-center pl-4
+            border-b overflow-hidden min-h-[4rem] 
+            border-gray-200
+            dark:border-stone-800 dark:bg-stone-900"
         >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ fontWeight: 700 }}>Topbar persistente</div>
                 <StatusPill online={connection.user} label="User socket" />
                 <StatusPill online={connection.chat} label="Chat socket" />
                 <StatusPill online={connection.admin} label="Admin socket" />
