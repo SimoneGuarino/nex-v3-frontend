@@ -1,6 +1,6 @@
 import { authenticatedFetch, isAuthInvalidationError } from "@nex/shared-platform";
 import { accessBuilderFixture } from "../fixtures/accessBuilderFixture";
-import type { AccessBuilderSnapshot, EffectiveAccessPreview, ObjectIdString, PendingChange } from "../model/types";
+import type { AccessBuilderSnapshot, EffectiveAccessPreview, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch } from "../model/types";
 
 const ADMIN_BASE = normalizeBase(import.meta.env.VITE_API_ADMIN ?? "");
 const AUTH_BASE = normalizeBase(import.meta.env.VITE_AUTH_API_ENDPOINT ?? import.meta.env.VITE_API_AUTH ?? "");
@@ -87,6 +87,37 @@ export async function getEffectiveAccessPreview(args: { userId: ObjectIdString; 
     );
 }
 
+
+export async function getAccessBuilderUserProfile(userId: ObjectIdString, tenant = "Focelda"): Promise<UserProfile> {
+    return withMockFallback(
+        () => requestJson<UserProfile>(accessUrl(`/access-builder/users/${encodeURIComponent(userId)}?tenant=${encodeURIComponent(tenant)}`)),
+        () => {
+            const user = accessBuilderFixture.users.find((item) => item._id === userId) ?? accessBuilderFixture.users[0];
+            return buildFixtureUserProfile(user._id, tenant);
+        },
+    );
+}
+
+export async function updateAccessBuilderUserProfile(userId: ObjectIdString, patch: UserProfilePatch, tenant = "Focelda"): Promise<UserProfile> {
+    return withMockFallback(
+        () => requestJson<UserProfile>(accessUrl(`/access-builder/users/${encodeURIComponent(userId)}`), {
+            method: "PATCH",
+            body: JSON.stringify({ tenant, patch }),
+        }),
+        () => ({ ...buildFixtureUserProfile(userId, tenant), ...patch, details: { ...buildFixtureUserProfile(userId, tenant).details, ...(patch.details ?? {}) } }),
+    );
+}
+
+export async function createAccessBuilderUser(payload: UserCreatePayload, tenant = "Focelda"): Promise<UserProfile> {
+    return withMockFallback(
+        () => requestJson<UserProfile>(accessUrl("/access-builder/users"), {
+            method: "POST",
+            body: JSON.stringify({ tenant, user: payload }),
+        }),
+        () => ({ ...buildFixtureUserProfile(`draft:user:${Date.now()}`, tenant), ...payload, details: { ...buildFixtureUserProfile(`draft:user:${Date.now()}`, tenant).details, ...(payload.details ?? {}) } }),
+    );
+}
+
 export async function publishAccessBuilderChanges(changes: PendingChange[], tenant = "Focelda"): Promise<{ ok: true; applied: number }> {
     return withMockFallback(
         () => requestJson<{ ok: true; applied: number }>(accessUrl("/access-builder/publish"), {
@@ -135,5 +166,36 @@ function buildFixturePreview(userId: ObjectIdString, actorRole: number, tenant: 
         denied: relevantGrants
             .filter((grant) => grant.effect === "DENY")
             .map((grant) => ({ permission: grant.permission, source: grant.principalType, sourceId: grant.principalId })),
+    };
+}
+
+
+function buildFixtureUserProfile(userId: ObjectIdString, tenant: string): UserProfile {
+    const user = accessBuilderFixture.users.find((item) => item._id === userId) ?? accessBuilderFixture.users[0];
+    const numericRole = typeof user.ruolo === "number" ? user.ruolo : 2;
+    return {
+        _id: userId,
+        username: user?.username ?? "utente@example.com",
+        nome: user?.nome ?? "",
+        cognome: user?.cognome ?? "",
+        ruolo: numericRole,
+        multiRuolo: Array.isArray(user?.multiRuolo) ? user.multiRuolo.filter((role): role is number => typeof role === "number") : [numericRole],
+        isMEPA: false,
+        stato: { codice: "Offline", ultimoAccesso: null },
+        registrato: new Date().toISOString(),
+        codici: { agente: null, buyer: null, ulterioriAgente: [] },
+        magazzino: null,
+        disabilitato: Boolean(user?.disabilitato),
+        details: {
+            _id: userId,
+            recapiti: { cellulare: null, interno: null, fissoSede: null },
+            sede: tenant,
+            divisione: null,
+            bu: null,
+            funzione: null,
+            divGeo: null,
+            biografia: null,
+            immagini: { avatar: user?.immagini?.avatar ?? null, cover: user?.immagini?.cover ?? null },
+        },
     };
 }

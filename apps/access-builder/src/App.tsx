@@ -192,7 +192,7 @@ function App() {
                 pad="sm"
                 border
                 variant="gradient"
-                className="pointer-events-auto !fixed left-3 right-3 top-20 z-40 flex flex-col gap-3 lg:left-1/2 lg:right-auto lg:w-[min(1040px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:flex-row lg:items-center lg:justify-between"
+                className="pointer-events-auto !fixed left-3 right-3 top-20 z-5 flex flex-col gap-3 lg:left-1/2 lg:right-auto lg:w-[min(1040px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:flex-row lg:items-center lg:justify-between"
             >
                 <div className="min-w-0">
                     <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500">
@@ -295,10 +295,18 @@ function App() {
                             roles={state.snapshot.roles}
                             selectedUserId={state.selectedUserId}
                             selectedActorRole={state.selectedActorRole}
+                            selectedUserProfile={state.selectedUserProfile}
                             preview={state.preview}
                             isLoading={state.isPreviewLoading}
+                            isUserProfileLoading={state.isUserProfileLoading}
+                            isUserProfileSaving={state.isUserProfileSaving}
                             onSelectUser={state.setSelectedUserId}
                             onSelectActorRole={state.setSelectedActorRole}
+                            onSaveUserProfile={state.saveSelectedUserProfile}
+                            onCreateUser={state.createUser}
+                            onRefreshUserProfile={state.refreshSelectedUserProfile}
+                            selectedGroupName={state.selectedGroup?.name}
+                            onAddSelectedUserToSelectedGroup={state.addSelectedUserToSelectedGroup}
                         />
                     ) : null}
 
@@ -386,7 +394,7 @@ function CanvasActionToolbar({
             pad="xs"
             border
             variant="gradient"
-            className="!fixed bottom-4 right-3 z-40 flex max-h-[calc(100dvh-7rem)] flex-col items-center gap-2 overflow-y-auto lg:bottom-auto lg:right-5 lg:top-1/2 lg:-translate-y-1/2 lg:overflow-visible"
+            className="!fixed bottom-4 right-3 z-5 flex max-h-[calc(100dvh-7rem)] flex-col items-center gap-2 overflow-y-auto lg:bottom-auto lg:right-5 lg:top-1/2 lg:-translate-y-1/2 lg:overflow-visible"
             aria-label="Azioni canvas"
         >
             <div className="px-2 pb-1 pt-1 text-center text-[0.56rem] font-black uppercase tracking-[0.2em] text-neutral-500">
@@ -434,7 +442,7 @@ function CanvasZoomToolbar({
             pad="xs"
             border
             variant="gradient"
-            className="pointer-events-auto !fixed bottom-4 left-4 z-40 flex max-w-[calc(100vw-6.5rem)] items-center gap-2 overflow-x-auto"
+            className="pointer-events-auto !fixed bottom-4 left-4 z-5 flex max-w-[calc(100vw-6.5rem)] items-center gap-2 overflow-x-auto"
             aria-label="Controlli zoom canvas"
         >
             <div className="hidden px-2 text-[0.56rem] font-black uppercase tracking-[0.2em] text-neutral-500 sm:block">
@@ -548,7 +556,7 @@ function WorkspacePanel({
             shadow="2xl"
             border
             variant="gradient"
-            className="!fixed inset-x-3 bottom-20 top-auto z-50 flex max-h-[70dvh] flex-col overflow-hidden lg:inset-x-auto lg:bottom-5 lg:left-5 lg:top-24 lg:h-auto lg:max-h-none lg:w-[min(440px,calc(100vw-2rem))]"
+            className="!fixed inset-x-3 bottom-20 top-auto z-10 flex max-h-[70dvh] flex-col overflow-hidden lg:inset-x-auto lg:bottom-5 lg:left-5 lg:top-24 lg:h-auto lg:max-h-none lg:w-[min(440px,calc(100vw-2rem))]"
             role="complementary"
         >
             <div className="flex items-start justify-between gap-3 border-b border-neutral-200 p-4 dark:border-neutral-800">

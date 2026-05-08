@@ -9,6 +9,7 @@ export { default as FDDate } from "./components/UI/input/FDDate";
 export { default as FDInput } from "./components/UI/input/FDInput";
 export { default as FDSelect } from "./components/UI/input/FDSelect";
 export { default as FDTextArea } from "./components/UI/input/FDTextArea";
+export { default as FDSwitch } from "./components/UI/input/FDSwitch";
 export { default as MarkdownEditor } from "./components/UI/input/MarkdownEditor";
 export { default as RichTextEditor } from "./components/UI/input/RichTextEditor";
 export { ContextMenu } from "./components/UI/menu/ContextMenu";

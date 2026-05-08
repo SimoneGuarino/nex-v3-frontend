@@ -19,9 +19,83 @@ export interface UserSummary {
   nome?: string;
   cognome?: string;
   username: string;
-  ruolo?: string | string[];
+  ruolo?: number | string | string[];
   desc_role?: string | string[];
+  multiRuolo?: number[] | string[];
   disabilitato?: boolean;
+  immagini?: {
+    avatar?: string | null;
+    cover?: string | null;
+  };
+}
+
+
+export interface UserDetailsRecord {
+  _id: ObjectIdString;
+  recapiti?: {
+    cellulare?: string | null;
+    interno?: string | null;
+    fissoSede?: string | null;
+  };
+  sede?: string | null;
+  divisione?: string | null;
+  bu?: string | null;
+  funzione?: string | null;
+  divGeo?: string | null;
+  biografia?: string | null;
+  immagini?: {
+    cover?: string | null;
+    avatar?: string | null;
+  };
+}
+
+export interface UserProfile {
+  _id: ObjectIdString;
+  username: string;
+  nome: string;
+  cognome: string;
+  ruolo: number;
+  multiRuolo: number[];
+  isMEPA?: boolean;
+  stato?: {
+    ultimoAccesso?: string | null;
+    codice?: string | number | null;
+  };
+  registrato?: string | null;
+  codici?: {
+    agente?: string | string[] | null;
+    buyer?: string | string[] | null;
+    ulterioriAgente?: string[];
+  };
+  magazzino?: string | null;
+  disabilitato?: boolean;
+  details: UserDetailsRecord;
+}
+
+export interface UserProfilePatch {
+  username?: string;
+  nome?: string;
+  cognome?: string;
+  ruolo?: number;
+  multiRuolo?: number[];
+  isMEPA?: boolean;
+  codici?: {
+    agente?: string | null;
+    buyer?: string | null;
+    ulterioriAgente?: string[];
+  };
+  magazzino?: string | null;
+  disabilitato?: boolean;
+  details?: Partial<Omit<UserDetailsRecord, "_id">>;
+}
+
+export interface UserCreatePayload extends UserProfilePatch {
+  username: string;
+  nome: string;
+  cognome: string;
+  password: string;
+  ruolo: number;
+  multiRuolo?: number[];
 }
 
 export interface AccessGroup {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isAuthInvalidationError } from "@nex/shared-platform";
-import { getAccessBuilderSnapshot, getEffectiveAccessPreview, publishAccessBuilderChanges } from "../api/accessBuilderApi";
-import type { AccessBuilderSnapshot, EffectiveAccessPreview, GroupKind, ObjectIdString, PendingChange } from "../model/types";
+import { createAccessBuilderUser, getAccessBuilderSnapshot, getAccessBuilderUserProfile, getEffectiveAccessPreview, publishAccessBuilderChanges, updateAccessBuilderUserProfile } from "../api/accessBuilderApi";
+import type { AccessBuilderSnapshot, EffectiveAccessPreview, GroupKind, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch, UserSummary } from "../model/types";
 
 const DEFAULT_TENANT = "Focelda";
 
@@ -74,10 +74,13 @@ export function useAccessBuilderState() {
     const [selectedUserId, setSelectedUserId] = useState<ObjectIdString | null>(null);
     const [selectedActorRole, setSelectedActorRole] = useState<number>(2);
     const [preview, setPreview] = useState<EffectiveAccessPreview | null>(null);
+    const [selectedUserProfile, setSelectedUserProfile] = useState<UserProfile | null>(null);
     const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
+    const [isUserProfileLoading, setIsUserProfileLoading] = useState(false);
+    const [isUserProfileSaving, setIsUserProfileSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const refreshSnapshot = useCallback(async () => {
@@ -125,6 +128,32 @@ export function useAccessBuilderState() {
             mounted = false;
         };
     }, [selectedUserId, selectedActorRole, pendingChanges.length, snapshot]);
+
+    useEffect(() => {
+        if (!selectedUserId) {
+            setSelectedUserProfile(null);
+            return;
+        }
+
+        let mounted = true;
+        setIsUserProfileLoading(true);
+        getAccessBuilderUserProfile(selectedUserId, DEFAULT_TENANT)
+            .then((profile) => {
+                if (mounted) setSelectedUserProfile(profile);
+            })
+            .catch((e) => {
+                if (mounted && !isAuthInvalidationError(e)) {
+                    setError(String((e as Error)?.message ?? e));
+                }
+            })
+            .finally(() => {
+                if (mounted) setIsUserProfileLoading(false);
+            });
+
+        return () => {
+            mounted = false;
+        };
+    }, [selectedUserId]);
 
     const selectedGroup = useMemo(() => snapshot?.groups.find((group) => group._id === selectedGroupId) ?? null, [snapshot, selectedGroupId]);
     const selectedGroupMemberships = useMemo(() => snapshot?.memberships.filter((m) => m.groupId === selectedGroupId) ?? [], [snapshot, selectedGroupId]);
@@ -456,6 +485,87 @@ export function useAccessBuilderState() {
         });
     }, [addPendingChange, snapshot]);
 
+    const upsertUserInSnapshot = useCallback((profile: UserProfile) => {
+        const summary: UserSummary = {
+            _id: profile._id,
+            username: profile.username,
+            nome: profile.nome,
+            cognome: profile.cognome,
+            ruolo: profile.ruolo,
+            multiRuolo: profile.multiRuolo,
+            disabilitato: profile.disabilitato,
+            immagini: profile.details?.immagini,
+        };
+
+        setSnapshot((current) => {
+            if (!current) return current;
+            const exists = current.users.some((user) => user._id === profile._id);
+            return {
+                ...current,
+                users: exists
+                    ? current.users.map((user) => user._id === profile._id ? { ...user, ...summary } : user)
+                    : [...current.users, summary].sort((a, b) => `${a.cognome ?? ""}${a.nome ?? ""}${a.username}`.localeCompare(`${b.cognome ?? ""}${b.nome ?? ""}${b.username}`)),
+                memberships: current.memberships.map((membership) => membership.userId === profile._id
+                    ? { ...membership, user: { ...(membership.user ?? {}), ...summary } }
+                    : membership),
+            };
+        });
+    }, []);
+
+    const saveSelectedUserProfile = useCallback(async (patch: UserProfilePatch) => {
+        if (!selectedUserId) return null;
+        setIsUserProfileSaving(true);
+        try {
+            const profile = await updateAccessBuilderUserProfile(selectedUserId, patch, DEFAULT_TENANT);
+            setSelectedUserProfile(profile);
+            upsertUserInSnapshot(profile);
+            return profile;
+        } catch (e) {
+            if (!isAuthInvalidationError(e)) {
+                setError(String((e as Error)?.message ?? e));
+            }
+            throw e;
+        } finally {
+            setIsUserProfileSaving(false);
+        }
+    }, [selectedUserId, upsertUserInSnapshot]);
+
+    const createUser = useCallback(async (payload: UserCreatePayload) => {
+        setIsUserProfileSaving(true);
+        try {
+            const profile = await createAccessBuilderUser(payload, DEFAULT_TENANT);
+            setSelectedUserId(profile._id);
+            setSelectedUserProfile(profile);
+            upsertUserInSnapshot(profile);
+            return profile;
+        } catch (e) {
+            if (!isAuthInvalidationError(e)) {
+                setError(String((e as Error)?.message ?? e));
+            }
+            throw e;
+        } finally {
+            setIsUserProfileSaving(false);
+        }
+    }, [upsertUserInSnapshot]);
+
+    const refreshSelectedUserProfile = useCallback(async () => {
+        if (!selectedUserId) return null;
+        setIsUserProfileLoading(true);
+        try {
+            const profile = await getAccessBuilderUserProfile(selectedUserId, DEFAULT_TENANT);
+            setSelectedUserProfile(profile);
+            upsertUserInSnapshot(profile);
+            return profile;
+        } catch (e) {
+            if (!isAuthInvalidationError(e)) {
+                setError(String((e as Error)?.message ?? e));
+            }
+            throw e;
+        } finally {
+            setIsUserProfileLoading(false);
+        }
+    }, [selectedUserId, upsertUserInSnapshot]);
+
     const discardDraft = useCallback(() => {
         setPendingChanges([]);
         void refreshSnapshot();
@@ -486,17 +596,23 @@ export function useAccessBuilderState() {
         selectedGroupGrants,
         selectedUserId,
         selectedActorRole,
+        selectedUserProfile,
         preview,
         pendingChanges,
         isLoading,
         isPreviewLoading,
         isPublishing,
+        isUserProfileLoading,
+        isUserProfileSaving,
         error,
         setSelectedGroupId,
         setSelectedUserId,
         setSelectedActorRole,
         createGroup,
         addSelectedUserToSelectedGroup,
+        saveSelectedUserProfile,
+        createUser,
+        refreshSelectedUserProfile,
         removeMembership,
         moveMembershipToGroup,
         removeGrant,
