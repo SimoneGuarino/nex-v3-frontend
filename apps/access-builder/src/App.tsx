@@ -4,6 +4,7 @@ import { FDBox, FDButton } from "@nex/fd-ui";
 import {
     MdAccountTree,
     MdAddLink,
+    MdAltRoute,
     MdCenterFocusStrong,
     MdClose,
     MdLibraryBooks,
@@ -26,11 +27,14 @@ import {
 } from "./components/OrganizationCanvas";
 import { PendingChangesBar } from "./components/PendingChangesBar";
 import { ResourceLibraryPanel } from "./components/ResourceLibraryPanel";
+import { NavigationResourcesCanvas } from "./components/NavigationResourcesCanvas";
+import { NavigationResourceInspectorPanel } from "./components/NavigationResourceInspectorPanel";
 import { useAccessBuilderState } from "./hooks/useAccessBuilderState";
 import useRootThemeClass from "./bootstrap/useRootThemeClass";
 import { useNexTheme } from "@nex/theme-system";
 
-type PanelKey = "groups" | "inspector" | "resources" | "preview" | "draft";
+type WorkspaceMode = "access" | "navigation" | "settings";
+type PanelKey = "groups" | "inspector" | "resources" | "preview" | "navigation" | "draft";
 
 type PanelMeta = {
     title: string;
@@ -56,8 +60,13 @@ const panelMeta: Record<PanelKey, PanelMeta> = {
     },
     resources: {
         title: "Pannelli & azioni",
-        subtitle: "Catalogo navigation_resources",
+        subtitle: "Gruppi, route e capability",
         icon: <MdLibraryBooks />,
+    },
+    navigation: {
+        title: "Navigation Engine",
+        subtitle: "Gestione route, pannelli, gruppi e sottogruppi menu",
+        icon: <MdAltRoute />,
     },
     draft: {
         title: "Modifiche draft",
@@ -77,6 +86,7 @@ function clampZoom(value: number) {
 function App() {
     const { preferences } = useNexTheme();
     const state = useAccessBuilderState();
+    const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("access");
     const [activePanel, setActivePanel] = useState<PanelKey | null>(null);
     const [canvasMode, setCanvasMode] = useState<CanvasMode>("move");
     const [showUsersOnCanvas, setShowUsersOnCanvas] = useState(false);
@@ -101,8 +111,11 @@ function App() {
         });
     }, []);
 
-    const selectedGroupName =
-        state.selectedGroup?.name ?? "Nessun gruppo selezionato";
+    const selectedWorkspaceTitle = workspaceMode === "access"
+        ? state.selectedGroup?.name ?? "Nessun gruppo selezionato"
+        : workspaceMode === "navigation"
+            ? state.selectedResource?.name ?? "Nessuna route selezionata"
+            : "Impostazioni applicative";
 
     const togglePanel = (key: PanelKey) => {
         setActivePanel((current) => (current === key ? null : key));
@@ -171,27 +184,51 @@ function App() {
                     Snapshot Access Builder non aggiornato: un altro utente ha pubblicato modifiche. Aggiorna o scarta il draft prima di ripubblicare.
                 </div>
             ) : null}
-            <OrganizationCanvas
-                groups={state.snapshot.groups}
-                edges={state.snapshot.edges}
-                memberships={state.snapshot.memberships}
-                users={state.snapshot.users}
-                selectedGroupId={state.selectedGroupId}
-                selectedUserId={state.selectedUserId}
-                mode={canvasMode}
-                zoom={canvasZoom}
-                showUsers={showUsersOnCanvas}
-                viewportResetSignal={viewportResetSignal}
-                onZoomChange={(nextZoom) => setCanvasZoom(clampZoom(nextZoom))}
-                onSelectGroup={state.setSelectedGroupId}
-                onSelectUser={state.setSelectedUserId}
-                onCreateEdge={state.createEdge}
-                onDeleteEdge={state.removeEdge}
-                onRemoveMembership={state.removeMembership}
-                onMoveMembership={state.moveMembershipToGroup}
-                layoutPositions={state.snapshot.canvasLayout?.positions}
-                onLayoutPositionsChange={state.recordCanvasLayoutPositions}
-            />
+            {workspaceMode === "access" ? (
+                <OrganizationCanvas
+                    groups={state.snapshot.groups}
+                    edges={state.snapshot.edges}
+                    memberships={state.snapshot.memberships}
+                    users={state.snapshot.users}
+                    selectedGroupId={state.selectedGroupId}
+                    selectedUserId={state.selectedUserId}
+                    mode={canvasMode}
+                    zoom={canvasZoom}
+                    showUsers={showUsersOnCanvas}
+                    viewportResetSignal={viewportResetSignal}
+                    onZoomChange={(nextZoom) => setCanvasZoom(clampZoom(nextZoom))}
+                    onSelectGroup={state.setSelectedGroupId}
+                    onSelectUser={state.setSelectedUserId}
+                    onCreateEdge={state.createEdge}
+                    onDeleteEdge={state.removeEdge}
+                    onRemoveMembership={state.removeMembership}
+                    onMoveMembership={state.moveMembershipToGroup}
+                    layoutPositions={state.snapshot.canvasLayout?.positions}
+                    onLayoutPositionsChange={state.recordCanvasLayoutPositions}
+                />
+            ) : workspaceMode === "navigation" ? (
+                <NavigationResourcesCanvas
+                    resources={state.snapshot.resources}
+                    selectedResourceId={state.selectedResourceId}
+                    mode={canvasMode}
+                    zoom={canvasZoom}
+                    viewportResetSignal={viewportResetSignal}
+                    onZoomChange={(nextZoom) => setCanvasZoom(clampZoom(nextZoom))}
+                    onSelectResource={state.setSelectedResourceId}
+                    onSetParent={state.setNavigationParent}
+                    onClearParent={state.clearNavigationParent}
+                    layoutPositions={state.snapshot.canvasLayout?.navigationPositions}
+                    onLayoutPositionsChange={state.recordNavigationLayoutPositions}
+                />
+            ) : (
+                <div className="absolute inset-0 grid place-items-center bg-neutral-100 text-neutral-700 dark:bg-neutral-950 dark:text-neutral-200">
+                    <FDBox radius="2xl" border shadow="xl" pad="lg" className="w-[min(560px,calc(100vw-2rem))] text-center">
+                        <div className="text-xs font-black uppercase tracking-[0.22em] text-neutral-500">NEX v3</div>
+                        <div className="mt-2 text-2xl font-black">Impostazioni applicative</div>
+                        <p className="mt-3 text-sm font-semibold text-neutral-500">Sezione predisposta per blocchi configurativi generali. Verrà collegata a generals_configs nella fase dedicata.</p>
+                    </FDBox>
+                </div>
+            )}
 
             <FDBox
                 radius="2xl"
@@ -206,11 +243,16 @@ function App() {
                         NEX v3 · Access Control
                     </div>
                     <div className="truncate text-lg font-black tracking-tight">
-                        {selectedGroupName}
+                        {selectedWorkspaceTitle}
                     </div>
                 </div>
 
                 <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 lg:justify-end">
+                    <WorkspaceButton active={workspaceMode === "access"} icon={<MdAccountTree />} label="Accessi" onClick={() => { setWorkspaceMode("access"); setActivePanel(null); }} />
+                    <WorkspaceButton active={workspaceMode === "navigation"} icon={<MdAltRoute />} label="Route" onClick={() => { setWorkspaceMode("navigation"); setActivePanel("navigation"); }} />
+                    <WorkspaceButton active={workspaceMode === "settings"} icon={<MdTune />} label="Config" onClick={() => { setWorkspaceMode("settings"); setActivePanel(null); }} />
+                    <span className="mx-1 hidden h-8 w-px bg-neutral-200 dark:bg-neutral-800 lg:block" />
+                    {workspaceMode === "access" ? (<>
                     <ToolbarButton
                         active={activePanel === "groups"}
                         icon={panelMeta.groups.icon}
@@ -235,6 +277,14 @@ function App() {
                         label="Risorse"
                         onClick={() => togglePanel("resources")}
                     />
+                    </>) : workspaceMode === "navigation" ? (
+                    <ToolbarButton
+                        active={activePanel === "navigation"}
+                        icon={panelMeta.navigation.icon}
+                        label="Route"
+                        onClick={() => togglePanel("navigation")}
+                    />
+                    ) : null}
                     <ToolbarButton
                         active={activePanel === "draft"}
                         icon={panelMeta.draft.icon}
@@ -263,6 +313,7 @@ function App() {
 
             <CanvasActionToolbar
                 mode={canvasMode}
+                workspaceMode={workspaceMode}
                 showUsers={showUsersOnCanvas}
                 onChangeMode={setCanvasMode}
                 onToggleUsers={() => setShowUsersOnCanvas((value) => !value)}
@@ -285,6 +336,7 @@ function App() {
                     }
                     icon={activeMeta.icon}
                     onClose={() => setActivePanel(null)}
+                    size={workspaceMode === "navigation" && activePanel === "navigation" ? "wide" : "default"}
                 >
                     {activePanel === "groups" ? (
                         <GroupTreePanel
@@ -338,6 +390,18 @@ function App() {
                         />
                     ) : null}
 
+                    {activePanel === "navigation" ? (
+                        <NavigationResourceInspectorPanel
+                            resources={state.snapshot.resources}
+                            selectedResource={state.selectedResource}
+                            onSelectResource={state.setSelectedResourceId}
+                            onCreateResource={state.createNavigationResource}
+                            onUpdateResource={state.updateNavigationResource}
+                            onClearParent={state.clearNavigationParent}
+                            onDisableResource={state.disableNavigationResource}
+                        />
+                    ) : null}
+
                     {activePanel === "draft" ? (
                         <PendingChangesBar
                             changes={state.pendingChanges}
@@ -353,11 +417,13 @@ function App() {
 
 function CanvasActionToolbar({
     mode,
+    workspaceMode,
     showUsers,
     onChangeMode,
     onToggleUsers,
 }: {
     mode: CanvasMode;
+    workspaceMode: WorkspaceMode;
     showUsers: boolean;
     onChangeMode: (mode: CanvasMode) => void;
     onToggleUsers: () => void;
@@ -420,13 +486,15 @@ function CanvasActionToolbar({
 
             <div className="mx-0 h-px w-8 shrink-0 bg-neutral-200 dark:bg-neutral-800" />
 
-            <IconButton
-                active={showUsers}
-                icon={<MdPeople />}
-                label="Utenti"
-                title="Mostra utenti come nodi collegati"
-                onClick={onToggleUsers}
-            />
+            {workspaceMode === "access" ? (
+                <IconButton
+                    active={showUsers}
+                    icon={<MdPeople />}
+                    label="Utenti"
+                    title="Mostra utenti come nodi collegati"
+                    onClick={onToggleUsers}
+                />
+            ) : null}
         </FDBox>
     );
 }
@@ -483,6 +551,24 @@ function CanvasZoomToolbar({
                 onClick={onZoomReset}
             />
         </FDBox>
+    );
+}
+
+function WorkspaceButton({ active, icon, label, onClick }: { active: boolean; icon: ReactNode; label: string; onClick: () => void }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={cx(
+                "inline-flex h-10 items-center gap-2 rounded-2xl border px-3 text-xs font-black uppercase tracking-[0.12em] transition",
+                active
+                    ? "border-blue-500 bg-blue-600 text-white shadow-lg shadow-blue-950/20"
+                    : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800",
+            )}
+        >
+            <span className="text-base">{icon}</span>
+            <span>{label}</span>
+        </button>
     );
 }
 
@@ -550,12 +636,14 @@ function WorkspacePanel({
     icon,
     onClose,
     children,
+    size = "default",
 }: {
     title: string;
     subtitle: string;
     icon: ReactNode;
     onClose: () => void;
     children: ReactNode;
+    size?: "default" | "wide";
 }) {
     return (
         <FDBox
@@ -563,7 +651,12 @@ function WorkspacePanel({
             shadow="2xl"
             border
             variant="gradient"
-            className="!fixed inset-x-3 bottom-20 top-auto z-10 flex max-h-[70dvh] flex-col overflow-hidden lg:inset-x-auto lg:bottom-5 lg:left-5 lg:top-24 lg:h-auto lg:max-h-none lg:w-[min(440px,calc(100vw-2rem))]"
+            className={cx(
+                "!fixed inset-x-3 bottom-20 top-auto z-10 flex max-h-[70dvh] min-w-0 flex-col overflow-hidden lg:inset-x-auto lg:bottom-5 lg:left-5 lg:top-24 lg:h-auto lg:max-h-none",
+                size === "wide"
+                    ? "lg:w-[min(760px,calc(100vw-7.5rem))] xl:w-[min(880px,calc(100vw-8rem))]"
+                    : "lg:w-[min(440px,calc(100vw-2rem))]",
+            )}
             role="complementary"
         >
             <div className="flex items-start justify-between gap-3 border-b border-neutral-200 p-4 dark:border-neutral-800">
@@ -589,7 +682,7 @@ function WorkspacePanel({
                     <MdClose />
                 </button>
             </div>
-            <div className="min-h-0 flex-1 overflow-auto p-4">{children}</div>
+            <div className="min-h-0 min-w-0 flex-1 overflow-auto overflow-x-hidden p-4">{children}</div>
         </FDBox>
     );
 }

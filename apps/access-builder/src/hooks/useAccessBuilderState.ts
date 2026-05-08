@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isAuthInvalidationError } from "@nex/shared-platform";
-import { buildCanvasLayoutChange, createAccessBuilderUser, getAccessBuilderSnapshot, getAccessBuilderUserProfile, getEffectiveAccessPreview, isAccessBuilderConflictError, publishAccessBuilderChanges, updateAccessBuilderUserProfile } from "../api/accessBuilderApi";
-import type { AccessBuilderSnapshot, CanvasPoint, EffectiveAccessPreview, GroupKind, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch, UserSummary } from "../model/types";
+import { buildCanvasLayoutChange, buildNavigationCanvasLayoutChange, createAccessBuilderUser, getAccessBuilderSnapshot, getAccessBuilderUserProfile, getEffectiveAccessPreview, isAccessBuilderConflictError, publishAccessBuilderChanges, updateAccessBuilderUserProfile } from "../api/accessBuilderApi";
+import type { AccessBuilderSnapshot, CanvasPoint, EffectiveAccessPreview, GroupKind, NavigationResource, NavigationResourceCreatePayload, NavigationResourcePatch, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch, UserSummary } from "../model/types";
 
 const DEFAULT_TENANT = "Focelda";
 
@@ -25,6 +25,29 @@ function slugifyGroupKey(value: string): string {
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-z0-9]+/g, "_")
         .replace(/^_+|_+$/g, "") || `group_${Date.now()}`;
+}
+
+function slugifyResourceKey(value: string): string {
+    return value
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9.]+/g, "_")
+        .replace(/^_+|_+$/g, "") || `resource_${Date.now()}`;
+}
+
+
+function defaultNavigationPermission(type: NavigationResource["type"], key: string): string {
+    const safeKey = slugifyResourceKey(key);
+    if (type === "GROUP") return `ui.nav_group.${safeKey}.view`;
+    if (type === "PANEL") return `ui.panel.${safeKey}.view`;
+    if (type === "DATA_SCOPE") return `data_scope.${safeKey}`;
+    return safeKey.includes(".") ? safeKey : `action.${safeKey}`;
+}
+
+function canNavigationResourceBeParent(resource: NavigationResource): boolean {
+    return resource.type === "GROUP" || resource.type === "PANEL";
 }
 
 function buildLocalPreview(snapshot: AccessBuilderSnapshot, userId: ObjectIdString, actorRole: number): EffectiveAccessPreview {
@@ -72,6 +95,7 @@ export function useAccessBuilderState() {
     const [snapshot, setSnapshot] = useState<AccessBuilderSnapshot | null>(null);
     const [selectedGroupId, setSelectedGroupId] = useState<ObjectIdString | null>(null);
     const [selectedUserId, setSelectedUserId] = useState<ObjectIdString | null>(null);
+    const [selectedResourceId, setSelectedResourceId] = useState<ObjectIdString | null>(null);
     const [selectedActorRole, setSelectedActorRole] = useState<number>(2);
     const [preview, setPreview] = useState<EffectiveAccessPreview | null>(null);
     const [selectedUserProfile, setSelectedUserProfile] = useState<UserProfile | null>(null);
@@ -93,6 +117,7 @@ export function useAccessBuilderState() {
             setPublishConflict(null);
             setSelectedGroupId((current) => current ?? data.groups[0]?._id ?? null);
             setSelectedUserId((current) => current ?? data.users[0]?._id ?? null);
+            setSelectedResourceId((current) => current ?? data.resources[0]?._id ?? null);
         } catch (e) {
             if (!isAuthInvalidationError(e)) {
                 setError(String((e as Error)?.message ?? e));
@@ -160,6 +185,7 @@ export function useAccessBuilderState() {
     const selectedGroup = useMemo(() => snapshot?.groups.find((group) => group._id === selectedGroupId) ?? null, [snapshot, selectedGroupId]);
     const selectedGroupMemberships = useMemo(() => snapshot?.memberships.filter((m) => m.groupId === selectedGroupId) ?? [], [snapshot, selectedGroupId]);
     const selectedGroupGrants = useMemo(() => snapshot?.grants.filter((g) => g.principalType === "GROUP" && g.principalId === selectedGroupId) ?? [], [snapshot, selectedGroupId]);
+    const selectedResource = useMemo(() => snapshot?.resources.find((resource) => resource._id === selectedResourceId) ?? null, [snapshot, selectedResourceId]);
 
     const addPendingChange = useCallback((input: Omit<PendingChange, "id" | "createdAt">) => {
         setPendingChanges((prev) => [...prev, createPendingChange(input)]);
@@ -184,6 +210,39 @@ export function useAccessBuilderState() {
         setPendingChanges((current) => {
             const change = buildCanvasLayoutChange(nextPositions);
             const existingIndex = current.findIndex((item) => item.type === "CANVAS_LAYOUT_UPDATE");
+            if (existingIndex < 0) return [...current, change];
+
+            const next = [...current];
+            next[existingIndex] = {
+                ...next[existingIndex],
+                label: change.label,
+                payload: change.payload,
+                createdAt: change.createdAt,
+            };
+            return next;
+        });
+    }, []);
+
+    const recordNavigationLayoutPositions = useCallback((positions: Record<ObjectIdString, CanvasPoint>) => {
+        const nextPositions = Object.entries(positions).reduce<Record<ObjectIdString, CanvasPoint>>((acc, [id, point]) => {
+            if (Number.isFinite(point?.x) && Number.isFinite(point?.y)) {
+                acc[id] = { x: Math.round(point.x), y: Math.round(point.y) };
+            }
+            return acc;
+        }, {});
+
+        setSnapshot((current) => current ? {
+            ...current,
+            canvasLayout: {
+                ...(current.canvasLayout ?? { positions: {} }),
+                positions: current.canvasLayout?.positions ?? {},
+                navigationPositions: nextPositions,
+            },
+        } : current);
+
+        setPendingChanges((current) => {
+            const change = buildNavigationCanvasLayoutChange(nextPositions);
+            const existingIndex = current.findIndex((item) => item.type === "NAV_CANVAS_LAYOUT_UPDATE");
             if (existingIndex < 0) return [...current, change];
 
             const next = [...current];
@@ -519,6 +578,126 @@ export function useAccessBuilderState() {
         });
     }, [addPendingChange, snapshot]);
 
+    const createNavigationResource = useCallback((input: NavigationResourceCreatePayload) => {
+        if (!snapshot) return;
+        const resourceId = makeDraftId("resource");
+        const key = slugifyResourceKey(input.key || input.name);
+        const order = Number.isFinite(Number(input.order)) ? Number(input.order) : snapshot.resources.length * 10 + 10;
+        const resource: NavigationResource = {
+            _id: resourceId,
+            tenant: DEFAULT_TENANT,
+            appId: input.appId || "legacy",
+            key,
+            type: input.type || "PANEL",
+            name: input.name,
+            route: input.type === "PANEL" ? (input.route || "") : (input.route || ""),
+            parentKey: input.parentKey ?? null,
+            permission: input.permission || defaultNavigationPermission(input.type || "PANEL", key),
+            order,
+            status: input.status || "ACTIVE",
+            meta: input.meta || {},
+        };
+
+        setSnapshot((current) => current ? {
+            ...current,
+            resources: [...current.resources, resource].sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name)),
+        } : current);
+        setSelectedResourceId(resourceId);
+
+        addPendingChange({
+            type: "NAV_RESOURCE_CREATE",
+            label: `Crea route ${resource.name}`,
+            payload: { tenant: DEFAULT_TENANT, resource },
+        });
+    }, [addPendingChange, snapshot]);
+
+    const updateNavigationResource = useCallback((resourceId: ObjectIdString, patch: NavigationResourcePatch) => {
+        if (!snapshot) return;
+        const currentResource = snapshot.resources.find((resource) => resource._id === resourceId);
+        if (!currentResource) return;
+        const nextResource = { ...currentResource, ...patch };
+
+        setSnapshot((current) => current ? {
+            ...current,
+            resources: current.resources.map((resource) => resource._id === resourceId ? nextResource : resource),
+        } : current);
+
+        addPendingChange({
+            type: "NAV_RESOURCE_UPDATE",
+            label: `Aggiorna route ${nextResource.name}`,
+            payload: { tenant: DEFAULT_TENANT, resourceId, appId: currentResource.appId, key: currentResource.key, patch },
+        });
+    }, [addPendingChange, snapshot]);
+
+    const setNavigationParent = useCallback((parentResourceId: ObjectIdString, childResourceId: ObjectIdString) => {
+        if (!snapshot || parentResourceId === childResourceId) return;
+        const parent = snapshot.resources.find((resource) => resource._id === parentResourceId);
+        const child = snapshot.resources.find((resource) => resource._id === childResourceId);
+        if (!parent || !child) return;
+        if (!canNavigationResourceBeParent(parent)) return;
+
+        const wouldCycle = (nextParentKey: string, childKey: string) => {
+            let cursor: string | null | undefined = nextParentKey;
+            const visited = new Set<string>();
+            while (cursor) {
+                if (cursor === childKey) return true;
+                if (visited.has(cursor)) return true;
+                visited.add(cursor);
+                cursor = snapshot.resources.find((resource) => resource.appId === child.appId && resource.key === cursor)?.parentKey;
+            }
+            return false;
+        };
+
+        if (parent.appId !== child.appId) return;
+        if (wouldCycle(parent.key, child.key)) return;
+
+        setSnapshot((current) => current ? {
+            ...current,
+            resources: current.resources.map((resource) => resource._id === childResourceId ? { ...resource, parentKey: parent.key } : resource),
+        } : current);
+
+        addPendingChange({
+            type: "NAV_RESOURCE_PARENT_SET",
+            label: `Collega route ${parent.name} → ${child.name}`,
+            payload: { tenant: DEFAULT_TENANT, resourceId: childResourceId, appId: child.appId, key: child.key, parentKey: parent.key },
+        });
+    }, [addPendingChange, snapshot]);
+
+    const clearNavigationParent = useCallback((resourceId: ObjectIdString) => {
+        if (!snapshot) return;
+        const resource = snapshot.resources.find((item) => item._id === resourceId);
+        if (!resource || !resource.parentKey) return;
+        const parent = snapshot.resources.find((item) => item.appId === resource.appId && item.key === resource.parentKey);
+
+        setSnapshot((current) => current ? {
+            ...current,
+            resources: current.resources.map((item) => item._id === resourceId ? { ...item, parentKey: null } : item),
+        } : current);
+
+        addPendingChange({
+            type: "NAV_RESOURCE_PARENT_SET",
+            label: `Rimuovi parent route ${parent?.name ?? resource.parentKey} → ${resource.name}`,
+            payload: { tenant: DEFAULT_TENANT, resourceId, appId: resource.appId, key: resource.key, parentKey: null },
+        });
+    }, [addPendingChange, snapshot]);
+
+    const disableNavigationResource = useCallback((resourceId: ObjectIdString) => {
+        if (!snapshot) return;
+        const resource = snapshot.resources.find((item) => item._id === resourceId);
+        if (!resource) return;
+
+        setSnapshot((current) => current ? {
+            ...current,
+            resources: current.resources.map((item) => item._id === resourceId ? { ...item, status: "DISABLED" } : item),
+        } : current);
+
+        addPendingChange({
+            type: "NAV_RESOURCE_DISABLE",
+            label: `Disabilita route ${resource.name}`,
+            payload: { tenant: DEFAULT_TENANT, resourceId, appId: resource.appId, key: resource.key },
+        });
+    }, [addPendingChange, snapshot]);
+
     const upsertUserInSnapshot = useCallback((profile: UserProfile) => {
         const summary: UserSummary = {
             _id: profile._id,
@@ -635,6 +814,8 @@ export function useAccessBuilderState() {
         selectedGroupId,
         selectedGroupMemberships,
         selectedGroupGrants,
+        selectedResource,
+        selectedResourceId,
         selectedUserId,
         selectedActorRole,
         selectedUserProfile,
@@ -648,6 +829,7 @@ export function useAccessBuilderState() {
         error,
         publishConflict,
         setSelectedGroupId,
+        setSelectedResourceId,
         setSelectedUserId,
         setSelectedActorRole,
         createGroup,
@@ -663,6 +845,12 @@ export function useAccessBuilderState() {
         grantResourceToSelectedGroup,
         addPendingChange,
         recordCanvasLayoutPositions,
+        recordNavigationLayoutPositions,
+        createNavigationResource,
+        updateNavigationResource,
+        setNavigationParent,
+        clearNavigationParent,
+        disableNavigationResource,
         discardDraft,
         publish,
     };

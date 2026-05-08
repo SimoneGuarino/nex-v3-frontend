@@ -157,7 +157,17 @@ export function buildCanvasLayoutChange(positions: Record<ObjectIdString, Canvas
     return {
         id: `draft:CANVAS_LAYOUT_UPDATE:${Date.now()}`,
         type: "CANVAS_LAYOUT_UPDATE",
-        label: "Aggiorna posizioni canvas",
+        label: "Aggiorna posizioni canvas gruppi",
+        payload: { positions },
+        createdAt: new Date().toISOString(),
+    };
+}
+
+export function buildNavigationCanvasLayoutChange(positions: Record<ObjectIdString, CanvasPoint>): PendingChange {
+    return {
+        id: `draft:NAV_CANVAS_LAYOUT_UPDATE:${Date.now()}`,
+        type: "NAV_CANVAS_LAYOUT_UPDATE",
+        label: "Aggiorna posizioni canvas navigation",
         payload: { positions },
         createdAt: new Date().toISOString(),
     };

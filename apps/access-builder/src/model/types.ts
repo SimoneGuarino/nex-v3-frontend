@@ -5,7 +5,7 @@ export type GroupStatus = "ACTIVE" | "DISABLED";
 export type GroupKind = "ORG_UNIT" | "TEAM" | "ROLE_GROUP" | "CAPABILITY_GROUP";
 export type PrincipalType = "GROUP" | "USER";
 export type GrantEffect = "ALLOW" | "DENY";
-export type ResourceType = "PANEL" | "ACTION" | "DATA_SCOPE";
+export type ResourceType = "GROUP" | "PANEL" | "ACTION" | "DATA_SCOPE";
 export type ScopeKind = "GLOBAL" | "ORG_UNIT" | "BUYER_CODE" | "AGENT_CODE" | "FAMIGLIA" | "LINEA" | "GRUPPO" | "QUOTATION_ID" | "LOOK_ID";
 
 export interface CanvasPoint {
@@ -27,9 +27,14 @@ export interface AccessBuilderMeta {
 }
 
 export interface AccessBuilderCanvasLayout {
+  /** Positions for organization/group nodes. */
   positions: Record<ObjectIdString, CanvasPoint>;
+  /** Positions for navigation_resources nodes. */
+  navigationPositions?: Record<ObjectIdString, CanvasPoint>;
   updatedAt?: string | null;
   updatedBy?: ObjectIdString | null;
+  navigationUpdatedAt?: string | null;
+  navigationUpdatedBy?: ObjectIdString | null;
 }
 
 export interface RoleOption {
@@ -192,6 +197,29 @@ export interface NavigationResource {
   order?: number;
   status: "ACTIVE" | "DISABLED";
   meta?: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface NavigationResourcePatch {
+  appId?: string;
+  key?: string;
+  type?: ResourceType;
+  name?: string;
+  route?: string;
+  parentKey?: string | null;
+  permission?: string;
+  order?: number;
+  status?: "ACTIVE" | "DISABLED";
+  meta?: Record<string, unknown>;
+}
+
+export interface NavigationResourceCreatePayload extends NavigationResourcePatch {
+  appId: string;
+  key: string;
+  type: ResourceType;
+  name: string;
+  permission: string;
 }
 
 export interface EffectiveAccessPreview {
@@ -222,7 +250,21 @@ export interface AccessBuilderSnapshot {
 
 export interface PendingChange {
   id: string;
-  type: "GROUP_CREATE" | "GROUP_UPDATE" | "EDGE_CREATE" | "EDGE_DELETE" | "MEMBERSHIP_ADD" | "MEMBERSHIP_REMOVE" | "GRANT_ADD" | "GRANT_REMOVE" | "CANVAS_LAYOUT_UPDATE";
+  type:
+    | "GROUP_CREATE"
+    | "GROUP_UPDATE"
+    | "EDGE_CREATE"
+    | "EDGE_DELETE"
+    | "MEMBERSHIP_ADD"
+    | "MEMBERSHIP_REMOVE"
+    | "GRANT_ADD"
+    | "GRANT_REMOVE"
+    | "CANVAS_LAYOUT_UPDATE"
+    | "NAV_RESOURCE_CREATE"
+    | "NAV_RESOURCE_UPDATE"
+    | "NAV_RESOURCE_PARENT_SET"
+    | "NAV_RESOURCE_DISABLE"
+    | "NAV_CANVAS_LAYOUT_UPDATE";
   label: string;
   payload: unknown;
   createdAt: string;
