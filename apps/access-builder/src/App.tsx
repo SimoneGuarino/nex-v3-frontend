@@ -20,7 +20,10 @@ import {
 import { EffectiveAccessPreviewPanel } from "./components/EffectiveAccessPreviewPanel";
 import { GroupInspectorPanel } from "./components/GroupInspectorPanel";
 import { GroupTreePanel } from "./components/GroupTreePanel";
-import { OrganizationCanvas, type CanvasMode } from "./components/OrganizationCanvas";
+import {
+    OrganizationCanvas,
+    type CanvasMode,
+} from "./components/OrganizationCanvas";
 import { PendingChangesBar } from "./components/PendingChangesBar";
 import { ResourceLibraryPanel } from "./components/ResourceLibraryPanel";
 import { useAccessBuilderState } from "./hooks/useAccessBuilderState";
@@ -68,7 +71,7 @@ function cx(...classes: Array<string | false | null | undefined>) {
 }
 
 function clampZoom(value: number) {
-    return Math.min(1.6, Math.max(0.55, Number(value.toFixed(2))));
+    return Math.min(2.25, Math.max(0.35, Number(value.toFixed(3))));
 }
 
 function App() {
@@ -78,29 +81,54 @@ function App() {
     const [canvasMode, setCanvasMode] = useState<CanvasMode>("move");
     const [showUsersOnCanvas, setShowUsersOnCanvas] = useState(false);
     const [canvasZoom, setCanvasZoom] = useState(1);
+    const [viewportResetSignal, setViewportResetSignal] = useState(0);
 
     useRootThemeClass(preferences.mode === "dark");
 
     useEffect(() => {
-        window.dispatchEvent(new CustomEvent("nex:mfe-ready", { detail: { app: "access-builder" } }));
+        window.dispatchEvent(
+            new CustomEvent("nex:mfe-ready", { detail: { app: "access-builder" } }),
+        );
         if (window.parent && window.parent !== window) {
-            window.parent.postMessage({ type: "nex:mfe-ready", app: "access-builder" }, "*");
+            window.parent.postMessage(
+                { type: "nex:mfe-ready", app: "access-builder" },
+                "*",
+            );
         }
-        notifyShellLoadingReady({ app: "access-builder", source: "access-builder-root-mounted" });
+        notifyShellLoadingReady({
+            app: "access-builder",
+            source: "access-builder-root-mounted",
+        });
     }, []);
 
-    const selectedGroupName = state.selectedGroup?.name ?? "Nessun gruppo selezionato";
+    const selectedGroupName =
+        state.selectedGroup?.name ?? "Nessun gruppo selezionato";
 
     const togglePanel = (key: PanelKey) => {
         setActivePanel((current) => (current === key ? null : key));
     };
 
+    const resetCanvasViewport = () => {
+        setCanvasZoom(1);
+        setViewportResetSignal((value) => value + 1);
+    };
+
     if (state.isLoading) {
         return (
             <div className="grid min-h-screen place-items-center bg-neutral-100 p-6 text-neutral-700 dark:bg-neutral-950 dark:text-neutral-200">
-                <FDBox radius="2xl" shadow="xl" pad="lg" border className="w-full max-w-md text-center">
-                    <div className="text-xs font-black uppercase tracking-[0.24em] text-neutral-500">NEX v3</div>
-                    <div className="mt-2 text-2xl font-black tracking-tight">Caricamento Access Builder…</div>
+                <FDBox
+                    radius="2xl"
+                    shadow="xl"
+                    pad="lg"
+                    border
+                    className="w-full max-w-md text-center"
+                >
+                    <div className="text-xs font-black uppercase tracking-[0.24em] text-neutral-500">
+                        NEX v3
+                    </div>
+                    <div className="mt-2 text-2xl font-black tracking-tight">
+                        Caricamento Access Builder…
+                    </div>
                     <div className="mt-5 h-2 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
                         <div className="h-full w-1/2 animate-pulse rounded-full bg-blue-600" />
                     </div>
@@ -112,10 +140,23 @@ function App() {
     if (state.error || !state.snapshot) {
         return (
             <div className="grid min-h-screen place-items-center bg-neutral-100 p-6 text-neutral-800 dark:bg-neutral-950 dark:text-neutral-100">
-                <FDBox variant="gradient-simple" radius="2xl" shadow="xl" pad="lg" border className="w-full max-w-xl">
-                    <div className="text-xs font-black uppercase tracking-[0.24em] text-red-600">Errore</div>
-                    <h1 className="mt-2 text-2xl font-black tracking-tight text-neutral-600 dark:text-neutral-300">Access Builder non disponibile</h1>
-                    <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">{state.error ?? "Snapshot non disponibile"}</p>
+                <FDBox
+                    variant="gradient-simple"
+                    radius="2xl"
+                    shadow="xl"
+                    pad="lg"
+                    border
+                    className="w-full max-w-xl"
+                >
+                    <div className="text-xs font-black uppercase tracking-[0.24em] text-red-600">
+                        Errore
+                    </div>
+                    <h1 className="mt-2 text-2xl font-black tracking-tight text-neutral-600 dark:text-neutral-300">
+                        Access Builder non disponibile
+                    </h1>
+                    <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">
+                        {state.error ?? "Snapshot non disponibile"}
+                    </p>
                 </FDBox>
             </div>
         );
@@ -134,6 +175,8 @@ function App() {
                 mode={canvasMode}
                 zoom={canvasZoom}
                 showUsers={showUsersOnCanvas}
+                viewportResetSignal={viewportResetSignal}
+                onZoomChange={(nextZoom) => setCanvasZoom(clampZoom(nextZoom))}
                 onSelectGroup={state.setSelectedGroupId}
                 onCreateEdge={state.createEdge}
                 onDeleteEdge={state.removeEdge}
@@ -147,16 +190,45 @@ function App() {
                 className="pointer-events-auto fixed left-3 right-3 top-3 z-40 flex flex-col gap-3 bg-white/95 backdrop-blur dark:bg-neutral-900/95 lg:left-1/2 lg:right-auto lg:w-[min(1040px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:flex-row lg:items-center lg:justify-between"
             >
                 <div className="min-w-0">
-                    <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500">NEX v3 · Access Control</div>
-                    <div className="truncate text-lg font-black tracking-tight">{selectedGroupName}</div>
+                    <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500">
+                        NEX v3 · Access Control
+                    </div>
+                    <div className="truncate text-lg font-black tracking-tight">
+                        {selectedGroupName}
+                    </div>
                 </div>
 
                 <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 lg:justify-end">
-                    <ToolbarButton active={activePanel === "groups"} icon={panelMeta.groups.icon} label="Gruppi" onClick={() => togglePanel("groups")} />
-                    <ToolbarButton active={activePanel === "preview"} icon={panelMeta.preview.icon} label="Preview" onClick={() => togglePanel("preview")} />
-                    <ToolbarButton active={activePanel === "inspector"} icon={panelMeta.inspector.icon} label="Inspector" onClick={() => togglePanel("inspector")} />
-                    <ToolbarButton active={activePanel === "resources"} icon={panelMeta.resources.icon} label="Risorse" onClick={() => togglePanel("resources")} />
-                    <ToolbarButton active={activePanel === "draft"} icon={panelMeta.draft.icon} label={`Draft ${state.pendingChanges.length || ""}`} onClick={() => togglePanel("draft")} />
+                    <ToolbarButton
+                        active={activePanel === "groups"}
+                        icon={panelMeta.groups.icon}
+                        label="Gruppi"
+                        onClick={() => togglePanel("groups")}
+                    />
+                    <ToolbarButton
+                        active={activePanel === "preview"}
+                        icon={panelMeta.preview.icon}
+                        label="Preview"
+                        onClick={() => togglePanel("preview")}
+                    />
+                    <ToolbarButton
+                        active={activePanel === "inspector"}
+                        icon={panelMeta.inspector.icon}
+                        label="Inspector"
+                        onClick={() => togglePanel("inspector")}
+                    />
+                    <ToolbarButton
+                        active={activePanel === "resources"}
+                        icon={panelMeta.resources.icon}
+                        label="Risorse"
+                        onClick={() => togglePanel("resources")}
+                    />
+                    <ToolbarButton
+                        active={activePanel === "draft"}
+                        icon={panelMeta.draft.icon}
+                        label={`Draft ${state.pendingChanges.length || ""}`}
+                        onClick={() => togglePanel("draft")}
+                    />
                     <FDButton
                         size="small"
                         radius="xl"
@@ -169,26 +241,36 @@ function App() {
                             return result;
                         }}
                     >
-                        Pubblica {state.pendingChanges.length > 0 ? `(${state.pendingChanges.length})` : ""}
+                        Pubblica{" "}
+                        {state.pendingChanges.length > 0
+                            ? `(${state.pendingChanges.length})`
+                            : ""}
                     </FDButton>
                 </div>
             </FDBox>
 
             <CanvasActionToolbar
                 mode={canvasMode}
-                zoom={canvasZoom}
                 showUsers={showUsersOnCanvas}
                 onChangeMode={setCanvasMode}
                 onToggleUsers={() => setShowUsersOnCanvas((value) => !value)}
-                onZoomIn={() => setCanvasZoom((value) => clampZoom(value + 0.1))}
-                onZoomOut={() => setCanvasZoom((value) => clampZoom(value - 0.1))}
-                onZoomReset={() => setCanvasZoom(1)}
+            />
+
+            <CanvasZoomToolbar
+                zoom={canvasZoom}
+                onZoomIn={() => setCanvasZoom((value) => clampZoom(value * 1.12))}
+                onZoomOut={() => setCanvasZoom((value) => clampZoom(value / 1.12))}
+                onZoomReset={resetCanvasViewport}
             />
 
             {activePanel && activeMeta ? (
                 <WorkspacePanel
                     title={activeMeta.title}
-                    subtitle={activePanel === "draft" ? `${state.pendingChanges.length} modifiche non pubblicate` : activeMeta.subtitle}
+                    subtitle={
+                        activePanel === "draft"
+                            ? `${state.pendingChanges.length} modifiche non pubblicate`
+                            : activeMeta.subtitle
+                    }
                     icon={activeMeta.icon}
                     onClose={() => setActivePanel(null)}
                 >
@@ -230,11 +312,18 @@ function App() {
                     ) : null}
 
                     {activePanel === "resources" ? (
-                        <ResourceLibraryPanel resources={state.snapshot.resources} onGrant={state.grantResourceToSelectedGroup} />
+                        <ResourceLibraryPanel
+                            resources={state.snapshot.resources}
+                            onGrant={state.grantResourceToSelectedGroup}
+                        />
                     ) : null}
 
                     {activePanel === "draft" ? (
-                        <PendingChangesBar changes={state.pendingChanges} isPublishing={state.isPublishing} onDiscard={state.discardDraft} />
+                        <PendingChangesBar
+                            changes={state.pendingChanges}
+                            isPublishing={state.isPublishing}
+                            onDiscard={state.discardDraft}
+                        />
                     ) : null}
                 </WorkspacePanel>
             ) : null}
@@ -242,22 +331,48 @@ function App() {
     );
 }
 
-function CanvasActionToolbar({ mode, zoom, showUsers, onChangeMode, onToggleUsers, onZoomIn, onZoomOut, onZoomReset }: {
+function CanvasActionToolbar({
+    mode,
+    showUsers,
+    onChangeMode,
+    onToggleUsers,
+}: {
     mode: CanvasMode;
-    zoom: number;
     showUsers: boolean;
     onChangeMode: (mode: CanvasMode) => void;
     onToggleUsers: () => void;
-    onZoomIn: () => void;
-    onZoomOut: () => void;
-    onZoomReset: () => void;
 }) {
-    const items: Array<{ key: CanvasMode; label: string; description: string; icon: ReactNode }> = [
-        { key: "move", label: "Sposta", description: "Sposta i blocchi", icon: <MdOpenWith /> },
-        { key: "connect", label: "Collega", description: "Crea collegamenti", icon: <MdAddLink /> },
-        { key: "delete-link", label: "Rimuovi", description: "Rimuovi collegamenti", icon: <MdLinkOff /> },
-        { key: "multi-select", label: "Seleziona", description: "Selezione multipla", icon: <MdSelectAll /> },
-    ];
+    const items: Array<{
+        key: CanvasMode;
+        label: string;
+        description: string;
+        icon: ReactNode;
+    }> = [
+            {
+                key: "move",
+                label: "Sposta",
+                description: "Sposta blocchi, gruppi selezionati e camera",
+                icon: <MdOpenWith />,
+            },
+            {
+                key: "connect",
+                label: "Collega",
+                description: "Crea collegamenti",
+                icon: <MdAddLink />,
+            },
+            {
+                key: "delete-link",
+                label: "Rimuovi",
+                description: "Rimuovi collegamenti",
+                icon: <MdLinkOff />,
+            },
+            {
+                key: "multi-select",
+                label: "Seleziona",
+                description: "Seleziona più blocchi, poi passa a Sposta",
+                icon: <MdSelectAll />,
+            },
+        ];
 
     return (
         <FDBox
@@ -265,10 +380,12 @@ function CanvasActionToolbar({ mode, zoom, showUsers, onChangeMode, onToggleUser
             shadow="xl"
             pad="xs"
             border
-            className="!fixed bottom-4 left-1/2 z-40 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-2 overflow-x-auto bg-white/95 backdrop-blur-xl dark:bg-neutral-900/95 lg:bottom-auto lg:left-auto lg:right-5 lg:top-1/2 lg:-translate-x-0 lg:-translate-y-1/2 lg:flex-col lg:overflow-visible"
+            className="!fixed bottom-4 right-3 z-40 flex max-h-[calc(100dvh-7rem)] flex-col items-center gap-2 overflow-y-auto bg-white/95 backdrop-blur-xl dark:bg-neutral-900/95 lg:bottom-auto lg:right-5 lg:top-1/2 lg:-translate-y-1/2 lg:overflow-visible"
             aria-label="Azioni canvas"
         >
-            <div className="hidden px-2 pb-1 pt-1 text-center text-[0.56rem] font-black uppercase tracking-[0.2em] text-neutral-500 lg:block">Canvas</div>
+            <div className="px-2 pb-1 pt-1 text-center text-[0.56rem] font-black uppercase tracking-[0.2em] text-neutral-500">
+                Canvas
+            </div>
             {items.map((item) => (
                 <IconButton
                     key={item.key}
@@ -280,26 +397,84 @@ function CanvasActionToolbar({ mode, zoom, showUsers, onChangeMode, onToggleUser
                 />
             ))}
 
-            <div className="mx-1 h-8 w-px shrink-0 bg-neutral-200 dark:bg-neutral-800 lg:mx-0 lg:h-px lg:w-8" />
+            <div className="mx-0 h-px w-8 shrink-0 bg-neutral-200 dark:bg-neutral-800" />
 
-            <IconButton active={showUsers} icon={<MdPeople />} label="Utenti" title="Mostra utenti nel canvas" onClick={onToggleUsers} />
-            <IconButton icon={<MdZoomOut />} label="Zoom -" title="Zoom out" onClick={onZoomOut} />
-            <button
-                type="button"
-                onClick={onZoomReset}
-                title="Reset zoom"
-                className="grid h-11 min-w-16 place-items-center rounded-2xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
-                aria-label="Reset zoom"
-            >
-                {Math.round(zoom * 100)}%
-            </button>
-            <IconButton icon={<MdZoomIn />} label="Zoom +" title="Zoom in" onClick={onZoomIn} />
-            <IconButton icon={<MdCenterFocusStrong />} label="Reset" title="Reset zoom 100%" onClick={onZoomReset} />
+            <IconButton
+                active={showUsers}
+                icon={<MdPeople />}
+                label="Utenti"
+                title="Mostra utenti come nodi collegati"
+                onClick={onToggleUsers}
+            />
         </FDBox>
     );
 }
 
-function ToolbarButton({ active, icon, label, onClick }: { active: boolean; icon: ReactNode; label: string; onClick: () => void }) {
+function CanvasZoomToolbar({
+    zoom,
+    onZoomIn,
+    onZoomOut,
+    onZoomReset,
+}: {
+    zoom: number;
+    onZoomIn: () => void;
+    onZoomOut: () => void;
+    onZoomReset: () => void;
+}) {
+    return (
+        <FDBox
+            radius="2xl"
+            shadow="xl"
+            pad="xs"
+            border
+            className="pointer-events-auto !fixed bottom-4 left-4 z-40 flex max-w-[calc(100vw-6.5rem)] items-center gap-2 overflow-x-auto bg-white/95 backdrop-blur-xl dark:bg-neutral-900/95"
+            aria-label="Controlli zoom canvas"
+        >
+            <div className="hidden px-2 text-[0.56rem] font-black uppercase tracking-[0.2em] text-neutral-500 sm:block">
+                Zoom
+            </div>
+            <IconButton
+                icon={<MdZoomOut />}
+                label="Zoom -"
+                title="Zoom out"
+                onClick={onZoomOut}
+            />
+            <button
+                type="button"
+                onClick={onZoomReset}
+                title="Reset zoom e camera"
+                className="grid h-11 min-w-16 shrink-0 place-items-center rounded-2xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                aria-label="Reset zoom e camera"
+            >
+                {Math.round(zoom * 100)}%
+            </button>
+            <IconButton
+                icon={<MdZoomIn />}
+                label="Zoom +"
+                title="Zoom in"
+                onClick={onZoomIn}
+            />
+            <IconButton
+                icon={<MdCenterFocusStrong />}
+                label="Reset"
+                title="Reset zoom e camera"
+                onClick={onZoomReset}
+            />
+        </FDBox>
+    );
+}
+
+function ToolbarButton({
+    active,
+    icon,
+    label,
+    onClick,
+}: {
+    active: boolean;
+    icon: ReactNode;
+    label: string;
+    onClick: () => void;
+}) {
     return (
         <FDButton
             size="small"
@@ -315,7 +490,19 @@ function ToolbarButton({ active, icon, label, onClick }: { active: boolean; icon
     );
 }
 
-function IconButton({ active, icon, label, title, onClick }: { active?: boolean; icon: ReactNode; label: string; title: string; onClick: () => void }) {
+function IconButton({
+    active,
+    icon,
+    label,
+    title,
+    onClick,
+}: {
+    active?: boolean;
+    icon: ReactNode;
+    label: string;
+    title: string;
+    onClick: () => void;
+}) {
     return (
         <button
             type="button"
@@ -335,7 +522,13 @@ function IconButton({ active, icon, label, title, onClick }: { active?: boolean;
     );
 }
 
-function WorkspacePanel({ title, subtitle, icon, onClose, children }: {
+function WorkspacePanel({
+    title,
+    subtitle,
+    icon,
+    onClose,
+    children,
+}: {
     title: string;
     subtitle: string;
     icon: ReactNode;
@@ -356,8 +549,12 @@ function WorkspacePanel({ title, subtitle, icon, onClose, children }: {
                         {icon}
                     </span>
                     <div className="min-w-0">
-                        <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500">{subtitle}</div>
-                        <h2 className="mt-1 truncate text-lg font-black tracking-tight">{title}</h2>
+                        <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500">
+                            {subtitle}
+                        </div>
+                        <h2 className="mt-1 truncate text-lg font-black tracking-tight">
+                            {title}
+                        </h2>
                     </div>
                 </div>
                 <button
