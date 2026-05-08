@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isAuthInvalidationError } from "@nex/shared-platform";
-import { createAccessBuilderUser, getAccessBuilderSnapshot, getAccessBuilderUserProfile, getEffectiveAccessPreview, publishAccessBuilderChanges, updateAccessBuilderUserProfile } from "../api/accessBuilderApi";
-import type { AccessBuilderSnapshot, EffectiveAccessPreview, GroupKind, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch, UserSummary } from "../model/types";
+import { buildCanvasLayoutChange, createAccessBuilderUser, getAccessBuilderSnapshot, getAccessBuilderUserProfile, getEffectiveAccessPreview, isAccessBuilderConflictError, publishAccessBuilderChanges, updateAccessBuilderUserProfile } from "../api/accessBuilderApi";
+import type { AccessBuilderSnapshot, CanvasPoint, EffectiveAccessPreview, GroupKind, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch, UserSummary } from "../model/types";
 
 const DEFAULT_TENANT = "Focelda";
 
@@ -82,6 +82,7 @@ export function useAccessBuilderState() {
     const [isUserProfileLoading, setIsUserProfileLoading] = useState(false);
     const [isUserProfileSaving, setIsUserProfileSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [publishConflict, setPublishConflict] = useState<Record<string, unknown> | null>(null);
 
     const refreshSnapshot = useCallback(async () => {
         setIsLoading(true);
@@ -89,6 +90,7 @@ export function useAccessBuilderState() {
         try {
             const data = await getAccessBuilderSnapshot(DEFAULT_TENANT);
             setSnapshot(data);
+            setPublishConflict(null);
             setSelectedGroupId((current) => current ?? data.groups[0]?._id ?? null);
             setSelectedUserId((current) => current ?? data.users[0]?._id ?? null);
         } catch (e) {
@@ -161,6 +163,38 @@ export function useAccessBuilderState() {
 
     const addPendingChange = useCallback((input: Omit<PendingChange, "id" | "createdAt">) => {
         setPendingChanges((prev) => [...prev, createPendingChange(input)]);
+    }, []);
+
+    const recordCanvasLayoutPositions = useCallback((positions: Record<ObjectIdString, CanvasPoint>) => {
+        const nextPositions = Object.entries(positions).reduce<Record<ObjectIdString, CanvasPoint>>((acc, [id, point]) => {
+            if (Number.isFinite(point?.x) && Number.isFinite(point?.y)) {
+                acc[id] = { x: Math.round(point.x), y: Math.round(point.y) };
+            }
+            return acc;
+        }, {});
+
+        setSnapshot((current) => current ? {
+            ...current,
+            canvasLayout: {
+                ...(current.canvasLayout ?? {}),
+                positions: nextPositions,
+            },
+        } : current);
+
+        setPendingChanges((current) => {
+            const change = buildCanvasLayoutChange(nextPositions);
+            const existingIndex = current.findIndex((item) => item.type === "CANVAS_LAYOUT_UPDATE");
+            if (existingIndex < 0) return [...current, change];
+
+            const next = [...current];
+            next[existingIndex] = {
+                ...next[existingIndex],
+                label: change.label,
+                payload: change.payload,
+                createdAt: change.createdAt,
+            };
+            return next;
+        });
     }, []);
 
     const createGroup = useCallback((name: string, kind: GroupKind = "TEAM", parentGroupId?: ObjectIdString | null) => {
@@ -516,37 +550,41 @@ export function useAccessBuilderState() {
         if (!selectedUserId) return null;
         setIsUserProfileSaving(true);
         try {
-            const profile = await updateAccessBuilderUserProfile(selectedUserId, patch, DEFAULT_TENANT);
+            const profile = await updateAccessBuilderUserProfile(selectedUserId, patch, DEFAULT_TENANT, snapshot?.meta?.revision);
             setSelectedUserProfile(profile);
             upsertUserInSnapshot(profile);
             return profile;
         } catch (e) {
-            if (!isAuthInvalidationError(e)) {
+            if (isAccessBuilderConflictError(e)) {
+                setPublishConflict(e.conflict);
+            } else if (!isAuthInvalidationError(e)) {
                 setError(String((e as Error)?.message ?? e));
             }
             throw e;
         } finally {
             setIsUserProfileSaving(false);
         }
-    }, [selectedUserId, upsertUserInSnapshot]);
+    }, [selectedUserId, snapshot?.meta?.revision, upsertUserInSnapshot]);
 
     const createUser = useCallback(async (payload: UserCreatePayload) => {
         setIsUserProfileSaving(true);
         try {
-            const profile = await createAccessBuilderUser(payload, DEFAULT_TENANT);
+            const profile = await createAccessBuilderUser(payload, DEFAULT_TENANT, snapshot?.meta?.revision);
             setSelectedUserId(profile._id);
             setSelectedUserProfile(profile);
             upsertUserInSnapshot(profile);
             return profile;
         } catch (e) {
-            if (!isAuthInvalidationError(e)) {
+            if (isAccessBuilderConflictError(e)) {
+                setPublishConflict(e.conflict);
+            } else if (!isAuthInvalidationError(e)) {
                 setError(String((e as Error)?.message ?? e));
             }
             throw e;
         } finally {
             setIsUserProfileSaving(false);
         }
-    }, [upsertUserInSnapshot]);
+    }, [snapshot?.meta?.revision, upsertUserInSnapshot]);
 
     const refreshSelectedUserProfile = useCallback(async () => {
         if (!selectedUserId) return null;
@@ -564,7 +602,7 @@ export function useAccessBuilderState() {
         } finally {
             setIsUserProfileLoading(false);
         }
-    }, [selectedUserId, upsertUserInSnapshot]);
+    }, [selectedUserId, snapshot?.meta?.revision, upsertUserInSnapshot]);
 
     const discardDraft = useCallback(() => {
         setPendingChanges([]);
@@ -574,19 +612,22 @@ export function useAccessBuilderState() {
     const publish = useCallback(async () => {
         setIsPublishing(true);
         try {
-            const result = await publishAccessBuilderChanges(pendingChanges, DEFAULT_TENANT);
+            const result = await publishAccessBuilderChanges(pendingChanges, DEFAULT_TENANT, snapshot?.meta?.revision);
             setPendingChanges([]);
+            setPublishConflict(null);
             await refreshSnapshot();
             return result;
         } catch (e) {
-            if (!isAuthInvalidationError(e)) {
+            if (isAccessBuilderConflictError(e)) {
+                setPublishConflict(e.conflict);
+            } else if (!isAuthInvalidationError(e)) {
                 setError(String((e as Error)?.message ?? e));
             }
             throw e;
         } finally {
             setIsPublishing(false);
         }
-    }, [pendingChanges, refreshSnapshot]);
+    }, [pendingChanges, refreshSnapshot, snapshot?.meta?.revision]);
 
     return {
         snapshot,
@@ -605,6 +646,7 @@ export function useAccessBuilderState() {
         isUserProfileLoading,
         isUserProfileSaving,
         error,
+        publishConflict,
         setSelectedGroupId,
         setSelectedUserId,
         setSelectedActorRole,
@@ -620,6 +662,7 @@ export function useAccessBuilderState() {
         removeEdge,
         grantResourceToSelectedGroup,
         addPendingChange,
+        recordCanvasLayoutPositions,
         discardDraft,
         publish,
     };

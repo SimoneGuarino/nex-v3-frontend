@@ -12,7 +12,7 @@ import {
 } from "react";
 import { MdClose, MdDragIndicator, MdLinkOff, MdSwapHoriz, MdOutlinePushPin } from "react-icons/md";
 import { FDBox } from "@nex/fd-ui";
-import type { AccessGroup, GroupEdge, GroupMembership, ObjectIdString, UserSummary } from "../model/types";
+import type { AccessGroup, CanvasPoint, GroupEdge, GroupMembership, ObjectIdString, UserSummary } from "../model/types";
 
 export type CanvasMode = "move" | "connect" | "delete-link" | "multi-select";
 
@@ -34,6 +34,8 @@ interface Props {
     onDeleteEdge: (edgeId: ObjectIdString) => void;
     onRemoveMembership: (membershipId: ObjectIdString) => void;
     onMoveMembership: (membershipId: ObjectIdString, targetGroupId: ObjectIdString) => void;
+    layoutPositions?: Record<ObjectIdString, CanvasPoint>;
+    onLayoutPositionsChange?: (positions: Record<ObjectIdString, CanvasPoint>) => void;
 }
 
 interface Point {
@@ -278,6 +280,8 @@ export function OrganizationCanvas({
     onDeleteEdge,
     onRemoveMembership,
     onMoveMembership,
+    layoutPositions,
+    onLayoutPositionsChange,
 }: Props) {
     const [positions, setPositions] = useState<Record<string, Point>>({});
     const [nodeSizes, setNodeSizes] = useState<Record<string, { width: number; height: number }>>({});
@@ -311,16 +315,23 @@ export function OrganizationCanvas({
         setPositions((current) => {
             let changed = false;
             const next = { ...current };
+            const activeGroupIds = new Set(groups.map((group) => group._id));
 
             groups.forEach((group, index) => {
-                if (!next[group._id]) {
-                    next[group._id] = computeInitialPosition(group, index, edges);
+                const savedPoint = layoutPositions?.[group._id];
+                const hasSavedPoint = Number.isFinite(savedPoint?.x) && Number.isFinite(savedPoint?.y);
+                const desiredPoint = hasSavedPoint
+                    ? { x: Number(savedPoint.x), y: Number(savedPoint.y) }
+                    : next[group._id] ?? computeInitialPosition(group, index, edges);
+
+                if (!next[group._id] || next[group._id].x !== desiredPoint.x || next[group._id].y !== desiredPoint.y) {
+                    next[group._id] = desiredPoint;
                     changed = true;
                 }
             });
 
             Object.keys(next).forEach((groupId) => {
-                if (!groups.some((group) => group._id === groupId)) {
+                if (!activeGroupIds.has(groupId)) {
                     delete next[groupId];
                     changed = true;
                 }
@@ -328,7 +339,7 @@ export function OrganizationCanvas({
 
             return changed ? next : current;
         });
-    }, [edges, groups]);
+    }, [edges, groups, layoutPositions]);
 
     useEffect(() => {
         positionsRef.current = positions;
@@ -755,7 +766,11 @@ export function OrganizationCanvas({
             // Pointer capture can already be released by the browser.
         }
 
+        const completedDrag = dragRef.current;
         flushPendingPosition();
+        if (completedDrag?.hasMoved) {
+            onLayoutPositionsChange?.({ ...positionsRef.current });
+        }
         dragRef.current = null;
         if (!panGestureRef.current && !pinchRef.current) {
             captureTargetRef.current = null;

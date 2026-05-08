@@ -166,6 +166,11 @@ function App() {
 
     return (
         <div className="relative h-dvh w-screen overflow-hidden bg-neutral-100 text-neutral-950 dark:bg-neutral-950 dark:text-neutral-100">
+            {state.publishConflict ? (
+                <div className="fixed left-1/2 top-4 z-[80] w-[min(560px,calc(100vw-24px))] -translate-x-1/2 rounded-2xl border border-amber-300 bg-amber-50/95 px-4 py-3 text-sm font-semibold text-amber-950 shadow-2xl backdrop-blur dark:border-amber-700 dark:bg-amber-950/95 dark:text-amber-50">
+                    Snapshot Access Builder non aggiornato: un altro utente ha pubblicato modifiche. Aggiorna o scarta il draft prima di ripubblicare.
+                </div>
+            ) : null}
             <OrganizationCanvas
                 groups={state.snapshot.groups}
                 edges={state.snapshot.edges}
@@ -184,6 +189,8 @@ function App() {
                 onDeleteEdge={state.removeEdge}
                 onRemoveMembership={state.removeMembership}
                 onMoveMembership={state.moveMembershipToGroup}
+                layoutPositions={state.snapshot.canvasLayout?.positions}
+                onLayoutPositionsChange={state.recordCanvasLayoutPositions}
             />
 
             <FDBox

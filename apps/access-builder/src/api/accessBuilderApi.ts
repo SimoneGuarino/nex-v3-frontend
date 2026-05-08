@@ -1,11 +1,36 @@
-import { authenticatedFetch, isAuthInvalidationError } from "@nex/shared-platform";
+import { authenticatedFetch, isApiHttpError, isAuthInvalidationError } from "@nex/shared-platform";
 import { accessBuilderFixture } from "../fixtures/accessBuilderFixture";
-import type { AccessBuilderSnapshot, EffectiveAccessPreview, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch } from "../model/types";
+import type { AccessBuilderSnapshot, CanvasPoint, EffectiveAccessPreview, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch } from "../model/types";
 
 const ADMIN_BASE = normalizeBase(import.meta.env.VITE_API_ADMIN ?? "");
 const AUTH_BASE = normalizeBase(import.meta.env.VITE_AUTH_API_ENDPOINT ?? import.meta.env.VITE_API_AUTH ?? "");
 const ACCESS_BASE = normalizeBase(import.meta.env.VITE_API_ACCESS_BUILDER ?? ADMIN_BASE);
 const USE_MOCK_FALLBACK = (import.meta.env.VITE_ACCESS_BUILDER_MOCK_FALLBACK ?? "true") !== "false";
+
+
+export class AccessBuilderConflictError extends Error {
+    readonly conflict: Record<string, unknown>;
+
+    constructor(message: string, conflict: Record<string, unknown>) {
+        super(message);
+        this.name = "AccessBuilderConflictError";
+        this.conflict = conflict;
+    }
+}
+
+function normalizeConflictError(error: unknown): never {
+    if (isApiHttpError(error) && error.status === 409) {
+        const body = error.body && typeof error.body === "object" ? error.body as Record<string, unknown> : {};
+        const conflict = body.conflict && typeof body.conflict === "object" ? body.conflict as Record<string, unknown> : body;
+        throw new AccessBuilderConflictError(error.message || "Access Builder modificato da un altro utente", conflict);
+    }
+
+    throw error;
+}
+
+export function isAccessBuilderConflictError(error: unknown): error is AccessBuilderConflictError {
+    return error instanceof AccessBuilderConflictError;
+}
 
 function normalizeBase(value: string): string {
     if (!value) return "";
@@ -63,7 +88,7 @@ function unwrapApiEnvelope<T>(data: unknown): T {
 function withMockFallback<T>(operation: () => Promise<T>, fallback: () => T): Promise<T> {
     if (!USE_MOCK_FALLBACK) return operation();
     return operation().catch((error) => {
-        if (isAuthInvalidationError(error)) {
+        if (isAuthInvalidationError(error) || isAccessBuilderConflictError(error)) {
             throw error;
         }
 
@@ -98,34 +123,44 @@ export async function getAccessBuilderUserProfile(userId: ObjectIdString, tenant
     );
 }
 
-export async function updateAccessBuilderUserProfile(userId: ObjectIdString, patch: UserProfilePatch, tenant = "Focelda"): Promise<UserProfile> {
+export async function updateAccessBuilderUserProfile(userId: ObjectIdString, patch: UserProfilePatch, tenant = "Focelda", baseRevision?: string): Promise<UserProfile> {
     return withMockFallback(
         () => requestJson<UserProfile>(accessUrl(`/access-builder/users/${encodeURIComponent(userId)}`), {
             method: "PATCH",
-            body: JSON.stringify({ tenant, patch }),
-        }),
+            body: JSON.stringify({ tenant, patch, baseRevision }),
+        }).catch(normalizeConflictError),
         () => ({ ...buildFixtureUserProfile(userId, tenant), ...patch, details: { ...buildFixtureUserProfile(userId, tenant).details, ...(patch.details ?? {}) } }),
     );
 }
 
-export async function createAccessBuilderUser(payload: UserCreatePayload, tenant = "Focelda"): Promise<UserProfile> {
+export async function createAccessBuilderUser(payload: UserCreatePayload, tenant = "Focelda", baseRevision?: string): Promise<UserProfile> {
     return withMockFallback(
         () => requestJson<UserProfile>(accessUrl("/access-builder/users"), {
             method: "POST",
-            body: JSON.stringify({ tenant, user: payload }),
-        }),
+            body: JSON.stringify({ tenant, user: payload, baseRevision }),
+        }).catch(normalizeConflictError),
         () => ({ ...buildFixtureUserProfile(`draft:user:${Date.now()}`, tenant), ...payload, details: { ...buildFixtureUserProfile(`draft:user:${Date.now()}`, tenant).details, ...(payload.details ?? {}) } }),
     );
 }
 
-export async function publishAccessBuilderChanges(changes: PendingChange[], tenant = "Focelda"): Promise<{ ok: true; applied: number }> {
+export async function publishAccessBuilderChanges(changes: PendingChange[], tenant = "Focelda", baseRevision?: string): Promise<{ ok: true; applied: number; revision?: string }> {
     return withMockFallback(
-        () => requestJson<{ ok: true; applied: number }>(accessUrl("/access-builder/publish"), {
+        () => requestJson<{ ok: true; applied: number; revision?: string }>(accessUrl("/access-builder/publish"), {
             method: "POST",
-            body: JSON.stringify({ tenant, changes }),
-        }),
+            body: JSON.stringify({ tenant, changes, baseRevision }),
+        }).catch(normalizeConflictError),
         () => ({ ok: true, applied: changes.length }),
     );
+}
+
+export function buildCanvasLayoutChange(positions: Record<ObjectIdString, CanvasPoint>): PendingChange {
+    return {
+        id: `draft:CANVAS_LAYOUT_UPDATE:${Date.now()}`,
+        type: "CANVAS_LAYOUT_UPDATE",
+        label: "Aggiorna posizioni canvas",
+        payload: { positions },
+        createdAt: new Date().toISOString(),
+    };
 }
 
 function buildFixturePreview(userId: ObjectIdString, actorRole: number, tenant: string): EffectiveAccessPreview {

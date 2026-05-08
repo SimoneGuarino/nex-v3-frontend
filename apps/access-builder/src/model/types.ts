@@ -8,6 +8,30 @@ export type GrantEffect = "ALLOW" | "DENY";
 export type ResourceType = "PANEL" | "ACTION" | "DATA_SCOPE";
 export type ScopeKind = "GLOBAL" | "ORG_UNIT" | "BUYER_CODE" | "AGENT_CODE" | "FAMIGLIA" | "LINEA" | "GRUPPO" | "QUOTATION_ID" | "LOOK_ID";
 
+export interface CanvasPoint {
+  x: number;
+  y: number;
+}
+
+export interface AccessBuilderMeta {
+  revision: string;
+  updatedAt?: string | null;
+  updatedBy?: ObjectIdString | null;
+  lastChange?: {
+    action: string;
+    label?: string;
+    actorUserId?: ObjectIdString | null;
+    createdAt?: string | null;
+    changesCount?: number;
+  } | null;
+}
+
+export interface AccessBuilderCanvasLayout {
+  positions: Record<ObjectIdString, CanvasPoint>;
+  updatedAt?: string | null;
+  updatedBy?: ObjectIdString | null;
+}
+
 export interface RoleOption {
   id: number;
   name: string;
@@ -184,6 +208,8 @@ export interface EffectiveAccessPreview {
 
 export interface AccessBuilderSnapshot {
   tenant: TenantKey;
+  meta?: AccessBuilderMeta;
+  canvasLayout?: AccessBuilderCanvasLayout;
   roles: RoleOption[];
   groups: AccessGroup[];
   edges: GroupEdge[];
@@ -196,7 +222,7 @@ export interface AccessBuilderSnapshot {
 
 export interface PendingChange {
   id: string;
-  type: "GROUP_CREATE" | "GROUP_UPDATE" | "EDGE_CREATE" | "EDGE_DELETE" | "MEMBERSHIP_ADD" | "MEMBERSHIP_REMOVE" | "GRANT_ADD" | "GRANT_REMOVE";
+  type: "GROUP_CREATE" | "GROUP_UPDATE" | "EDGE_CREATE" | "EDGE_DELETE" | "MEMBERSHIP_ADD" | "MEMBERSHIP_REMOVE" | "GRANT_ADD" | "GRANT_REMOVE" | "CANVAS_LAYOUT_UPDATE";
   label: string;
   payload: unknown;
   createdAt: string;
