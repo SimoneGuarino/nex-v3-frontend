@@ -1,14 +1,18 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { FDBox } from "@nex/fd-ui";
-import type { AccessGroup, GroupEdge, ObjectIdString } from "../model/types";
+import type { AccessGroup, GroupEdge, GroupMembership, ObjectIdString, UserSummary } from "../model/types";
 
 export type CanvasMode = "move" | "connect" | "delete-link" | "multi-select";
 
 interface Props {
     groups: AccessGroup[];
     edges: GroupEdge[];
+    memberships: GroupMembership[];
+    users: UserSummary[];
     selectedGroupId: ObjectIdString | null;
     mode: CanvasMode;
+    zoom: number;
+    showUsers: boolean;
     onSelectGroup: (id: ObjectIdString) => void;
     onCreateEdge: (parentGroupId: ObjectIdString, childGroupId: ObjectIdString) => void;
     onDeleteEdge: (edgeId: ObjectIdString) => void;
@@ -46,6 +50,7 @@ interface ConnectionPorts {
 
 const fallbackNodeWidth = 270;
 const fallbackNodeHeight = 118;
+const userPreviewLimit = 5;
 const connectorGap = 3;
 
 const kindLabel: Record<string, string> = {
@@ -155,7 +160,7 @@ function buildConnection(edge: GroupEdge, positions: Record<string, Point>, size
     };
 }
 
-export function OrganizationCanvas({ groups, edges, selectedGroupId, mode, onSelectGroup, onCreateEdge, onDeleteEdge }: Props) {
+export function OrganizationCanvas({ groups, edges, memberships, users, selectedGroupId, mode, zoom, showUsers, onSelectGroup, onCreateEdge, onDeleteEdge }: Props) {
     const [positions, setPositions] = useState<Record<string, Point>>({});
     const [nodeSizes, setNodeSizes] = useState<Record<string, { width: number; height: number }>>({});
     const [linkSourceId, setLinkSourceId] = useState<ObjectIdString | null>(null);
@@ -169,6 +174,7 @@ export function OrganizationCanvas({ groups, edges, selectedGroupId, mode, onSel
     const pendingPositionRef = useRef<PendingPosition | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const nodeElementRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+    const nodeResizeObserverRefs = useRef<Map<string, ResizeObserver>>(new Map());
     const pathElementRefs = useRef<Map<string, SVGPathElement>>(new Map());
 
     useEffect(() => {
@@ -212,15 +218,20 @@ export function OrganizationCanvas({ groups, edges, selectedGroupId, mode, onSel
             if (animationFrameRef.current !== null) {
                 window.cancelAnimationFrame(animationFrameRef.current);
             }
+            for (const observer of nodeResizeObserverRefs.current.values()) {
+                observer.disconnect();
+            }
+            nodeResizeObserverRefs.current.clear();
         };
     }, []);
 
     const canvasSize = useMemo(() => {
         const points = Object.values(positions);
-        const maxX = Math.max(1400, ...points.map((point) => point.x + fallbackNodeWidth + 220));
-        const maxY = Math.max(850, ...points.map((point) => point.y + fallbackNodeHeight + 220));
+        const estimatedHeight = showUsers ? fallbackNodeHeight + 148 : fallbackNodeHeight;
+        const maxX = Math.max(1400, ...points.map((point) => point.x + fallbackNodeWidth + 240));
+        const maxY = Math.max(850, ...points.map((point) => point.y + estimatedHeight + 240));
         return { width: maxX, height: maxY };
-    }, [positions]);
+    }, [positions, showUsers]);
 
     const updateConnectedEdgePaths = useCallback((groupId: ObjectIdString) => {
         const currentPositions = positionsRef.current;
@@ -277,8 +288,8 @@ export function OrganizationCanvas({ groups, edges, selectedGroupId, mode, onSel
         const drag = dragRef.current;
         if (!drag) return;
 
-        const deltaX = event.clientX - drag.startClientX;
-        const deltaY = event.clientY - drag.startClientY;
+        const deltaX = (event.clientX - drag.startClientX) / zoom;
+        const deltaY = (event.clientY - drag.startClientY) / zoom;
 
         if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
             drag.hasMoved = true;
@@ -357,13 +368,7 @@ export function OrganizationCanvas({ groups, edges, selectedGroupId, mode, onSel
         onSelectGroup(groupId);
     };
 
-    const registerNodeElement = useCallback((groupId: ObjectIdString, element: HTMLDivElement | null) => {
-        if (!element) {
-            nodeElementRefs.current.delete(groupId);
-            return;
-        }
-
-        nodeElementRefs.current.set(groupId, element);
+    const setMeasuredNodeSize = useCallback((groupId: ObjectIdString, element: HTMLDivElement) => {
         const width = element.offsetWidth || fallbackNodeWidth;
         const height = element.offsetHeight || fallbackNodeHeight;
 
@@ -374,6 +379,28 @@ export function OrganizationCanvas({ groups, edges, selectedGroupId, mode, onSel
         });
     }, []);
 
+    const registerNodeElement = useCallback((groupId: ObjectIdString, element: HTMLDivElement | null) => {
+        nodeResizeObserverRefs.current.get(groupId)?.disconnect();
+        nodeResizeObserverRefs.current.delete(groupId);
+
+        if (!element) {
+            nodeElementRefs.current.delete(groupId);
+            return;
+        }
+
+        nodeElementRefs.current.set(groupId, element);
+        setMeasuredNodeSize(groupId, element);
+
+        if (typeof ResizeObserver !== "undefined") {
+            const observer = new ResizeObserver(() => {
+                setMeasuredNodeSize(groupId, element);
+                updateConnectedEdgePaths(groupId);
+            });
+            observer.observe(element);
+            nodeResizeObserverRefs.current.set(groupId, observer);
+        }
+    }, [setMeasuredNodeSize, updateConnectedEdgePaths]);
+
     const registerPathElement = useCallback((edgeId: ObjectIdString, element: SVGPathElement | null) => {
         if (!element) {
             pathElementRefs.current.delete(edgeId);
@@ -381,6 +408,24 @@ export function OrganizationCanvas({ groups, edges, selectedGroupId, mode, onSel
         }
         pathElementRefs.current.set(edgeId, element);
     }, []);
+
+    const usersById = useMemo(() => {
+        const map = new Map<ObjectIdString, UserSummary>();
+        for (const user of users) map.set(user._id, user);
+        return map;
+    }, [users]);
+
+    const membersByGroup = useMemo(() => {
+        const map = new Map<ObjectIdString, UserSummary[]>();
+        for (const membership of memberships) {
+            const user = membership.user ?? usersById.get(membership.userId);
+            if (!user) continue;
+            const current = map.get(membership.groupId) ?? [];
+            current.push(user);
+            map.set(membership.groupId, current);
+        }
+        return map;
+    }, [memberships, usersById]);
 
     const modeCopy = useMemo(() => {
         if (mode === "connect") return linkSourceId ? "Seleziona il gruppo di destinazione per creare il collegamento." : "Seleziona il gruppo sorgente da collegare.";
@@ -399,7 +444,11 @@ export function OrganizationCanvas({ groups, edges, selectedGroupId, mode, onSel
                 onPointerUp={stopDrag}
                 onPointerCancel={stopDrag}
             >
-                <div className="relative" style={{ width: canvasSize.width, height: canvasSize.height }}>
+                <div className="relative" style={{ width: canvasSize.width * zoom, height: canvasSize.height * zoom }}>
+                    <div
+                        className="absolute left-0 top-0 origin-top-left"
+                        style={{ width: canvasSize.width, height: canvasSize.height, transform: `scale(${zoom})` }}
+                    >
                     <svg className={cx("absolute inset-0 z-0", mode === "delete-link" ? "pointer-events-auto" : "pointer-events-none")} width={canvasSize.width} height={canvasSize.height} aria-hidden="true">
                         <defs>
                             <marker id="ab-arrow" viewBox="0 0 12 12" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
@@ -459,6 +508,8 @@ export function OrganizationCanvas({ groups, edges, selectedGroupId, mode, onSel
                                 refCallback={registerNodeElement}
                                 group={group}
                                 point={point}
+                                members={membersByGroup.get(group._id) ?? []}
+                                showUsers={showUsers}
                                 selected={selectedGroupId === group._id}
                                 connectSource={linkSourceId === group._id}
                                 multiSelected={multiSelectedIds.has(group._id)}
@@ -468,16 +519,19 @@ export function OrganizationCanvas({ groups, edges, selectedGroupId, mode, onSel
                             />
                         );
                     })}
+                    </div>
                 </div>
             </div>
         </main>
     );
 }
 
-const GroupNode = memo(function GroupNode({ refCallback, group, point, selected, connectSource, multiSelected, mode, onPointerDown, onClick }: {
+const GroupNode = memo(function GroupNode({ refCallback, group, point, members, showUsers, selected, connectSource, multiSelected, mode, onPointerDown, onClick }: {
     refCallback: (groupId: ObjectIdString, element: HTMLDivElement | null) => void;
     group: AccessGroup;
     point: Point;
+    members: UserSummary[];
+    showUsers: boolean;
     selected: boolean;
     connectSource: boolean;
     multiSelected: boolean;
@@ -486,6 +540,8 @@ const GroupNode = memo(function GroupNode({ refCallback, group, point, selected,
     onClick: (id: ObjectIdString) => void;
 }) {
     const cursorClass = mode === "move" ? "cursor-grab active:cursor-grabbing" : mode === "connect" ? "cursor-crosshair" : mode === "multi-select" ? "cursor-cell" : "cursor-default";
+    const visibleMembers = members.slice(0, userPreviewLimit);
+    const extraMembersCount = Math.max(0, members.length - visibleMembers.length);
 
     return (
         <div
@@ -516,10 +572,40 @@ const GroupNode = memo(function GroupNode({ refCallback, group, point, selected,
                         <span className="mt-0.5 block truncate text-xs font-bold uppercase tracking-[0.12em] text-neutral-500">{group.key}</span>
                         <span className="mt-1 block truncate text-[0.68rem] font-black uppercase tracking-[0.18em] text-neutral-500">{kindLabel[group.kind] ?? group.kind}</span>
                         <span className="mt-3 grid grid-cols-3 gap-2 text-center text-[0.68rem] font-black text-neutral-500">
-                            <span className="rounded-xl bg-neutral-100 px-2 py-1 dark:bg-neutral-800"><b className="block text-sm text-neutral-900 dark:text-neutral-100">{group.membersCount ?? 0}</b>Membri</span>
+                            <span className="rounded-xl bg-neutral-100 px-2 py-1 dark:bg-neutral-800"><b className="block text-sm text-neutral-900 dark:text-neutral-100">{group.membersCount ?? members.length}</b>Membri</span>
                             <span className="rounded-xl bg-neutral-100 px-2 py-1 dark:bg-neutral-800"><b className="block text-sm text-neutral-900 dark:text-neutral-100">{group.grantsCount ?? 0}</b>Grant</span>
                             <span className="rounded-xl bg-neutral-100 px-2 py-1 dark:bg-neutral-800"><b className="block text-sm text-neutral-900 dark:text-neutral-100">{group.inheritedGrantsCount ?? 0}</b>Ered.</span>
                         </span>
+                        {showUsers ? (
+                            <span className="mt-3 block rounded-2xl border border-neutral-200 bg-neutral-50 p-2 dark:border-neutral-800 dark:bg-neutral-950/60">
+                                <span className="mb-2 block text-[0.62rem] font-black uppercase tracking-[0.18em] text-neutral-500">Utenti nel gruppo</span>
+                                {visibleMembers.length === 0 ? (
+                                    <span className="block text-xs font-semibold text-neutral-500">Nessun membro diretto.</span>
+                                ) : (
+                                    <span className="flex flex-wrap gap-1.5">
+                                        {visibleMembers.map((user) => (
+                                            <span
+                                                key={user._id}
+                                                className={cx(
+                                                    "max-w-full truncate rounded-full px-2 py-1 text-[0.68rem] font-black",
+                                                    user.disabilitato
+                                                        ? "bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-200"
+                                                        : "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-200",
+                                                )}
+                                                title={user.username}
+                                            >
+                                                {[user.nome, user.cognome].filter(Boolean).join(" ") || user.username}
+                                            </span>
+                                        ))}
+                                        {extraMembersCount > 0 ? (
+                                            <span className="rounded-full bg-neutral-200 px-2 py-1 text-[0.68rem] font-black text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
+                                                +{extraMembersCount}
+                                            </span>
+                                        ) : null}
+                                    </span>
+                                )}
+                            </span>
+                        ) : null}
                     </span>
                 </button>
             </FDBox>

@@ -1,7 +1,22 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { notifyShellLoadingReady } from "@nex/shared-platform";
 import { FDBox, FDButton } from "@nex/fd-ui";
-import { MdAccountTree, MdAddLink, MdClose, MdLibraryBooks, MdLinkOff, MdOpenWith, MdPendingActions, MdPersonSearch, MdSelectAll, MdTune } from "react-icons/md";
+import {
+    MdAccountTree,
+    MdAddLink,
+    MdCenterFocusStrong,
+    MdClose,
+    MdLibraryBooks,
+    MdLinkOff,
+    MdOpenWith,
+    MdPendingActions,
+    MdPeople,
+    MdPersonSearch,
+    MdSelectAll,
+    MdTune,
+    MdZoomIn,
+    MdZoomOut,
+} from "react-icons/md";
 import { EffectiveAccessPreviewPanel } from "./components/EffectiveAccessPreviewPanel";
 import { GroupInspectorPanel } from "./components/GroupInspectorPanel";
 import { GroupTreePanel } from "./components/GroupTreePanel";
@@ -12,34 +27,57 @@ import { useAccessBuilderState } from "./hooks/useAccessBuilderState";
 import useRootThemeClass from "./bootstrap/useRootThemeClass";
 import { useNexTheme } from "@nex/theme-system";
 
-type DrawerKey = "groups" | "inspector" | "resources" | "preview" | "draft";
-type DrawerSide = "left" | "right";
+type PanelKey = "groups" | "inspector" | "resources" | "preview" | "draft";
 
-interface DrawerState {
-    groups: boolean;
-    inspector: boolean;
-    resources: boolean;
-    preview: boolean;
-    draft: boolean;
-}
+type PanelMeta = {
+    title: string;
+    subtitle: string;
+    icon: ReactNode;
+};
 
-const initialDrawers: DrawerState = {
-    groups: false,
-    inspector: false,
-    resources: false,
-    preview: false,
-    draft: false,
+const panelMeta: Record<PanelKey, PanelMeta> = {
+    groups: {
+        title: "Struttura gruppi",
+        subtitle: "Gerarchia, reparti e sotto-gruppi",
+        icon: <MdAccountTree />,
+    },
+    preview: {
+        title: "Preview accessi",
+        subtitle: "Entitlements effettivi per utente e actorRole",
+        icon: <MdPersonSearch />,
+    },
+    inspector: {
+        title: "Inspector gruppo",
+        subtitle: "Dettagli, membri e grants diretti",
+        icon: <MdTune />,
+    },
+    resources: {
+        title: "Pannelli & azioni",
+        subtitle: "Catalogo navigation_resources",
+        icon: <MdLibraryBooks />,
+    },
+    draft: {
+        title: "Modifiche draft",
+        subtitle: "Modifiche non pubblicate",
+        icon: <MdPendingActions />,
+    },
 };
 
 function cx(...classes: Array<string | false | null | undefined>) {
     return classes.filter(Boolean).join(" ");
 }
 
+function clampZoom(value: number) {
+    return Math.min(1.6, Math.max(0.55, Number(value.toFixed(2))));
+}
+
 function App() {
     const { preferences } = useNexTheme();
     const state = useAccessBuilderState();
-    const [drawers, setDrawers] = useState<DrawerState>(initialDrawers);
+    const [activePanel, setActivePanel] = useState<PanelKey | null>(null);
     const [canvasMode, setCanvasMode] = useState<CanvasMode>("move");
+    const [showUsersOnCanvas, setShowUsersOnCanvas] = useState(false);
+    const [canvasZoom, setCanvasZoom] = useState(1);
 
     useRootThemeClass(preferences.mode === "dark");
 
@@ -53,20 +91,8 @@ function App() {
 
     const selectedGroupName = state.selectedGroup?.name ?? "Nessun gruppo selezionato";
 
-    const rightOpenCount = useMemo(() => {
-        return (["inspector", "resources", "draft"] as DrawerKey[]).filter((key) => drawers[key]).length;
-    }, [drawers]);
-
-    const leftOpenCount = useMemo(() => {
-        return (["groups", "preview"] as DrawerKey[]).filter((key) => drawers[key]).length;
-    }, [drawers]);
-
-    const toggleDrawer = (key: DrawerKey) => {
-        setDrawers((current) => ({ ...current, [key]: !current[key] }));
-    };
-
-    const closeDrawer = (key: DrawerKey) => {
-        setDrawers((current) => ({ ...current, [key]: false }));
+    const togglePanel = (key: PanelKey) => {
+        setActivePanel((current) => (current === key ? null : key));
     };
 
     if (state.isLoading) {
@@ -81,7 +107,7 @@ function App() {
                 </FDBox>
             </div>
         );
-    };
+    }
 
     if (state.error || !state.snapshot) {
         return (
@@ -93,40 +119,44 @@ function App() {
                 </FDBox>
             </div>
         );
-    };
+    }
+
+    const activeMeta = activePanel ? panelMeta[activePanel] : null;
 
     return (
-        <div className="relative h-screen w-screen overflow-hidden bg-neutral-100 text-neutral-950 dark:bg-neutral-950 dark:text-neutral-100">
+        <div className="relative h-dvh w-screen overflow-hidden bg-neutral-100 text-neutral-950 dark:bg-neutral-950 dark:text-neutral-100">
             <OrganizationCanvas
                 groups={state.snapshot.groups}
                 edges={state.snapshot.edges}
+                memberships={state.snapshot.memberships}
+                users={state.snapshot.users}
                 selectedGroupId={state.selectedGroupId}
                 mode={canvasMode}
+                zoom={canvasZoom}
+                showUsers={showUsersOnCanvas}
                 onSelectGroup={state.setSelectedGroupId}
                 onCreateEdge={state.createEdge}
                 onDeleteEdge={state.removeEdge}
             />
-
-            <CanvasModeToolbar mode={canvasMode} onChange={setCanvasMode} />
 
             <FDBox
                 radius="2xl"
                 shadow="xl"
                 pad="sm"
                 border
-                className="pointer-events-auto absolute left-1/2 top-4 z-40 flex w-[min(940px,calc(100vw-2rem))] -translate-x-1/2 items-center justify-between gap-3 bg-white/95 backdrop-blur dark:bg-neutral-900/95"
+                className="pointer-events-auto fixed left-3 right-3 top-3 z-40 flex flex-col gap-3 bg-white/95 backdrop-blur dark:bg-neutral-900/95 lg:left-1/2 lg:right-auto lg:w-[min(1040px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:flex-row lg:items-center lg:justify-between"
             >
                 <div className="min-w-0">
                     <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500">NEX v3 · Access Control</div>
                     <div className="truncate text-lg font-black tracking-tight">{selectedGroupName}</div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                    <ToolbarButton active={drawers.groups} icon={<MdAccountTree />} label="Gruppi" onClick={() => toggleDrawer("groups")} />
-                    <ToolbarButton active={drawers.preview} icon={<MdPersonSearch />} label="Preview" onClick={() => toggleDrawer("preview")} />
-                    <ToolbarButton active={drawers.inspector} icon={<MdTune />} label="Inspector" onClick={() => toggleDrawer("inspector")} />
-                    <ToolbarButton active={drawers.resources} icon={<MdLibraryBooks />} label="Risorse" onClick={() => toggleDrawer("resources")} />
-                    <ToolbarButton active={drawers.draft} icon={<MdPendingActions />} label={`Draft ${state.pendingChanges.length || ""}`} onClick={() => toggleDrawer("draft")} />
+                <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 lg:justify-end">
+                    <ToolbarButton active={activePanel === "groups"} icon={panelMeta.groups.icon} label="Gruppi" onClick={() => togglePanel("groups")} />
+                    <ToolbarButton active={activePanel === "preview"} icon={panelMeta.preview.icon} label="Preview" onClick={() => togglePanel("preview")} />
+                    <ToolbarButton active={activePanel === "inspector"} icon={panelMeta.inspector.icon} label="Inspector" onClick={() => togglePanel("inspector")} />
+                    <ToolbarButton active={activePanel === "resources"} icon={panelMeta.resources.icon} label="Risorse" onClick={() => togglePanel("resources")} />
+                    <ToolbarButton active={activePanel === "draft"} icon={panelMeta.draft.icon} label={`Draft ${state.pendingChanges.length || ""}`} onClick={() => togglePanel("draft")} />
                     <FDButton
                         size="small"
                         radius="xl"
@@ -144,95 +174,84 @@ function App() {
                 </div>
             </FDBox>
 
-            <SideDrawer
-                title="Struttura gruppi"
-                subtitle={`${state.snapshot.groups.length} gruppi · ${leftOpenCount} pannelli aperti a sinistra`}
-                side="left"
-                open={drawers.groups}
-                topOffset={96}
-                stackIndex={0}
-                onClose={() => closeDrawer("groups")}
-            >
-                <GroupTreePanel
-                    groups={state.snapshot.groups}
-                    edges={state.snapshot.edges}
-                    selectedGroupId={state.selectedGroupId}
-                    onSelectGroup={state.setSelectedGroupId}
-                    onCreateGroup={state.createGroup}
-                />
-            </SideDrawer>
+            <CanvasActionToolbar
+                mode={canvasMode}
+                zoom={canvasZoom}
+                showUsers={showUsersOnCanvas}
+                onChangeMode={setCanvasMode}
+                onToggleUsers={() => setShowUsersOnCanvas((value) => !value)}
+                onZoomIn={() => setCanvasZoom((value) => clampZoom(value + 0.1))}
+                onZoomOut={() => setCanvasZoom((value) => clampZoom(value - 0.1))}
+                onZoomReset={() => setCanvasZoom(1)}
+            />
 
-            <SideDrawer
-                title="Preview accessi"
-                subtitle="Entitlements effettivi per utente e actorRole"
-                side="left"
-                open={drawers.preview}
-                topOffset={96}
-                stackIndex={drawers.groups ? 1 : 0}
-                onClose={() => closeDrawer("preview")}
-            >
-                <EffectiveAccessPreviewPanel
-                    users={state.snapshot.users}
-                    roles={state.snapshot.roles}
-                    selectedUserId={state.selectedUserId}
-                    selectedActorRole={state.selectedActorRole}
-                    preview={state.preview}
-                    isLoading={state.isPreviewLoading}
-                    onSelectUser={state.setSelectedUserId}
-                    onSelectActorRole={state.setSelectedActorRole}
-                />
-            </SideDrawer>
+            {activePanel && activeMeta ? (
+                <WorkspacePanel
+                    title={activeMeta.title}
+                    subtitle={activePanel === "draft" ? `${state.pendingChanges.length} modifiche non pubblicate` : activeMeta.subtitle}
+                    icon={activeMeta.icon}
+                    onClose={() => setActivePanel(null)}
+                >
+                    {activePanel === "groups" ? (
+                        <GroupTreePanel
+                            groups={state.snapshot.groups}
+                            edges={state.snapshot.edges}
+                            selectedGroupId={state.selectedGroupId}
+                            onSelectGroup={state.setSelectedGroupId}
+                            onCreateGroup={state.createGroup}
+                        />
+                    ) : null}
 
-            <SideDrawer
-                title="Inspector gruppo"
-                subtitle="Dettagli, membri e grants diretti"
-                side="right"
-                open={drawers.inspector}
-                topOffset={96}
-                stackIndex={0}
-                onClose={() => closeDrawer("inspector")}
-            >
-                <GroupInspectorPanel
-                    group={state.selectedGroup}
-                    memberships={state.selectedGroupMemberships}
-                    grants={state.selectedGroupGrants}
-                    users={state.snapshot.users}
-                    selectedUserId={state.selectedUserId}
-                    onSelectUser={state.setSelectedUserId}
-                    onAddSelectedUser={state.addSelectedUserToSelectedGroup}
-                    onRemoveMembership={state.removeMembership}
-                    onRemoveGrant={state.removeGrant}
-                />
-            </SideDrawer>
+                    {activePanel === "preview" ? (
+                        <EffectiveAccessPreviewPanel
+                            users={state.snapshot.users}
+                            roles={state.snapshot.roles}
+                            selectedUserId={state.selectedUserId}
+                            selectedActorRole={state.selectedActorRole}
+                            preview={state.preview}
+                            isLoading={state.isPreviewLoading}
+                            onSelectUser={state.setSelectedUserId}
+                            onSelectActorRole={state.setSelectedActorRole}
+                        />
+                    ) : null}
 
-            <SideDrawer
-                title="Pannelli & azioni"
-                subtitle="Catalogo navigation_resources"
-                side="right"
-                open={drawers.resources}
-                topOffset={96}
-                stackIndex={drawers.inspector ? 1 : 0}
-                onClose={() => closeDrawer("resources")}
-            >
-                <ResourceLibraryPanel resources={state.snapshot.resources} onGrant={state.grantResourceToSelectedGroup} />
-            </SideDrawer>
+                    {activePanel === "inspector" ? (
+                        <GroupInspectorPanel
+                            group={state.selectedGroup}
+                            memberships={state.selectedGroupMemberships}
+                            grants={state.selectedGroupGrants}
+                            users={state.snapshot.users}
+                            selectedUserId={state.selectedUserId}
+                            onSelectUser={state.setSelectedUserId}
+                            onAddSelectedUser={state.addSelectedUserToSelectedGroup}
+                            onRemoveMembership={state.removeMembership}
+                            onRemoveGrant={state.removeGrant}
+                        />
+                    ) : null}
 
-            <SideDrawer
-                title="Modifiche draft"
-                subtitle={`${state.pendingChanges.length} modifiche non pubblicate · ${rightOpenCount} pannelli aperti a destra`}
-                side="right"
-                open={drawers.draft}
-                topOffset={96}
-                stackIndex={(drawers.inspector ? 1 : 0) + (drawers.resources ? 1 : 0)}
-                onClose={() => closeDrawer("draft")}
-            >
-                <PendingChangesBar changes={state.pendingChanges} isPublishing={state.isPublishing} onDiscard={state.discardDraft} />
-            </SideDrawer>
+                    {activePanel === "resources" ? (
+                        <ResourceLibraryPanel resources={state.snapshot.resources} onGrant={state.grantResourceToSelectedGroup} />
+                    ) : null}
+
+                    {activePanel === "draft" ? (
+                        <PendingChangesBar changes={state.pendingChanges} isPublishing={state.isPublishing} onDiscard={state.discardDraft} />
+                    ) : null}
+                </WorkspacePanel>
+            ) : null}
         </div>
     );
 }
 
-function CanvasModeToolbar({ mode, onChange }: { mode: CanvasMode; onChange: (mode: CanvasMode) => void }) {
+function CanvasActionToolbar({ mode, zoom, showUsers, onChangeMode, onToggleUsers, onZoomIn, onZoomOut, onZoomReset }: {
+    mode: CanvasMode;
+    zoom: number;
+    showUsers: boolean;
+    onChangeMode: (mode: CanvasMode) => void;
+    onToggleUsers: () => void;
+    onZoomIn: () => void;
+    onZoomOut: () => void;
+    onZoomReset: () => void;
+}) {
     const items: Array<{ key: CanvasMode; label: string; description: string; icon: ReactNode }> = [
         { key: "move", label: "Sposta", description: "Sposta i blocchi", icon: <MdOpenWith /> },
         { key: "connect", label: "Collega", description: "Crea collegamenti", icon: <MdAddLink /> },
@@ -246,28 +265,36 @@ function CanvasModeToolbar({ mode, onChange }: { mode: CanvasMode; onChange: (mo
             shadow="xl"
             pad="xs"
             border
-            className="!fixed right-5 top-1/2 z-40 flex -translate-y-1/2 flex-col gap-2 bg-white/95 backdrop-blur-xl dark:bg-neutral-900/95"
-            aria-label="Modalità canvas"
+            className="!fixed bottom-4 left-1/2 z-40 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-2 overflow-x-auto bg-white/95 backdrop-blur-xl dark:bg-neutral-900/95 lg:bottom-auto lg:left-auto lg:right-5 lg:top-1/2 lg:-translate-x-0 lg:-translate-y-1/2 lg:flex-col lg:overflow-visible"
+            aria-label="Azioni canvas"
         >
-            <div className="px-2 pb-1 pt-1 text-center text-[0.56rem] font-black uppercase tracking-[0.2em] text-neutral-500">Mode</div>
+            <div className="hidden px-2 pb-1 pt-1 text-center text-[0.56rem] font-black uppercase tracking-[0.2em] text-neutral-500 lg:block">Canvas</div>
             {items.map((item) => (
-                <button
+                <IconButton
                     key={item.key}
-                    type="button"
-                    onClick={() => onChange(item.key)}
+                    active={mode === item.key}
+                    icon={item.icon}
+                    label={item.label}
                     title={item.description}
-                    className={cx(
-                        "grid h-11 w-11 place-items-center rounded-2xl border text-lg transition",
-                        mode === item.key
-                            ? "border-blue-500 bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                            : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800",
-                    )}
-                    aria-label={item.label}
-                    aria-pressed={mode === item.key}
-                >
-                    {item.icon}
-                </button>
+                    onClick={() => onChangeMode(item.key)}
+                />
             ))}
+
+            <div className="mx-1 h-8 w-px shrink-0 bg-neutral-200 dark:bg-neutral-800 lg:mx-0 lg:h-px lg:w-8" />
+
+            <IconButton active={showUsers} icon={<MdPeople />} label="Utenti" title="Mostra utenti nel canvas" onClick={onToggleUsers} />
+            <IconButton icon={<MdZoomOut />} label="Zoom -" title="Zoom out" onClick={onZoomOut} />
+            <button
+                type="button"
+                onClick={onZoomReset}
+                title="Reset zoom"
+                className="grid h-11 min-w-16 place-items-center rounded-2xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                aria-label="Reset zoom"
+            >
+                {Math.round(zoom * 100)}%
+            </button>
+            <IconButton icon={<MdZoomIn />} label="Zoom +" title="Zoom in" onClick={onZoomIn} />
+            <IconButton icon={<MdCenterFocusStrong />} label="Reset" title="Reset zoom 100%" onClick={onZoomReset} />
         </FDBox>
     );
 }
@@ -288,53 +315,50 @@ function ToolbarButton({ active, icon, label, onClick }: { active: boolean; icon
     );
 }
 
-function SideDrawer({ title, subtitle, side, open, topOffset, stackIndex, onClose, children }: {
+function IconButton({ active, icon, label, title, onClick }: { active?: boolean; icon: ReactNode; label: string; title: string; onClick: () => void }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            title={title}
+            className={cx(
+                "grid h-11 w-11 shrink-0 place-items-center rounded-2xl border text-lg transition",
+                active
+                    ? "border-blue-500 bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                    : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800",
+            )}
+            aria-label={label}
+            aria-pressed={active}
+        >
+            {icon}
+        </button>
+    );
+}
+
+function WorkspacePanel({ title, subtitle, icon, onClose, children }: {
     title: string;
     subtitle: string;
-    side: DrawerSide;
-    open: boolean;
-    topOffset: number;
-    stackIndex: number;
+    icon: ReactNode;
     onClose: () => void;
     children: ReactNode;
 }) {
-    const viewport = useViewportSize();
-    const requestedWidth = 390;
-    const minSafeWidth = 300;
-    const width = Math.min(requestedWidth, Math.max(minSafeWidth, viewport.width - 32));
-    const gap = 14;
-    const requestedOffset = 16 + stackIndex * (width + gap);
-    const maxVisibleOffset = Math.max(16, viewport.width - width - 16);
-    const offset = Math.min(requestedOffset, maxVisibleOffset);
-    const translateClosed = side === "left" ? "-translate-x-[110vw]" : "translate-x-[110vw]";
-
-    const drawerStyle: CSSProperties = {
-        top: topOffset,
-        bottom: 16,
-        width,
-        zIndex: 50 + stackIndex,
-    };
-
-    if (side === "left") drawerStyle.left = offset;
-    else drawerStyle.right = offset;
-
     return (
         <FDBox
             radius="2xl"
             shadow="2xl"
             border
-            className={cx(
-                "fixed flex max-w-[calc(100vw-2rem)] flex-col overflow-hidden bg-white/95 backdrop-blur-xl transition-transform duration-300 dark:bg-neutral-900/95",
-                open ? "pointer-events-auto translate-x-0" : `pointer-events-none ${translateClosed}`,
-            )}
-            style={drawerStyle}
+            className="fixed inset-x-3 bottom-20 top-auto z-50 flex max-h-[70dvh] flex-col overflow-hidden bg-white/95 backdrop-blur-xl dark:bg-neutral-900/95 lg:inset-x-auto lg:bottom-5 lg:right-5 lg:top-24 lg:h-auto lg:max-h-none lg:w-[min(440px,calc(100vw-2rem))]"
             role="complementary"
-            aria-hidden={!open}
         >
             <div className="flex items-start justify-between gap-3 border-b border-neutral-200 p-4 dark:border-neutral-800">
-                <div className="min-w-0">
-                    <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500">{subtitle}</div>
-                    <h2 className="mt-1 truncate text-lg font-black tracking-tight">{title}</h2>
+                <div className="flex min-w-0 items-start gap-3">
+                    <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-blue-50 text-xl text-blue-700 dark:bg-blue-950/60 dark:text-blue-200">
+                        {icon}
+                    </span>
+                    <div className="min-w-0">
+                        <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500">{subtitle}</div>
+                        <h2 className="mt-1 truncate text-lg font-black tracking-tight">{title}</h2>
+                    </div>
                 </div>
                 <button
                     type="button"
@@ -348,24 +372,6 @@ function SideDrawer({ title, subtitle, side, open, topOffset, stackIndex, onClos
             <div className="min-h-0 flex-1 overflow-auto p-4">{children}</div>
         </FDBox>
     );
-}
-
-function useViewportSize() {
-    const [viewport, setViewport] = useState(() => ({
-        width: typeof window === "undefined" ? 1440 : window.innerWidth,
-        height: typeof window === "undefined" ? 900 : window.innerHeight,
-    }));
-
-    useEffect(() => {
-        const onResize = () => {
-            setViewport({ width: window.innerWidth, height: window.innerHeight });
-        };
-
-        window.addEventListener("resize", onResize);
-        return () => window.removeEventListener("resize", onResize);
-    }, []);
-
-    return viewport;
 }
 
 export default App;
