@@ -44,7 +44,7 @@ export function EffectiveAccessPreviewPanel({ users, roles, selectedUserId, sele
             </div>
 
             {isLoading ? (
-                <FDBox radius="2xl" pad="md" border className="bg-neutral-50 dark:bg-neutral-900">
+                <FDBox variant="gradient-simple" radius="2xl" pad="md" border>
                     <div className="grid gap-2">
                         <FDSkeleton shape="text" className="h-4 w-4/5" />
                         <FDSkeleton shape="text" className="h-4 w-3/5" />
@@ -73,7 +73,7 @@ export function EffectiveAccessPreviewPanel({ users, roles, selectedUserId, sele
                     </PreviewBucket>
                 </div>
             ) : (
-                <FDBox radius="2xl" pad="md" border className="bg-neutral-50 text-sm font-semibold text-neutral-500 dark:bg-neutral-900">
+                <FDBox variant="gradient-simple" radius="2xl" pad="md" border className="text-sm font-semibold text-neutral-500">
                     Seleziona un utente per calcolare la preview.
                 </FDBox>
             )}
@@ -83,7 +83,7 @@ export function EffectiveAccessPreviewPanel({ users, roles, selectedUserId, sele
 
 function PreviewBucket({ title, count, children }: { title: string; count: number; children: ReactNode }) {
     return (
-        <FDBox radius="2xl" pad="sm" border className="bg-white dark:bg-neutral-950">
+        <FDBox variant="gradient-simple" radius="2xl" pad="sm" border>
             <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="text-xs font-black uppercase tracking-[0.18em] text-neutral-500">{title}</h3>
                 <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-black text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">{count}</span>

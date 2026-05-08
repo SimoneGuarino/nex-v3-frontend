@@ -58,11 +58,11 @@ export function ResourceLibraryPanel({ resources, onGrant }: Props) {
             <div className="min-h-0 flex-1 overflow-auto pr-1">
                 <div className="grid gap-3">
                     {filtered.length === 0 ? (
-                        <FDBox radius="2xl" pad="md" border className="bg-neutral-50 text-sm font-semibold text-neutral-500 dark:bg-neutral-900">
+                        <FDBox variant="gradient-simple" radius="2xl" pad="md" border className="text-sm font-semibold text-neutral-500">
                             Nessuna risorsa trovata.
                         </FDBox>
                     ) : filtered.map((resource) => (
-                        <FDBox radius="2xl" pad="sm" border className="bg-white dark:bg-neutral-950" key={resource._id}>
+                        <FDBox variant="gradient-simple" radius="2xl" pad="sm" border key={resource._id}>
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2">

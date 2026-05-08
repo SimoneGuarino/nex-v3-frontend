@@ -9,6 +9,14 @@ function makeDraftId(prefix: string): string {
     return `draft:${prefix}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
 }
 
+function createPendingChange(input: Omit<PendingChange, "id" | "createdAt">): PendingChange {
+    return {
+        ...input,
+        id: makeDraftId(input.type),
+        createdAt: new Date().toISOString(),
+    };
+}
+
 function slugifyGroupKey(value: string): string {
     return value
         .trim()
@@ -123,14 +131,7 @@ export function useAccessBuilderState() {
     const selectedGroupGrants = useMemo(() => snapshot?.grants.filter((g) => g.principalType === "GROUP" && g.principalId === selectedGroupId) ?? [], [snapshot, selectedGroupId]);
 
     const addPendingChange = useCallback((input: Omit<PendingChange, "id" | "createdAt">) => {
-        setPendingChanges((prev) => [
-            ...prev,
-            {
-                ...input,
-                id: makeDraftId(input.type),
-                createdAt: new Date().toISOString(),
-            },
-        ]);
+        setPendingChanges((prev) => [...prev, createPendingChange(input)]);
     }, []);
 
     const createGroup = useCallback((name: string, kind: GroupKind = "TEAM", parentGroupId?: ObjectIdString | null) => {
@@ -215,6 +216,103 @@ export function useAccessBuilderState() {
             payload: { tenant: DEFAULT_TENANT, groupId: membership.groupId, userId: membership.userId, membershipId: membership._id },
         });
     }, [addPendingChange, snapshot]);
+
+    const moveMembershipToGroup = useCallback((membershipId: ObjectIdString, targetGroupId: ObjectIdString) => {
+        if (!snapshot) return;
+
+        const membership = snapshot.memberships.find((item) => item._id === membershipId);
+        if (!membership || membership.groupId === targetGroupId) return;
+
+        const sourceGroup = snapshot.groups.find((group) => group._id === membership.groupId);
+        const targetGroup = snapshot.groups.find((group) => group._id === targetGroupId);
+        if (!targetGroup) return;
+
+        const user = membership.user ?? snapshot.users.find((item) => item._id === membership.userId);
+        const targetAlreadyMember = snapshot.memberships.some((item) => (
+            item._id !== membershipId
+            && item.groupId === targetGroupId
+            && item.userId === membership.userId
+        ));
+
+        setSnapshot((current) => {
+            if (!current) return current;
+
+            const nextMemberships = targetAlreadyMember
+                ? current.memberships.filter((item) => item._id !== membershipId)
+                : current.memberships.map((item) => item._id === membershipId
+                    ? { ...item, groupId: targetGroupId, user }
+                    : item);
+
+            return {
+                ...current,
+                memberships: nextMemberships,
+                groups: current.groups.map((group) => {
+                    if (group._id === membership.groupId) {
+                        return { ...group, membersCount: Math.max(0, (group.membersCount ?? 0) - 1) };
+                    }
+                    if (group._id === targetGroupId && !targetAlreadyMember) {
+                        return { ...group, membersCount: (group.membersCount ?? 0) + 1 };
+                    }
+                    return group;
+                }),
+            };
+        });
+
+        const userLabel = user?.username ?? membership.userId;
+        const sourceLabel = sourceGroup?.name ?? membership.groupId;
+        const targetLabel = targetGroup.name;
+
+        setPendingChanges((current) => {
+            const draftAddIndex = current.findIndex((change) => {
+                if (change.type !== "MEMBERSHIP_ADD") return false;
+                const payload = change.payload as { groupId?: ObjectIdString; userId?: ObjectIdString };
+                return payload.groupId === membership.groupId && payload.userId === membership.userId;
+            });
+
+            if (draftAddIndex >= 0) {
+                const next = [...current];
+                const previous = next[draftAddIndex];
+                next[draftAddIndex] = {
+                    ...previous,
+                    label: `Sposta ${userLabel}: ${sourceLabel} → ${targetLabel}`,
+                    payload: {
+                        ...(previous.payload as Record<string, unknown>),
+                        groupId: targetGroupId,
+                        userId: membership.userId,
+                    },
+                    createdAt: new Date().toISOString(),
+                };
+                return next;
+            }
+
+            const changes: PendingChange[] = [
+                createPendingChange({
+                    type: "MEMBERSHIP_REMOVE",
+                    label: `Rimuovi ${userLabel} da ${sourceLabel}`,
+                    payload: {
+                        tenant: DEFAULT_TENANT,
+                        groupId: membership.groupId,
+                        userId: membership.userId,
+                        membershipId: membership._id,
+                    },
+                }),
+            ];
+
+            if (!targetAlreadyMember) {
+                changes.push(createPendingChange({
+                    type: "MEMBERSHIP_ADD",
+                    label: `Aggiungi ${userLabel} a ${targetLabel}`,
+                    payload: {
+                        tenant: DEFAULT_TENANT,
+                        groupId: targetGroupId,
+                        userId: membership.userId,
+                    },
+                }));
+            }
+
+            return [...current, ...changes];
+        });
+    }, [snapshot]);
 
     const grantResourceToSelectedGroup = useCallback((permission: string, effect: "ALLOW" | "DENY" = "ALLOW") => {
         if (!selectedGroupId) return;
@@ -400,6 +498,7 @@ export function useAccessBuilderState() {
         createGroup,
         addSelectedUserToSelectedGroup,
         removeMembership,
+        moveMembershipToGroup,
         removeGrant,
         createEdge,
         removeEdge,

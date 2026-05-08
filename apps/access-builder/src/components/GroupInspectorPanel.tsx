@@ -29,7 +29,7 @@ export function GroupInspectorPanel({ group, memberships, grants, users, selecte
 
     return (
         <div className="grid gap-4">
-            <FDBox radius="2xl" pad="md" border className="bg-white dark:bg-neutral-950">
+            <FDBox variant="gradient-simple" radius="2xl" pad="md" border>
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                         <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500">{group.kind}</div>
@@ -47,7 +47,7 @@ export function GroupInspectorPanel({ group, memberships, grants, users, selecte
                 <Metric label="Ereditati" value={group.inheritedGrantsCount ?? 0} />
             </div>
 
-            <FDBox radius="2xl" pad="md" border className="bg-white dark:bg-neutral-950">
+            <FDBox variant="gradient-simple" radius="2xl" pad="md" border>
                 <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
                         <h3 className="text-sm font-black uppercase tracking-[0.18em] text-neutral-500">Membri diretti</h3>
@@ -87,7 +87,7 @@ export function GroupInspectorPanel({ group, memberships, grants, users, selecte
                 </div>
             </FDBox>
 
-            <FDBox radius="2xl" pad="md" border className="bg-white dark:bg-neutral-950">
+            <FDBox variant="gradient-simple" radius="2xl" pad="md" border>
                 <h3 className="text-sm font-black uppercase tracking-[0.18em] text-neutral-500">Grants diretti</h3>
                 <div className="mt-3 grid gap-2">
                     {grants.length === 0 ? (
@@ -112,7 +112,7 @@ export function GroupInspectorPanel({ group, memberships, grants, users, selecte
 
 function Metric({ label, value }: { label: string; value: number }) {
     return (
-        <FDBox radius="2xl" pad="sm" border className="bg-white text-center dark:bg-neutral-950">
+        <FDBox variant="gradient-simple" radius="2xl" pad="sm" border className="text-center">
             <strong className="block text-xl font-black tracking-tight">{value}</strong>
             <span className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-neutral-500">{label}</span>
         </FDBox>

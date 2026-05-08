@@ -6,9 +6,11 @@ import {
     useMemo,
     useRef,
     useState,
+    type MouseEvent as ReactMouseEvent,
     type PointerEvent as ReactPointerEvent,
     type WheelEvent as ReactWheelEvent,
 } from "react";
+import { MdClose, MdDragIndicator, MdLinkOff, MdSwapHoriz, MdOutlinePushPin } from "react-icons/md";
 import { FDBox } from "@nex/fd-ui";
 import type { AccessGroup, GroupEdge, GroupMembership, ObjectIdString, UserSummary } from "../model/types";
 
@@ -20,14 +22,18 @@ interface Props {
     memberships: GroupMembership[];
     users: UserSummary[];
     selectedGroupId: ObjectIdString | null;
+    selectedUserId?: ObjectIdString | null;
     mode: CanvasMode;
     zoom: number;
     showUsers: boolean;
     viewportResetSignal?: number;
     onZoomChange: (zoom: number) => void;
     onSelectGroup: (id: ObjectIdString) => void;
+    onSelectUser?: (id: ObjectIdString) => void;
     onCreateEdge: (parentGroupId: ObjectIdString, childGroupId: ObjectIdString) => void;
     onDeleteEdge: (edgeId: ObjectIdString) => void;
+    onRemoveMembership: (membershipId: ObjectIdString) => void;
+    onMoveMembership: (membershipId: ObjectIdString, targetGroupId: ObjectIdString) => void;
 }
 
 interface Point {
@@ -47,6 +53,27 @@ interface DragState {
     startClientY: number;
     startPositions: Record<ObjectIdString, Point>;
     hasMoved: boolean;
+}
+
+interface CanvasMember {
+    membership: GroupMembership;
+    user: UserSummary;
+}
+
+interface UserDragState {
+    membershipId: ObjectIdString;
+    userId: ObjectIdString;
+    sourceGroupId: ObjectIdString;
+    startClientX: number;
+    startClientY: number;
+    element: HTMLElement;
+    hasMoved: boolean;
+}
+
+interface UserLinkSource {
+    membershipId: ObjectIdString;
+    userId: ObjectIdString;
+    sourceGroupId: ObjectIdString;
 }
 
 interface PendingPosition extends Point {
@@ -239,18 +266,24 @@ export function OrganizationCanvas({
     memberships,
     users,
     selectedGroupId,
+    selectedUserId = null,
     mode,
     zoom,
     showUsers,
     viewportResetSignal = 0,
     onZoomChange,
     onSelectGroup,
+    onSelectUser,
     onCreateEdge,
     onDeleteEdge,
+    onRemoveMembership,
+    onMoveMembership,
 }: Props) {
     const [positions, setPositions] = useState<Record<string, Point>>({});
     const [nodeSizes, setNodeSizes] = useState<Record<string, { width: number; height: number }>>({});
     const [linkSourceId, setLinkSourceId] = useState<ObjectIdString | null>(null);
+    const [userLinkSource, setUserLinkSource] = useState<UserLinkSource | null>(null);
+    const [userDropTargetGroupId, setUserDropTargetGroupId] = useState<ObjectIdString | null>(null);
     const [multiSelectedIds, setMultiSelectedIds] = useState<Set<ObjectIdString>>(() => new Set());
     const [pan, setPan] = useState<Point>({ x: 0, y: 0 });
 
@@ -262,10 +295,13 @@ export function OrganizationCanvas({
     const positionsRef = useRef<Record<string, Point>>({});
     const nodeSizesRef = useRef<Record<string, { width: number; height: number }>>({});
     const dragRef = useRef<DragState | null>(null);
+    const userDragRef = useRef<UserDragState | null>(null);
     const suppressClickRef = useRef(false);
     const captureTargetRef = useRef<HTMLElement | null>(null);
     const pendingPositionRef = useRef<PendingPosition[] | null>(null);
     const animationFrameRef = useRef<number | null>(null);
+    const pendingUserDragRef = useRef<{ element: HTMLElement; deltaX: number; deltaY: number } | null>(null);
+    const userDragFrameRef = useRef<number | null>(null);
     const nodeElementRefs = useRef<Map<string, HTMLDivElement>>(new Map());
     const nodeResizeObserverRefs = useRef<Map<string, ResizeObserver>>(new Map());
     const pathElementRefs = useRef<Map<string, SVGPathElement>>(new Map());
@@ -316,9 +352,14 @@ export function OrganizationCanvas({
     }, [viewportResetSignal]);
 
     useEffect(() => {
-        if (mode !== "connect") setLinkSourceId(null);
+        if (mode !== "connect") {
+            setLinkSourceId(null);
+            setUserLinkSource(null);
+        }
         if (mode !== "move") {
             panGestureRef.current = null;
+            userDragRef.current = null;
+            setUserDropTargetGroupId(null);
         }
     }, [mode]);
 
@@ -327,6 +368,10 @@ export function OrganizationCanvas({
             if (animationFrameRef.current !== null) {
                 window.cancelAnimationFrame(animationFrameRef.current);
             }
+            if (userDragFrameRef.current !== null) {
+                window.cancelAnimationFrame(userDragFrameRef.current);
+            }
+            pendingUserDragRef.current = null;
             for (const observer of nodeResizeObserverRefs.current.values()) {
                 observer.disconnect();
             }
@@ -422,6 +467,43 @@ export function OrganizationCanvas({
         });
     }, [applyNodePositions]);
 
+    const applyUserDragTransform = useCallback((element: HTMLElement, deltaX: number, deltaY: number) => {
+        element.style.transition = "none";
+        element.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
+        element.style.zIndex = "80";
+        element.style.boxShadow = "0 24px 70px rgba(15, 23, 42, 0.25)";
+        element.style.willChange = "transform";
+    }, []);
+
+    const scheduleUserDragDomCommit = useCallback((element: HTMLElement, deltaX: number, deltaY: number) => {
+        pendingUserDragRef.current = { element, deltaX, deltaY };
+
+        if (userDragFrameRef.current !== null) return;
+
+        userDragFrameRef.current = window.requestAnimationFrame(() => {
+            const pending = pendingUserDragRef.current;
+            pendingUserDragRef.current = null;
+            userDragFrameRef.current = null;
+
+            if (!pending) return;
+            applyUserDragTransform(pending.element, pending.deltaX, pending.deltaY);
+        });
+    }, [applyUserDragTransform]);
+
+    const flushPendingUserDrag = useCallback(() => {
+        const pending = pendingUserDragRef.current;
+        pendingUserDragRef.current = null;
+
+        if (userDragFrameRef.current !== null) {
+            window.cancelAnimationFrame(userDragFrameRef.current);
+            userDragFrameRef.current = null;
+        }
+
+        if (pending) {
+            applyUserDragTransform(pending.element, pending.deltaX, pending.deltaY);
+        }
+    }, [applyUserDragTransform]);
+
     const getViewportRect = useCallback(() => viewportRef.current?.getBoundingClientRect() ?? null, []);
 
     const screenToWorld = useCallback((clientX: number, clientY: number, sourcePan = panRef.current, sourceZoom = zoom): Point => {
@@ -432,6 +514,36 @@ export function OrganizationCanvas({
             y: (clientY - rect.top - sourcePan.y) / sourceZoom,
         };
     }, [getViewportRect, zoom]);
+
+    const getGroupAtClientPoint = useCallback((clientX: number, clientY: number, excludeGroupId?: ObjectIdString | null): ObjectIdString | null => {
+        const worldPoint = screenToWorld(clientX, clientY);
+        let bestMatch: { groupId: ObjectIdString; distance: number } | null = null;
+
+        for (const group of groups) {
+            if (excludeGroupId && group._id === excludeGroupId) continue;
+            const point = positionsRef.current[group._id]
+                ?? positions[group._id]
+                ?? computeInitialPosition(group, 0, edges);
+            const size = nodeSizesRef.current[group._id] ?? { width: fallbackNodeWidth, height: fallbackNodeHeight };
+            const width = fallbackNodeWidth;
+            const height = Math.min(Math.max(fallbackNodeHeight, size.height), 172);
+
+            const inside = worldPoint.x >= point.x
+                && worldPoint.x <= point.x + width
+                && worldPoint.y >= point.y
+                && worldPoint.y <= point.y + height;
+
+            if (!inside) continue;
+
+            const center = { x: point.x + width / 2, y: point.y + height / 2 };
+            const distance = Math.hypot(worldPoint.x - center.x, worldPoint.y - center.y);
+            if (!bestMatch || distance < bestMatch.distance) {
+                bestMatch = { groupId: group._id, distance };
+            }
+        }
+
+        return bestMatch?.groupId ?? null;
+    }, [edges, groups, positions, screenToWorld]);
 
     const applyZoomAtClientPoint = useCallback((rawNextZoom: number, clientX: number, clientY: number) => {
         const nextZoom = clampZoom(rawNextZoom);
@@ -497,6 +609,25 @@ export function OrganizationCanvas({
             const center = getMidpoint(first, second);
             const nextZoom = pinchRef.current.startZoom * (distance / Math.max(1, pinchRef.current.startDistance));
             applyZoomAroundWorldAnchor(nextZoom, center, pinchRef.current.worldAnchor);
+            return;
+        }
+
+        const userDrag = userDragRef.current;
+        if (userDrag) {
+            const deltaX = (event.clientX - userDrag.startClientX) / zoom;
+            const deltaY = (event.clientY - userDrag.startClientY) / zoom;
+
+            if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+                userDrag.hasMoved = true;
+            }
+
+            event.preventDefault();
+            scheduleUserDragDomCommit(userDrag.element, deltaX, deltaY);
+
+            const nextDropTarget = userDrag.hasMoved
+                ? getGroupAtClientPoint(event.clientX, event.clientY, userDrag.sourceGroupId)
+                : null;
+            setUserDropTargetGroupId((current) => current === nextDropTarget ? current : nextDropTarget);
             return;
         }
 
@@ -587,6 +718,29 @@ export function OrganizationCanvas({
             canvasClickRef.current = null;
         }
 
+        const userDrag = userDragRef.current;
+        if (userDrag) {
+            suppressClickRef.current = userDrag.hasMoved;
+            window.setTimeout(() => {
+                suppressClickRef.current = false;
+            }, 0);
+
+            flushPendingUserDrag();
+            userDrag.element.style.transform = "";
+            userDrag.element.style.transition = "";
+            userDrag.element.style.zIndex = "";
+            userDrag.element.style.boxShadow = "";
+            userDrag.element.style.willChange = "";
+
+            const dropTargetGroupId = userDropTargetGroupId
+                ?? getGroupAtClientPoint(event.clientX, event.clientY, userDrag.sourceGroupId);
+            if (userDrag.hasMoved && dropTargetGroupId && dropTargetGroupId !== userDrag.sourceGroupId) {
+                onMoveMembership(userDrag.membershipId, dropTargetGroupId);
+            }
+            userDragRef.current = null;
+            setUserDropTargetGroupId(null);
+        }
+
         const drag = dragRef.current;
         if (drag) {
             suppressClickRef.current = drag.hasMoved;
@@ -636,6 +790,29 @@ export function OrganizationCanvas({
             startClientX: event.clientX,
             startClientY: event.clientY,
             startPositions,
+            hasMoved: false,
+        };
+        captureTargetRef.current = event.currentTarget;
+        event.currentTarget.setPointerCapture(event.pointerId);
+    };
+
+    const startUserDrag = (event: ReactPointerEvent<HTMLElement>, member: CanvasMember) => {
+        if (event.button !== 0 || mode !== "move") return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.style.transition = "none";
+        event.currentTarget.style.willChange = "transform";
+        onSelectUser?.(member.user._id);
+        onSelectGroup(member.membership.groupId);
+
+        userDragRef.current = {
+            membershipId: member.membership._id,
+            userId: member.user._id,
+            sourceGroupId: member.membership.groupId,
+            startClientX: event.clientX,
+            startClientY: event.clientY,
+            element: event.currentTarget,
             hasMoved: false,
         };
         captureTargetRef.current = event.currentTarget;
@@ -700,6 +877,16 @@ export function OrganizationCanvas({
         if (suppressClickRef.current) return;
 
         if (mode === "connect") {
+            if (userLinkSource) {
+                if (userLinkSource.sourceGroupId !== groupId) {
+                    onMoveMembership(userLinkSource.membershipId, groupId);
+                }
+                setUserLinkSource(null);
+                setLinkSourceId(null);
+                onSelectGroup(groupId);
+                return;
+            }
+
             if (!linkSourceId) {
                 setLinkSourceId(groupId);
                 onSelectGroup(groupId);
@@ -726,6 +913,33 @@ export function OrganizationCanvas({
         }
 
         onSelectGroup(groupId);
+    };
+
+    const handleUserClick = (member: CanvasMember) => {
+        if (suppressClickRef.current) return;
+
+        onSelectUser?.(member.user._id);
+        onSelectGroup(member.membership.groupId);
+
+        if (mode === "delete-link") {
+            onRemoveMembership(member.membership._id);
+            return;
+        }
+
+        if (mode === "connect") {
+            setLinkSourceId(null);
+            setUserLinkSource({
+                membershipId: member.membership._id,
+                userId: member.user._id,
+                sourceGroupId: member.membership.groupId,
+            });
+        }
+    };
+
+    const handleRemoveUserMembership = (event: ReactPointerEvent<HTMLElement> | ReactMouseEvent<HTMLElement>, membershipId: ObjectIdString) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onRemoveMembership(membershipId);
     };
 
     const setMeasuredNodeSize = useCallback((groupId: ObjectIdString, element: HTMLDivElement) => {
@@ -784,27 +998,30 @@ export function OrganizationCanvas({
     }, [users]);
 
     const membersByGroup = useMemo(() => {
-        const map = new Map<ObjectIdString, UserSummary[]>();
+        const map = new Map<ObjectIdString, CanvasMember[]>();
         for (const membership of memberships) {
             const user = membership.user ?? usersById.get(membership.userId);
             if (!user) continue;
             const current = map.get(membership.groupId) ?? [];
-            current.push(user);
+            current.push({ membership, user });
             map.set(membership.groupId, current);
         }
         return map;
     }, [memberships, usersById]);
 
     const modeCopy = useMemo(() => {
-        if (mode === "connect") return linkSourceId ? "Seleziona il gruppo di destinazione per creare il collegamento." : "Seleziona il gruppo sorgente da collegare.";
+        if (mode === "connect") {
+            if (userLinkSource) return "Seleziona il gruppo di destinazione per spostare l’utente.";
+            return linkSourceId ? "Seleziona il gruppo di destinazione per creare il collegamento." : "Seleziona un gruppo sorgente oppure un utente da ricollegare.";
+        }
         if (mode === "delete-link") return "Clicca direttamente su una linea per rimuovere il collegamento.";
         if (mode === "multi-select") return multiSelectedIds.size > 0
             ? `${multiSelectedIds.size} blocchi selezionati. Passa a Sposta e trascina un blocco selezionato per muoverli insieme.`
             : "Tocca o clicca i blocchi da selezionare. Tocca lo sfondo per svuotare la selezione.";
         return multiSelectedIds.size > 1
             ? `${multiSelectedIds.size} blocchi selezionati: trascinane uno selezionato per muovere il gruppo. Clicca lo sfondo per annullare.`
-            : "Trascina i blocchi per spostarli. Trascina lo sfondo per muovere la telecamera. Rotella/pinch per lo zoom.";
-    }, [linkSourceId, mode, multiSelectedIds.size]);
+            : "Trascina gruppi e utenti. Rilascia un utente sopra un gruppo per spostarlo. Trascina lo sfondo per muovere la camera.";
+    }, [linkSourceId, mode, multiSelectedIds.size, userLinkSource]);
 
     return (
         <main
@@ -876,7 +1093,7 @@ export function OrganizationCanvas({
                 </svg>
 
                 <div className="pointer-events-none absolute left-6 top-6 z-10 max-w-sm rounded-2xl border border-neutral-200 bg-white/80 p-4 opacity-50 shadow-xl backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/80">
-                    <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500">Builder canvas</div>
+                    <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500 flex items-center gap-1"><MdOutlinePushPin size={20}/> Builder canvas</div>
                     <h1 className="mt-1 text-xl font-black tracking-tight">Organigramma permessi</h1>
                     <p className="mt-2 text-sm font-medium text-neutral-600 dark:text-neutral-300">{modeCopy}</p>
                 </div>
@@ -894,9 +1111,15 @@ export function OrganizationCanvas({
                             selected={selectedGroupId === group._id}
                             connectSource={linkSourceId === group._id}
                             multiSelected={multiSelectedIds.has(group._id)}
+                            userDropTarget={userDropTargetGroupId === group._id}
                             mode={mode}
                             onPointerDown={startDrag}
+                            onUserPointerDown={startUserDrag}
                             onClick={handleNodeClick}
+                            onUserClick={handleUserClick}
+                            onRemoveMembership={handleRemoveUserMembership}
+                            selectedUserId={selectedUserId}
+                            userLinkSource={userLinkSource}
                         />
                     );
                 })}
@@ -905,18 +1128,24 @@ export function OrganizationCanvas({
     );
 }
 
-const GroupNode = memo(function GroupNode({ refCallback, group, point, members, showUsers, selected, connectSource, multiSelected, mode, onPointerDown, onClick }: {
+const GroupNode = memo(function GroupNode({ refCallback, group, point, members, showUsers, selected, connectSource, multiSelected, userDropTarget, mode, onPointerDown, onUserPointerDown, onClick, onUserClick, onRemoveMembership, selectedUserId, userLinkSource }: {
     refCallback: (groupId: ObjectIdString, element: HTMLDivElement | null) => void;
     group: AccessGroup;
     point: Point;
-    members: UserSummary[];
+    members: CanvasMember[];
     showUsers: boolean;
     selected: boolean;
     connectSource: boolean;
     multiSelected: boolean;
+    userDropTarget: boolean;
     mode: CanvasMode;
     onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, group: AccessGroup) => void;
+    onUserPointerDown: (event: ReactPointerEvent<HTMLElement>, member: CanvasMember) => void;
     onClick: (id: ObjectIdString) => void;
+    onUserClick: (member: CanvasMember) => void;
+    onRemoveMembership: (event: ReactPointerEvent<HTMLElement> | ReactMouseEvent<HTMLElement>, membershipId: ObjectIdString) => void;
+    selectedUserId?: ObjectIdString | null;
+    userLinkSource: UserLinkSource | null;
 }) {
     const cursorClass = mode === "move" ? "cursor-grab active:cursor-grabbing" : mode === "connect" ? "cursor-crosshair" : mode === "multi-select" ? "cursor-cell" : "cursor-default";
     const nodeRef = useRef<HTMLDivElement | null>(null);
@@ -953,6 +1182,7 @@ const GroupNode = memo(function GroupNode({ refCallback, group, point, members, 
                     selected && "ring-2 ring-blue-500/70",
                     connectSource && "ring-2 ring-emerald-500/80",
                     multiSelected && "ring-2 ring-violet-500/80",
+                    userDropTarget && "ring-4 ring-emerald-400/90 shadow-emerald-500/30",
                 )}
             >
                 <button
@@ -975,12 +1205,32 @@ const GroupNode = memo(function GroupNode({ refCallback, group, point, members, 
                 </button>
             </FDBox>
 
-            {showUsers ? <MemberBranch groupId={group._id} members={members} /> : null}
+            {showUsers ? (
+                <MemberBranch
+                    groupId={group._id}
+                    members={members}
+                    mode={mode}
+                    selectedUserId={selectedUserId}
+                    userLinkSource={userLinkSource}
+                    onUserPointerDown={onUserPointerDown}
+                    onUserClick={onUserClick}
+                    onRemoveMembership={onRemoveMembership}
+                />
+            ) : null}
         </div>
     );
 });
 
-const MemberBranch = memo(function MemberBranch({ groupId, members }: { groupId: ObjectIdString; members: UserSummary[] }) {
+const MemberBranch = memo(function MemberBranch({ groupId, members, mode, selectedUserId, userLinkSource, onUserPointerDown, onUserClick, onRemoveMembership }: {
+    groupId: ObjectIdString;
+    members: CanvasMember[];
+    mode: CanvasMode;
+    selectedUserId?: ObjectIdString | null;
+    userLinkSource: UserLinkSource | null;
+    onUserPointerDown: (event: ReactPointerEvent<HTMLElement>, member: CanvasMember) => void;
+    onUserClick: (member: CanvasMember) => void;
+    onRemoveMembership: (event: ReactPointerEvent<HTMLElement> | ReactMouseEvent<HTMLElement>, membershipId: ObjectIdString) => void;
+}) {
     if (members.length === 0) return null;
 
     const visibleMembers = members.slice(0, maxUserNodesPerGroup);
@@ -995,7 +1245,6 @@ const MemberBranch = memo(function MemberBranch({ groupId, members }: { groupId:
     return (
         <div
             className="pointer-events-none absolute left-0 top-0 z-10"
-            aria-hidden="true"
             style={{
                 width: fallbackNodeWidth + userBranchGap + userNodeWidth,
                 height: Math.max(branchHeight + userBranchTop, fallbackNodeHeight),
@@ -1016,12 +1265,24 @@ const MemberBranch = memo(function MemberBranch({ groupId, members }: { groupId:
                     const controlA = startX + Math.max(36, (endX - startX) * 0.55);
                     const controlB = endX - 34;
                     return (
-                        <path
-                            key={index}
-                            d={`M ${startX} ${startY} C ${controlA} ${startY}, ${controlB} ${centerY}, ${endX - 4} ${centerY}`}
-                            className="fill-none stroke-blue-300 stroke-[1.8] [stroke-dasharray:5_5] dark:stroke-blue-700"
-                            markerEnd={`url(#${markerId})`}
-                        />
+                        <g key={index}>
+                            {mode === "delete-link" && members[index] ? (
+                                <path
+                                    data-canvas-interactive="true"
+                                    d={`M ${startX} ${startY} C ${controlA} ${startY}, ${controlB} ${centerY}, ${endX - 4} ${centerY}`}
+                                    className="pointer-events-auto cursor-pointer fill-none stroke-transparent stroke-[18]"
+                                    onClick={(event: any) => onRemoveMembership(event, members[index].membership._id)}
+                                />
+                            ) : null}
+                            <path
+                                d={`M ${startX} ${startY} C ${controlA} ${startY}, ${controlB} ${centerY}, ${endX - 4} ${centerY}`}
+                                className={cx(
+                                    "fill-none stroke-[1.8] [stroke-dasharray:5_5]",
+                                    mode === "delete-link" ? "stroke-red-300 dark:stroke-red-700" : "stroke-blue-300 dark:stroke-blue-700",
+                                )}
+                                markerEnd={`url(#${markerId})`}
+                            />
+                        </g>
                     );
                 })}
             </svg>
@@ -1034,8 +1295,17 @@ const MemberBranch = memo(function MemberBranch({ groupId, members }: { groupId:
                     width: userNodeWidth,
                 }}
             >
-                {visibleMembers.map((user) => (
-                    <UserMemberNode key={user._id} user={user} />
+                {visibleMembers.map((member) => (
+                    <UserMemberNode
+                        key={member.membership._id}
+                        member={member}
+                        mode={mode}
+                        selected={selectedUserId === member.user._id}
+                        linkSource={userLinkSource?.membershipId === member.membership._id}
+                        onPointerDown={onUserPointerDown}
+                        onClick={onUserClick}
+                        onRemoveMembership={onRemoveMembership}
+                    />
                 ))}
                 {overflowCount > 0 ? <UserOverflowNode count={overflowCount} /> : null}
             </div>
@@ -1043,7 +1313,16 @@ const MemberBranch = memo(function MemberBranch({ groupId, members }: { groupId:
     );
 });
 
-const UserMemberNode = memo(function UserMemberNode({ user }: { user: UserSummary }) {
+const UserMemberNode = memo(function UserMemberNode({ member, mode, selected, linkSource, onPointerDown, onClick, onRemoveMembership }: {
+    member: CanvasMember;
+    mode: CanvasMode;
+    selected: boolean;
+    linkSource: boolean;
+    onPointerDown: (event: ReactPointerEvent<HTMLElement>, member: CanvasMember) => void;
+    onClick: (member: CanvasMember) => void;
+    onRemoveMembership: (event: ReactPointerEvent<HTMLElement> | ReactMouseEvent<HTMLElement>, membershipId: ObjectIdString) => void;
+}) {
+    const { user } = member;
     const displayName = getUserDisplayName(user);
     const initials = displayName
         .split(/\s+/)
@@ -1052,14 +1331,34 @@ const UserMemberNode = memo(function UserMemberNode({ user }: { user: UserSummar
         .map((part) => part[0]?.toUpperCase())
         .join("") || "U";
 
+    const dragEnabled = mode === "move";
+
     return (
         <div
+            data-canvas-interactive="true"
+            role="button"
+            tabIndex={0}
+            onPointerDown={(event) => onPointerDown(event, member)}
+            onClick={(event) => {
+                event.stopPropagation();
+                onClick(member);
+            }}
+            onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onClick(member);
+                }
+            }}
             className={cx(
-                "flex h-[68px] w-[224px] items-center gap-3 rounded-2xl border bg-white/95 px-3 shadow-md backdrop-blur dark:bg-neutral-900/95",
+                "pointer-events-auto group/user relative flex h-[68px] w-[224px] touch-none select-none items-center gap-3 rounded-2xl border bg-white/95 px-3 pr-12 shadow-md backdrop-blur transition-colors duration-150 will-change-transform dark:bg-neutral-900/95",
+                dragEnabled ? "cursor-grab active:cursor-grabbing" : mode === "connect" ? "cursor-crosshair" : mode === "delete-link" ? "cursor-pointer" : "cursor-default",
                 user.disabilitato
                     ? "border-red-200 dark:border-red-900/70"
                     : "border-blue-200 dark:border-blue-900/70",
+                selected && "ring-2 ring-blue-500/80",
+                linkSource && "ring-2 ring-emerald-500/90",
             )}
+            title={mode === "move" ? "Trascina su un altro gruppo per spostare l’utente" : mode === "connect" ? "Seleziona questo utente, poi il gruppo destinazione" : mode === "delete-link" ? "Rimuovi l’utente da questo gruppo" : displayName}
         >
             <span
                 className={cx(
@@ -1078,11 +1377,32 @@ const UserMemberNode = memo(function UserMemberNode({ user }: { user: UserSummar
                 <span className="mt-0.5 block truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] text-neutral-500">
                     {getUserRoleLabel(user)}
                 </span>
-                {user.disabilitato ? (
+                {linkSource ? (
+                    <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[0.56rem] font-black uppercase tracking-[0.14em] text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-200">
+                        Sorgente
+                    </span>
+                ) : user.disabilitato ? (
                     <span className="mt-1 inline-flex rounded-full bg-red-50 px-2 py-0.5 text-[0.58rem] font-black uppercase tracking-[0.14em] text-red-700 dark:bg-red-950/60 dark:text-red-200">
                         Disabilitato
                     </span>
                 ) : null}
+            </span>
+
+            <span className="absolute right-2 top-2 flex flex-col gap-1 opacity-100 sm:opacity-0 sm:transition sm:group-hover/user:opacity-100 sm:group-focus-within/user:opacity-100">
+                <span className="grid h-7 w-7 place-items-center rounded-xl bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300" aria-hidden="true">
+                    {dragEnabled ? <MdDragIndicator /> : mode === "connect" ? <MdSwapHoriz /> : <MdLinkOff />}
+                </span>
+                <button
+                    type="button"
+                    data-canvas-interactive="true"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => onRemoveMembership(event, member.membership._id)}
+                    className="grid h-7 w-7 place-items-center rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100 dark:bg-red-950/60 dark:text-red-200 dark:hover:bg-red-900/70"
+                    aria-label={`Rimuovi ${displayName} da questo gruppo`}
+                    title="Rimuovi dal gruppo"
+                >
+                    <MdClose />
+                </button>
             </span>
         </div>
     );
