@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isAuthInvalidationError } from "@nex/shared-platform";
-import { buildCanvasLayoutChange, buildNavigationCanvasLayoutChange, createAccessBuilderUser, getAccessBuilderSnapshot, getAccessBuilderUserProfile, getEffectiveAccessPreview, isAccessBuilderConflictError, publishAccessBuilderChanges, updateAccessBuilderUserProfile } from "../api/accessBuilderApi";
-import type { AccessBuilderSnapshot, CanvasPoint, EffectiveAccessPreview, GroupKind, NavigationResource, NavigationResourceCreatePayload, NavigationResourcePatch, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch, UserSummary } from "../model/types";
+import { buildBuilderCanvasLayoutChange, createAccessBuilderUser, getAccessBuilderSnapshot, getAccessBuilderUserProfile, getEffectiveAccessPreview, isAccessBuilderConflictError, publishAccessBuilderChanges, updateAccessBuilderUserProfile } from "../api/accessBuilderApi";
+import type { AccessBuilderSnapshot, BuilderCanvasWorkspaceType, CanvasPoint, EffectiveAccessPreview, GroupKind, NavigationResource, NavigationResourceCreatePayload, NavigationResourcePatch, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch, UserSummary } from "../model/types";
+import { buildCanvasNodeLayout, getWorkspaceCanvasPositions, normalizeCanvasPositions } from "../engine/canvas/layout";
 
 const DEFAULT_TENANT = "Focelda";
 
@@ -90,6 +91,52 @@ function buildLocalPreview(snapshot: AccessBuilderSnapshot, userId: ObjectIdStri
             .map((grant) => ({ permission: grant.permission, source: grant.principalType, sourceId: grant.principalId })),
     };
 }
+
+function updateSnapshotWorkspaceLayout(
+    snapshot: AccessBuilderSnapshot,
+    workspace: BuilderCanvasWorkspaceType,
+    positions: Record<ObjectIdString, CanvasPoint>,
+): AccessBuilderSnapshot {
+    const now = new Date().toISOString();
+    const currentWorkspace = snapshot.builderEngine?.canvas?.workspaces?.[workspace];
+    const nodes = buildCanvasNodeLayout(positions, currentWorkspace?.nodes ?? {}, { updatedAt: now, updatedBy: null });
+
+    const nextBuilderEngine = {
+        ...(snapshot.builderEngine ?? { revision: snapshot.meta?.revision ?? "0" }),
+        canvas: {
+            ...(snapshot.builderEngine?.canvas ?? {}),
+            workspaces: {
+                ...(snapshot.builderEngine?.canvas?.workspaces ?? {}),
+                [workspace]: {
+                    ...(currentWorkspace ?? {}),
+                    nodes,
+                    updatedAt: now,
+                    updatedBy: null,
+                },
+            },
+        },
+    };
+
+    const nextCanvasLayout = {
+        ...(snapshot.canvasLayout ?? { positions: {} }),
+        positions: workspace === "access" ? positions : snapshot.canvasLayout?.positions ?? getWorkspaceCanvasPositions(snapshot, "access"),
+        navigationPositions: workspace === "route" ? positions : snapshot.canvasLayout?.navigationPositions ?? getWorkspaceCanvasPositions(snapshot, "route"),
+        configPositions: workspace === "config" ? positions : snapshot.canvasLayout?.configPositions ?? getWorkspaceCanvasPositions(snapshot, "config"),
+        updatedAt: workspace === "access" ? now : snapshot.canvasLayout?.updatedAt ?? null,
+        updatedBy: workspace === "access" ? null : snapshot.canvasLayout?.updatedBy ?? null,
+        navigationUpdatedAt: workspace === "route" ? now : snapshot.canvasLayout?.navigationUpdatedAt ?? null,
+        navigationUpdatedBy: workspace === "route" ? null : snapshot.canvasLayout?.navigationUpdatedBy ?? null,
+        configUpdatedAt: workspace === "config" ? now : snapshot.canvasLayout?.configUpdatedAt ?? null,
+        configUpdatedBy: workspace === "config" ? null : snapshot.canvasLayout?.configUpdatedBy ?? null,
+    };
+
+    return {
+        ...snapshot,
+        builderEngine: nextBuilderEngine,
+        canvasLayout: nextCanvasLayout,
+    };
+}
+
 
 export function useAccessBuilderState() {
     const [snapshot, setSnapshot] = useState<AccessBuilderSnapshot | null>(null);
@@ -191,25 +238,22 @@ export function useAccessBuilderState() {
         setPendingChanges((prev) => [...prev, createPendingChange(input)]);
     }, []);
 
-    const recordCanvasLayoutPositions = useCallback((positions: Record<ObjectIdString, CanvasPoint>) => {
-        const nextPositions = Object.entries(positions).reduce<Record<ObjectIdString, CanvasPoint>>((acc, [id, point]) => {
-            if (Number.isFinite(point?.x) && Number.isFinite(point?.y)) {
-                acc[id] = { x: Math.round(point.x), y: Math.round(point.y) };
-            }
-            return acc;
-        }, {});
+    const accessCanvasPositions = useMemo(() => getWorkspaceCanvasPositions(snapshot, "access"), [snapshot]);
+    const routeCanvasPositions = useMemo(() => getWorkspaceCanvasPositions(snapshot, "route"), [snapshot]);
+    const configCanvasPositions = useMemo(() => getWorkspaceCanvasPositions(snapshot, "config"), [snapshot]);
 
-        setSnapshot((current) => current ? {
-            ...current,
-            canvasLayout: {
-                ...(current.canvasLayout ?? {}),
-                positions: nextPositions,
-            },
-        } : current);
+    const recordWorkspaceLayoutPositions = useCallback((workspace: BuilderCanvasWorkspaceType, positions: Record<ObjectIdString, CanvasPoint>) => {
+        const nextPositions = normalizeCanvasPositions(positions);
+
+        setSnapshot((current) => current ? updateSnapshotWorkspaceLayout(current, workspace, nextPositions) : current);
 
         setPendingChanges((current) => {
-            const change = buildCanvasLayoutChange(nextPositions);
-            const existingIndex = current.findIndex((item) => item.type === "CANVAS_LAYOUT_UPDATE");
+            const change = buildBuilderCanvasLayoutChange(workspace, nextPositions);
+            const existingIndex = current.findIndex((item) => {
+                if (item.type !== "BUILDER_CANVAS_LAYOUT_UPDATE") return false;
+                const payload = item.payload as { workspace?: string } | null | undefined;
+                return payload?.workspace === workspace;
+            });
             if (existingIndex < 0) return [...current, change];
 
             const next = [...current];
@@ -222,39 +266,18 @@ export function useAccessBuilderState() {
             return next;
         });
     }, []);
+
+    const recordCanvasLayoutPositions = useCallback((positions: Record<ObjectIdString, CanvasPoint>) => {
+        recordWorkspaceLayoutPositions("access", positions);
+    }, [recordWorkspaceLayoutPositions]);
 
     const recordNavigationLayoutPositions = useCallback((positions: Record<ObjectIdString, CanvasPoint>) => {
-        const nextPositions = Object.entries(positions).reduce<Record<ObjectIdString, CanvasPoint>>((acc, [id, point]) => {
-            if (Number.isFinite(point?.x) && Number.isFinite(point?.y)) {
-                acc[id] = { x: Math.round(point.x), y: Math.round(point.y) };
-            }
-            return acc;
-        }, {});
+        recordWorkspaceLayoutPositions("route", positions);
+    }, [recordWorkspaceLayoutPositions]);
 
-        setSnapshot((current) => current ? {
-            ...current,
-            canvasLayout: {
-                ...(current.canvasLayout ?? { positions: {} }),
-                positions: current.canvasLayout?.positions ?? {},
-                navigationPositions: nextPositions,
-            },
-        } : current);
-
-        setPendingChanges((current) => {
-            const change = buildNavigationCanvasLayoutChange(nextPositions);
-            const existingIndex = current.findIndex((item) => item.type === "NAV_CANVAS_LAYOUT_UPDATE");
-            if (existingIndex < 0) return [...current, change];
-
-            const next = [...current];
-            next[existingIndex] = {
-                ...next[existingIndex],
-                label: change.label,
-                payload: change.payload,
-                createdAt: change.createdAt,
-            };
-            return next;
-        });
-    }, []);
+    const recordConfigLayoutPositions = useCallback((positions: Record<ObjectIdString, CanvasPoint>) => {
+        recordWorkspaceLayoutPositions("config", positions);
+    }, [recordWorkspaceLayoutPositions]);
 
     const createGroup = useCallback((name: string, kind: GroupKind = "TEAM", parentGroupId?: ObjectIdString | null) => {
         if (!snapshot) return;
@@ -729,7 +752,7 @@ export function useAccessBuilderState() {
         if (!selectedUserId) return null;
         setIsUserProfileSaving(true);
         try {
-            const profile = await updateAccessBuilderUserProfile(selectedUserId, patch, DEFAULT_TENANT, snapshot?.meta?.revision);
+            const profile = await updateAccessBuilderUserProfile(selectedUserId, patch, DEFAULT_TENANT, snapshot?.builderEngine?.revision ?? snapshot?.meta?.revision);
             setSelectedUserProfile(profile);
             upsertUserInSnapshot(profile);
             return profile;
@@ -743,12 +766,12 @@ export function useAccessBuilderState() {
         } finally {
             setIsUserProfileSaving(false);
         }
-    }, [selectedUserId, snapshot?.meta?.revision, upsertUserInSnapshot]);
+    }, [selectedUserId, snapshot?.builderEngine?.revision ?? snapshot?.meta?.revision, upsertUserInSnapshot]);
 
     const createUser = useCallback(async (payload: UserCreatePayload) => {
         setIsUserProfileSaving(true);
         try {
-            const profile = await createAccessBuilderUser(payload, DEFAULT_TENANT, snapshot?.meta?.revision);
+            const profile = await createAccessBuilderUser(payload, DEFAULT_TENANT, snapshot?.builderEngine?.revision ?? snapshot?.meta?.revision);
             setSelectedUserId(profile._id);
             setSelectedUserProfile(profile);
             upsertUserInSnapshot(profile);
@@ -763,7 +786,7 @@ export function useAccessBuilderState() {
         } finally {
             setIsUserProfileSaving(false);
         }
-    }, [snapshot?.meta?.revision, upsertUserInSnapshot]);
+    }, [snapshot?.builderEngine?.revision ?? snapshot?.meta?.revision, upsertUserInSnapshot]);
 
     const refreshSelectedUserProfile = useCallback(async () => {
         if (!selectedUserId) return null;
@@ -781,7 +804,7 @@ export function useAccessBuilderState() {
         } finally {
             setIsUserProfileLoading(false);
         }
-    }, [selectedUserId, snapshot?.meta?.revision, upsertUserInSnapshot]);
+    }, [selectedUserId, snapshot?.builderEngine?.revision ?? snapshot?.meta?.revision, upsertUserInSnapshot]);
 
     const discardDraft = useCallback(() => {
         setPendingChanges([]);
@@ -791,7 +814,7 @@ export function useAccessBuilderState() {
     const publish = useCallback(async () => {
         setIsPublishing(true);
         try {
-            const result = await publishAccessBuilderChanges(pendingChanges, DEFAULT_TENANT, snapshot?.meta?.revision);
+            const result = await publishAccessBuilderChanges(pendingChanges, DEFAULT_TENANT, snapshot?.builderEngine?.revision ?? snapshot?.meta?.revision);
             setPendingChanges([]);
             setPublishConflict(null);
             await refreshSnapshot();
@@ -806,10 +829,13 @@ export function useAccessBuilderState() {
         } finally {
             setIsPublishing(false);
         }
-    }, [pendingChanges, refreshSnapshot, snapshot?.meta?.revision]);
+    }, [pendingChanges, refreshSnapshot, snapshot?.builderEngine?.revision ?? snapshot?.meta?.revision]);
 
     return {
         snapshot,
+        accessCanvasPositions,
+        routeCanvasPositions,
+        configCanvasPositions,
         selectedGroup,
         selectedGroupId,
         selectedGroupMemberships,
@@ -846,6 +872,8 @@ export function useAccessBuilderState() {
         addPendingChange,
         recordCanvasLayoutPositions,
         recordNavigationLayoutPositions,
+        recordConfigLayoutPositions,
+        recordWorkspaceLayoutPositions,
         createNavigationResource,
         updateNavigationResource,
         setNavigationParent,

@@ -18,10 +18,13 @@ import {
     MdLink,
     MdLinkOff,
     MdOpenWith,
-    MdOutlinePushPin
+    MdOutlinePushPin,
+    MdSelectAll,
 } from "react-icons/md";
 import type { CanvasPoint, NavigationResource, ObjectIdString } from "../model/types";
 import type { CanvasMode } from "./OrganizationCanvas";
+import { useCanvasSelection } from "../engine/canvas/useCanvasSelection";
+import { normalizeCanvasPoint, normalizeCanvasPositions } from "../engine/canvas/layout";
 
 interface Props {
     resources: NavigationResource[];
@@ -39,10 +42,11 @@ interface Props {
 
 interface Point { x: number; y: number; }
 interface DragState {
-    id: string;
+    primaryId: ObjectIdString;
+    draggedIds: ObjectIdString[];
     startClientX: number;
     startClientY: number;
-    startPoint: Point;
+    startPositions: Record<ObjectIdString, Point>;
     hasMoved: boolean;
 }
 interface PanState {
@@ -51,11 +55,12 @@ interface PanState {
     startClientY: number;
     startX: number;
     startY: number;
+    hasMoved: boolean;
 }
 interface ConnectionTopology {
     id: string;
-    parentId: string;
-    childId: string;
+    parentId: ObjectIdString;
+    childId: ObjectIdString;
     parent: NavigationResource;
     child: NavigationResource;
 }
@@ -117,6 +122,34 @@ function canBeParent(resource: NavigationResource) {
     return resource.type === "GROUP" || resource.type === "PANEL";
 }
 
+function reconcileOrphanLayoutPositions(
+    resources: NavigationResource[],
+    layoutPositions?: Record<ObjectIdString, CanvasPoint>,
+): Record<ObjectIdString, CanvasPoint> | undefined {
+    if (!layoutPositions || Object.keys(layoutPositions).length === 0) return layoutPositions;
+
+    const resourceIds = new Set(resources.map((resource) => resource._id));
+    const directMatches = resources.filter((resource) => layoutPositions[resource._id]).length;
+
+    if (directMatches > 0) return layoutPositions;
+
+    const orphanPositions = Object.entries(layoutPositions)
+        .filter(([id]) => !resourceIds.has(id))
+        .map(([, point]) => point)
+        .filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y));
+
+    // Defensive migration path: early fallback navigation resources used volatile ObjectIds.
+    // When the DB/resource identity becomes stable, remap the old layout by the same
+    // rendered order once; the next publish persists the layout using durable IDs.
+    if (orphanPositions.length !== resources.length) return layoutPositions;
+
+    return resources.reduce<Record<ObjectIdString, CanvasPoint>>((acc, resource, index) => {
+        const point = orphanPositions[index];
+        if (point) acc[resource._id] = { x: Math.round(point.x), y: Math.round(point.y) };
+        return acc;
+    }, {});
+}
+
 function resourceIcon(type: string) {
     if (type === "GROUP") return <MdFolder />;
     if (type === "ACTION") return <MdBolt />;
@@ -156,14 +189,22 @@ export function NavigationResourcesCanvas({
         () => resources
             .filter((resource) => resource.status !== "DISABLED")
             .slice()
-            .sort((a, b) => (
-                (a.appId || "").localeCompare(b.appId || "")
-                || getDepth(a, new Map(resources.map((item) => [`${item.appId}:${item.key}`, item]))) - getDepth(b, new Map(resources.map((item) => [`${item.appId}:${item.key}`, item])))
-                || (a.order ?? 0) - (b.order ?? 0)
-                || a.name.localeCompare(b.name)
-            )),
+            .sort((a, b) => {
+                const map = new Map(resources.map((item) => [`${item.appId}:${item.key}`, item]));
+                return (a.appId || "").localeCompare(b.appId || "")
+                    || getDepth(a, map) - getDepth(b, map)
+                    || (a.order ?? 0) - (b.order ?? 0)
+                    || a.name.localeCompare(b.name);
+            }),
         [resources],
     );
+    const activeResourceIds = useMemo(() => new Set(activeResources.map((resource) => resource._id)), [activeResources]);
+    const reconciledLayoutPositions = useMemo(
+        () => reconcileOrphanLayoutPositions(activeResources, layoutPositions),
+        [activeResources, layoutPositions],
+    );
+    const selection = useCanvasSelection();
+
     const byKey = useMemo(() => {
         const map = new Map<string, NavigationResource>();
         for (const resource of activeResources) map.set(`${resource.appId}:${resource.key}`, resource);
@@ -183,7 +224,7 @@ export function NavigationResourcesCanvas({
     const hitPathRefs = useRef<Map<string, SVGPathElement>>(new Map());
     const connectionsRef = useRef<ConnectionTopology[]>([]);
     const frameRef = useRef<number | null>(null);
-    const pendingDragRef = useRef<{ id: string; x: number; y: number } | null>(null);
+    const pendingDragRef = useRef<Record<string, Point> | null>(null);
     const suppressClickRef = useRef(false);
 
     useEffect(() => {
@@ -192,10 +233,13 @@ export function NavigationResourcesCanvas({
             const next = { ...current };
             const validIds = new Set(activeResources.map((resource) => resource._id));
             activeResources.forEach((resource, index) => {
-                const saved = layoutPositions?.[resource._id];
-                const desired = Number.isFinite(saved?.x) && Number.isFinite(saved?.y)
-                    ? { x: Number(saved.x), y: Number(saved.y) }
-                    : next[resource._id] ?? computeInitialPosition(resource, index, byKey);
+                const saved = normalizeCanvasPoint(reconciledLayoutPositions?.[resource._id]);
+
+                const desired =
+                    saved ??
+                    next[resource._id] ??
+                    computeInitialPosition(resource, index, byKey);
+                    
                 if (!next[resource._id] || next[resource._id].x !== desired.x || next[resource._id].y !== desired.y) {
                     next[resource._id] = desired;
                     changed = true;
@@ -209,9 +253,11 @@ export function NavigationResourcesCanvas({
             }
             return changed ? next : current;
         });
-    }, [activeResources, byKey, layoutPositions]);
+    }, [activeResources, byKey, reconciledLayoutPositions]);
 
-    useEffect(() => { positionsRef.current = positions; }, [positions]);
+    useEffect(() => {
+        positionsRef.current = positions;
+    }, [positions]);
     useEffect(() => { panRef.current = pan; }, [pan]);
     useEffect(() => {
         setPan({ x: 0, y: 0 });
@@ -223,6 +269,11 @@ export function NavigationResourcesCanvas({
     useEffect(() => {
         if (mode !== "connect") setLinkSourceId(null);
     }, [mode]);
+
+    useEffect(() => {
+        const nextSelected = selection.selectedIds.filter((id) => activeResourceIds.has(id));
+        if (nextSelected.length !== selection.selectedIds.length) selection.setMany(nextSelected);
+    }, [activeResourceIds, selection]);
 
     const canvasSize = useMemo(() => {
         const maxX = Math.max(1900, ...activeResources.map((resource, index) => {
@@ -253,9 +304,10 @@ export function NavigationResourcesCanvas({
         connectionsRef.current = connectionTopology;
     }, [connectionTopology]);
 
-    const updateConnectedPathsForNode = useCallback((nodeId: string) => {
+    const updateConnectedPathsForNodes = useCallback((nodeIds: Iterable<string>) => {
+        const affected = new Set(nodeIds);
         for (const connection of connectionsRef.current) {
-            if (connection.parentId !== nodeId && connection.childId !== nodeId) continue;
+            if (!affected.has(connection.parentId) && !affected.has(connection.childId)) continue;
             const parentPoint = positionsRef.current[connection.parentId];
             const childPoint = positionsRef.current[connection.childId];
             if (!parentPoint || !childPoint) continue;
@@ -265,26 +317,53 @@ export function NavigationResourcesCanvas({
         }
     }, []);
 
-    const scheduleNodeTransform = useCallback((id: string, point: Point) => {
-        pendingDragRef.current = { id, x: point.x, y: point.y };
+    const scheduleNodeTransforms = useCallback((nextPositions: Record<string, Point>) => {
+        pendingDragRef.current = {
+            ...(pendingDragRef.current ?? {}),
+            ...nextPositions,
+        };
         if (frameRef.current !== null) return;
         frameRef.current = window.requestAnimationFrame(() => {
             frameRef.current = null;
             const pending = pendingDragRef.current;
             pendingDragRef.current = null;
             if (!pending) return;
-            positionsRef.current[pending.id] = { x: pending.x, y: pending.y };
-            const el = nodeRefs.current.get(pending.id);
-            if (el) el.style.transform = `translate3d(${pending.x}px, ${pending.y}px, 0)`;
-            updateConnectedPathsForNode(pending.id);
+            const affectedIds = Object.keys(pending);
+            for (const [id, point] of Object.entries(pending)) {
+                positionsRef.current[id] = { x: point.x, y: point.y };
+                const el = nodeRefs.current.get(id);
+                if (el) el.style.transform = `translate3d(${point.x}px, ${point.y}px, 0)`;
+            }
+            updateConnectedPathsForNodes(affectedIds);
         });
-    }, [updateConnectedPathsForNode]);
+    }, [updateConnectedPathsForNodes]);
+
+    const flushPendingNodeTransforms = useCallback(() => {
+        if (frameRef.current !== null) {
+            window.cancelAnimationFrame(frameRef.current);
+            frameRef.current = null;
+        }
+
+        const pending = pendingDragRef.current;
+        pendingDragRef.current = null;
+        if (!pending) return;
+
+        const affectedIds = Object.keys(pending);
+        for (const [id, point] of Object.entries(pending)) {
+            positionsRef.current[id] = { x: point.x, y: point.y };
+            const el = nodeRefs.current.get(id);
+            if (el) el.style.transform = `translate3d(${point.x}px, ${point.y}px, 0)`;
+        }
+        updateConnectedPathsForNodes(affectedIds);
+    }, [updateConnectedPathsForNodes]);
 
     const commitPositions = useCallback(() => {
-        const next = { ...positionsRef.current };
+        flushPendingNodeTransforms();
+        const next = normalizeCanvasPositions(positionsRef.current);
+        positionsRef.current = next;
         setPositions(next);
         onLayoutPositionsChange?.(next);
-    }, [onLayoutPositionsChange]);
+    }, [flushPendingNodeTransforms, onLayoutPositionsChange]);
 
     const handleWheel = useCallback((event: ReactWheelEvent<HTMLElement>) => {
         event.preventDefault();
@@ -311,30 +390,44 @@ export function NavigationResourcesCanvas({
         if (event.button !== 0 && event.button !== 1) return;
         const target = event.target as HTMLElement;
         if (target.closest("[data-nav-node='true']")) return;
+        if (mode === "multi-select") selection.clear();
         panRefState.current = {
             pointerId: event.pointerId,
             startClientX: event.clientX,
             startClientY: event.clientY,
             startX: panRef.current.x,
             startY: panRef.current.y,
+            hasMoved: false,
         };
         (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    }, []);
+    }, [mode, selection]);
 
     const handleNodePointerDown = useCallback((event: ReactPointerEvent<HTMLElement>, resource: NavigationResource) => {
         event.stopPropagation();
         if (mode !== "move") return;
-        const point = positionsRef.current[resource._id];
-        if (!point) return;
+        const primaryPoint = positionsRef.current[resource._id];
+        if (!primaryPoint) return;
+
+        const shouldGroupDrag = selection.selectedIdsSet.has(resource._id) && selection.selectedIds.length > 0;
+        const draggedIds = shouldGroupDrag ? selection.selectedIds.filter((id) => positionsRef.current[id]) : [resource._id];
+        if (!shouldGroupDrag) selection.selectOnly(resource._id);
+
+        const startPositions = draggedIds.reduce<Record<string, Point>>((acc, id) => {
+            const point = positionsRef.current[id];
+            if (point) acc[id] = { ...point };
+            return acc;
+        }, {});
+
         dragRef.current = {
-            id: resource._id,
+            primaryId: resource._id,
+            draggedIds,
             startClientX: event.clientX,
             startClientY: event.clientY,
-            startPoint: point,
+            startPositions,
             hasMoved: false,
         };
-        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    }, [mode]);
+        viewportRef.current?.setPointerCapture(event.pointerId);
+    }, [mode, selection]);
 
     const handlePointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
         const drag = dragRef.current;
@@ -342,22 +435,33 @@ export function NavigationResourcesCanvas({
             const deltaX = (event.clientX - drag.startClientX) / zoom;
             const deltaY = (event.clientY - drag.startClientY) / zoom;
             if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) drag.hasMoved = true;
-            const point = { x: Math.round(drag.startPoint.x + deltaX), y: Math.round(drag.startPoint.y + deltaY) };
-            scheduleNodeTransform(drag.id, point);
+            const nextPositions = drag.draggedIds.reduce<Record<string, Point>>((acc, id) => {
+                const start = drag.startPositions[id];
+                if (!start) return acc;
+                acc[id] = {
+                    x: Math.round(start.x + deltaX),
+                    y: Math.round(start.y + deltaY),
+                };
+                return acc;
+            }, {});
+            scheduleNodeTransforms(nextPositions);
             suppressClickRef.current = true;
             return;
         }
 
         const panGesture = panRefState.current;
         if (panGesture) {
+            const movedX = event.clientX - panGesture.startClientX;
+            const movedY = event.clientY - panGesture.startClientY;
+            if (Math.abs(movedX) > 2 || Math.abs(movedY) > 2) panGesture.hasMoved = true;
             const nextPan = {
-                x: panGesture.startX + event.clientX - panGesture.startClientX,
-                y: panGesture.startY + event.clientY - panGesture.startClientY,
+                x: panGesture.startX + movedX,
+                y: panGesture.startY + movedY,
             };
             setPan(nextPan);
             panRef.current = nextPan;
         }
-    }, [scheduleNodeTransform, zoom]);
+    }, [scheduleNodeTransforms, zoom]);
 
     const handlePointerUp = useCallback((event: ReactPointerEvent<HTMLElement>) => {
         if (dragRef.current) {
@@ -367,13 +471,21 @@ export function NavigationResourcesCanvas({
             window.setTimeout(() => { suppressClickRef.current = false; }, 0);
         }
         if (panRefState.current?.pointerId === event.pointerId) {
+            const panGesture = panRefState.current;
             panRefState.current = null;
+            if (!panGesture.hasMoved && mode !== "multi-select") selection.clear();
         }
-    }, [commitPositions]);
+    }, [commitPositions, mode, selection]);
 
     const handleResourceClick = useCallback((resource: NavigationResource) => {
         if (suppressClickRef.current) return;
         onSelectResource(resource._id);
+
+        if (mode === "multi-select") {
+            selection.toggle(resource._id);
+            return;
+        }
+
         if (mode === "connect") {
             if (!linkSourceId) {
                 if (!canBeParent(resource)) return;
@@ -382,8 +494,13 @@ export function NavigationResourcesCanvas({
             }
             if (linkSourceId !== resource._id) onSetParent(linkSourceId, resource._id);
             setLinkSourceId(null);
+            return;
         }
-    }, [linkSourceId, mode, onSelectResource, onSetParent]);
+
+        if (mode === "delete-link") {
+            onClearParent(resource._id);
+        }
+    }, [linkSourceId, mode, onClearParent, onSelectResource, onSetParent, selection]);
 
     return (
         <main
@@ -405,6 +522,11 @@ export function NavigationResourcesCanvas({
                     <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500 flex items-center gap-1"><MdOutlinePushPin size={20} /> Navigation Engine</div>
                     <h1 className="mt-1 text-xl font-black tracking-tight">{activeResources.length} nodi</h1>
                     <p className="mt-2 text-sm font-medium text-neutral-600 dark:text-neutral-300">GROUP = contenitore, PANEL = route, ACTION/DATA_SCOPE = capacità</p>
+                    {selection.hasSelection ? (
+                        <p className="mt-2 inline-flex rounded-full bg-blue-50 px-3 py-1 text-[0.68rem] font-black uppercase tracking-[0.13em] text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">
+                            {selection.selectedIds.length} selezionati
+                        </p>
+                    ) : null}
                 </div>
 
                 <svg className="pointer-events-none absolute inset-0 overflow-visible" width={canvasSize.width} height={canvasSize.height}>
@@ -464,6 +586,7 @@ export function NavigationResourcesCanvas({
                             resource={resource}
                             point={point}
                             selected={selectedResourceId === resource._id}
+                            multiSelected={selection.isSelected(resource._id)}
                             linkSource={linkSourceId === resource._id}
                             mode={mode}
                             onPointerDown={handleNodePointerDown}
@@ -476,11 +599,12 @@ export function NavigationResourcesCanvas({
     );
 }
 
-const ResourceNode = memo(function ResourceNode({ nodeRef, resource, point, selected, linkSource, mode, onPointerDown, onClick }: {
+const ResourceNode = memo(function ResourceNode({ nodeRef, resource, point, selected, multiSelected, linkSource, mode, onPointerDown, onClick }: {
     nodeRef: (element: HTMLDivElement | null) => void;
     resource: NavigationResource;
     point: Point;
     selected: boolean;
+    multiSelected: boolean;
     linkSource: boolean;
     mode: CanvasMode;
     onPointerDown: (event: ReactPointerEvent<HTMLElement>, resource: NavigationResource) => void;
@@ -497,11 +621,12 @@ const ResourceNode = memo(function ResourceNode({ nodeRef, resource, point, sele
         >
             <FDBox
                 radius="2xl"
-                shadow={selected || linkSource ? "2xl" : "lg"}
+                shadow={selected || linkSource || multiSelected ? "2xl" : "lg"}
                 border
                 className={cx(
                     "relative bg-white/95 backdrop-blur transition-shadow dark:bg-neutral-900/95",
                     selected && "ring-2 ring-blue-500/80",
+                    multiSelected && "ring-2 ring-cyan-500/90",
                     linkSource && "ring-2 ring-emerald-500/90",
                     resource.status === "DISABLED" && "opacity-60 grayscale",
                     isContainer && "border-slate-300 bg-slate-50/95 dark:border-slate-700 dark:bg-slate-950/80",
@@ -522,6 +647,11 @@ const ResourceNode = memo(function ResourceNode({ nodeRef, resource, point, sele
                         <span className="mt-2 inline-flex rounded-full bg-neutral-100 px-2 py-1 text-[0.65rem] font-black uppercase tracking-[0.14em] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
                             {resourceLabel(resource.type)} · {resource.status}
                         </span>
+                        {multiSelected ? (
+                            <span className="ml-2 mt-2 inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2 py-1 text-[0.65rem] font-black uppercase tracking-[0.14em] text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-200">
+                                <MdSelectAll /> Selezionato
+                            </span>
+                        ) : null}
                         {resource.route ? (
                             <span className="mt-2 block truncate rounded-xl bg-blue-50 px-2 py-1 text-[0.68rem] font-bold text-blue-700 dark:bg-blue-950/30 dark:text-blue-200">{resource.route}</span>
                         ) : (

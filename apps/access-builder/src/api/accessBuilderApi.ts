@@ -1,6 +1,6 @@
 import { authenticatedFetch, isApiHttpError, isAuthInvalidationError } from "@nex/shared-platform";
 import { accessBuilderFixture } from "../fixtures/accessBuilderFixture";
-import type { AccessBuilderSnapshot, CanvasPoint, EffectiveAccessPreview, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch } from "../model/types";
+import type { AccessBuilderSnapshot, BuilderCanvasWorkspaceType, CanvasPoint, EffectiveAccessPreview, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch } from "../model/types";
 
 const ADMIN_BASE = normalizeBase(import.meta.env.VITE_API_ADMIN ?? "");
 const AUTH_BASE = normalizeBase(import.meta.env.VITE_AUTH_API_ENDPOINT ?? import.meta.env.VITE_API_AUTH ?? "");
@@ -153,24 +153,28 @@ export async function publishAccessBuilderChanges(changes: PendingChange[], tena
     );
 }
 
-export function buildCanvasLayoutChange(positions: Record<ObjectIdString, CanvasPoint>): PendingChange {
+export function buildBuilderCanvasLayoutChange(workspace: BuilderCanvasWorkspaceType, positions: Record<ObjectIdString, CanvasPoint>): PendingChange {
+    const labelByWorkspace: Record<BuilderCanvasWorkspaceType, string> = {
+        access: "Aggiorna posizioni canvas Accessi",
+        route: "Aggiorna posizioni canvas Route",
+        config: "Aggiorna posizioni canvas Config",
+    };
+
     return {
-        id: `draft:CANVAS_LAYOUT_UPDATE:${Date.now()}`,
-        type: "CANVAS_LAYOUT_UPDATE",
-        label: "Aggiorna posizioni canvas gruppi",
-        payload: { positions },
+        id: `draft:BUILDER_CANVAS_LAYOUT_UPDATE:${workspace}:${Date.now()}`,
+        type: "BUILDER_CANVAS_LAYOUT_UPDATE",
+        label: labelByWorkspace[workspace],
+        payload: { workspace, positions },
         createdAt: new Date().toISOString(),
     };
 }
 
+export function buildCanvasLayoutChange(positions: Record<ObjectIdString, CanvasPoint>): PendingChange {
+    return buildBuilderCanvasLayoutChange("access", positions);
+}
+
 export function buildNavigationCanvasLayoutChange(positions: Record<ObjectIdString, CanvasPoint>): PendingChange {
-    return {
-        id: `draft:NAV_CANVAS_LAYOUT_UPDATE:${Date.now()}`,
-        type: "NAV_CANVAS_LAYOUT_UPDATE",
-        label: "Aggiorna posizioni canvas navigation",
-        payload: { positions },
-        createdAt: new Date().toISOString(),
-    };
+    return buildBuilderCanvasLayoutChange("route", positions);
 }
 
 function buildFixturePreview(userId: ObjectIdString, actorRole: number, tenant: string): EffectiveAccessPreview {

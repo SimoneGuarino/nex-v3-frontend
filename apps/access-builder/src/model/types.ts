@@ -13,6 +13,39 @@ export interface CanvasPoint {
   y: number;
 }
 
+export type BuilderCanvasWorkspaceType = "access" | "route" | "config";
+
+export interface BuilderCanvasNodeLayout {
+  position: CanvasPoint;
+  updatedAt?: string | null;
+  updatedBy?: ObjectIdString | null;
+}
+
+export interface BuilderCanvasWorkspaceLayout {
+  nodes: Record<ObjectIdString, BuilderCanvasNodeLayout>;
+  updatedAt?: string | null;
+  updatedBy?: ObjectIdString | null;
+}
+
+export interface BuilderEngineCanvasLayout {
+  workspaces: Partial<Record<BuilderCanvasWorkspaceType, BuilderCanvasWorkspaceLayout>>;
+}
+
+export interface BuilderEngineMeta {
+  revision: string;
+  updatedAt?: string | null;
+  updatedBy?: ObjectIdString | null;
+  lastChange?: {
+    action: string;
+    label?: string;
+    actorUserId?: ObjectIdString | null;
+    createdAt?: string | null;
+    changesCount?: number;
+    workspace?: BuilderCanvasWorkspaceType;
+  } | null;
+  canvas?: BuilderEngineCanvasLayout;
+}
+
 export interface AccessBuilderMeta {
   revision: string;
   updatedAt?: string | null;
@@ -27,14 +60,18 @@ export interface AccessBuilderMeta {
 }
 
 export interface AccessBuilderCanvasLayout {
-  /** Positions for organization/group nodes. */
+  /** @deprecated Use builderEngine.canvas.workspaces.access.nodes. */
   positions: Record<ObjectIdString, CanvasPoint>;
-  /** Positions for navigation_resources nodes. */
+  /** @deprecated Use builderEngine.canvas.workspaces.route.nodes. */
   navigationPositions?: Record<ObjectIdString, CanvasPoint>;
+  /** @deprecated Use builderEngine.canvas.workspaces.config.nodes. */
+  configPositions?: Record<ObjectIdString, CanvasPoint>;
   updatedAt?: string | null;
   updatedBy?: ObjectIdString | null;
   navigationUpdatedAt?: string | null;
   navigationUpdatedBy?: ObjectIdString | null;
+  configUpdatedAt?: string | null;
+  configUpdatedBy?: ObjectIdString | null;
 }
 
 export interface RoleOption {
@@ -237,6 +274,7 @@ export interface EffectiveAccessPreview {
 export interface AccessBuilderSnapshot {
   tenant: TenantKey;
   meta?: AccessBuilderMeta;
+  builderEngine?: BuilderEngineMeta;
   canvasLayout?: AccessBuilderCanvasLayout;
   roles: RoleOption[];
   groups: AccessGroup[];
@@ -260,11 +298,12 @@ export interface PendingChange {
     | "GRANT_ADD"
     | "GRANT_REMOVE"
     | "CANVAS_LAYOUT_UPDATE"
+    | "NAV_CANVAS_LAYOUT_UPDATE"
+    | "BUILDER_CANVAS_LAYOUT_UPDATE"
     | "NAV_RESOURCE_CREATE"
     | "NAV_RESOURCE_UPDATE"
     | "NAV_RESOURCE_PARENT_SET"
-    | "NAV_RESOURCE_DISABLE"
-    | "NAV_CANVAS_LAYOUT_UPDATE";
+    | "NAV_RESOURCE_DISABLE";
   label: string;
   payload: unknown;
   createdAt: string;

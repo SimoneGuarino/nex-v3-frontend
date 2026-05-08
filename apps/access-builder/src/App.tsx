@@ -203,7 +203,7 @@ function App() {
                     onDeleteEdge={state.removeEdge}
                     onRemoveMembership={state.removeMembership}
                     onMoveMembership={state.moveMembershipToGroup}
-                    layoutPositions={state.snapshot.canvasLayout?.positions}
+                    layoutPositions={state.accessCanvasPositions}
                     onLayoutPositionsChange={state.recordCanvasLayoutPositions}
                 />
             ) : workspaceMode === "navigation" ? (
@@ -217,7 +217,7 @@ function App() {
                     onSelectResource={state.setSelectedResourceId}
                     onSetParent={state.setNavigationParent}
                     onClearParent={state.clearNavigationParent}
-                    layoutPositions={state.snapshot.canvasLayout?.navigationPositions}
+                    layoutPositions={state.routeCanvasPositions}
                     onLayoutPositionsChange={state.recordNavigationLayoutPositions}
                 />
             ) : (

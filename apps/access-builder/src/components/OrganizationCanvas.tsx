@@ -13,6 +13,7 @@ import {
 import { MdClose, MdDragIndicator, MdLinkOff, MdSwapHoriz, MdOutlinePushPin } from "react-icons/md";
 import { FDBox } from "@nex/fd-ui";
 import type { AccessGroup, CanvasPoint, GroupEdge, GroupMembership, ObjectIdString, UserSummary } from "../model/types";
+import { normalizeCanvasPoint } from "../engine/canvas/layout";
 
 export type CanvasMode = "move" | "connect" | "delete-link" | "multi-select";
 
@@ -318,11 +319,11 @@ export function OrganizationCanvas({
             const activeGroupIds = new Set(groups.map((group) => group._id));
 
             groups.forEach((group, index) => {
-                const savedPoint = layoutPositions?.[group._id];
-                const hasSavedPoint = Number.isFinite(savedPoint?.x) && Number.isFinite(savedPoint?.y);
-                const desiredPoint = hasSavedPoint
-                    ? { x: Number(savedPoint.x), y: Number(savedPoint.y) }
-                    : next[group._id] ?? computeInitialPosition(group, index, edges);
+                const savedPoint = normalizeCanvasPoint(layoutPositions?.[group._id]);
+                const desiredPoint =
+                    savedPoint ??
+                    next[group._id] ??
+                    computeInitialPosition(group, index, edges);
 
                 if (!next[group._id] || next[group._id].x !== desiredPoint.x || next[group._id].y !== desiredPoint.y) {
                     next[group._id] = desiredPoint;
@@ -1108,7 +1109,7 @@ export function OrganizationCanvas({
                 </svg>
 
                 <div className="pointer-events-none absolute left-6 top-6 z-10 max-w-sm rounded-2xl border border-neutral-200 bg-white/80 p-4 opacity-50 shadow-xl backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/80">
-                    <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500 flex items-center gap-1"><MdOutlinePushPin size={20}/> Builder canvas</div>
+                    <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-neutral-500 flex items-center gap-1"><MdOutlinePushPin size={20} /> Builder canvas</div>
                     <h1 className="mt-1 text-xl font-black tracking-tight">Organigramma permessi</h1>
                     <p className="mt-2 text-sm font-medium text-neutral-600 dark:text-neutral-300">{modeCopy}</p>
                 </div>
