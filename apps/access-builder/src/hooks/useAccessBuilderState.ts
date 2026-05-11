@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isAuthInvalidationError } from "@nex/shared-platform";
 import { buildBuilderCanvasLayoutChange, createAccessBuilderUser, getAccessBuilderSnapshot, getAccessBuilderUserProfile, getEffectiveAccessPreview, isAccessBuilderConflictError, publishAccessBuilderChanges, updateAccessBuilderUserProfile } from "../api/accessBuilderApi";
-import type { AccessBuilderSnapshot, BuilderCanvasWorkspaceType, CanvasPoint, EffectiveAccessPreview, GroupKind, NavigationResource, NavigationResourceCreatePayload, NavigationResourcePatch, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch, UserSummary } from "../model/types";
+import type { AccessBuilderSnapshot, BuilderCanvasWorkspaceType, CanvasPoint, EffectiveAccessPreview, GrantEffect, GroupKind, NavigationResource, NavigationResourceCreatePayload, NavigationResourcePatch, ObjectIdString, PendingChange, UserCreatePayload, UserProfile, UserProfilePatch, UserSummary } from "../model/types";
 import { buildCanvasNodeLayout, getWorkspaceCanvasPositions, normalizeCanvasPositions } from "../engine/canvas/layout";
 
 const DEFAULT_TENANT = "Focelda";
@@ -459,46 +459,117 @@ export function useAccessBuilderState() {
         });
     }, [snapshot]);
 
-    const grantResourceToSelectedGroup = useCallback((permission: string, effect: "ALLOW" | "DENY" = "ALLOW") => {
-        if (!selectedGroupId) return;
-        const grantId = makeDraftId("grant");
+    const setResourceGrantForSelectedGroup = useCallback((permission: string, effect: GrantEffect | null) => {
+        if (!selectedGroupId || !permission) return;
 
-        // Enterprise rule: navigation/panel/action grants are group-based by default.
-        // They must not inherit the currently selected numeric actorRole from the preview panel.
-        // If a future domain policy needs a runtime condition, it should be modeled explicitly
-        // as a scope/condition, not implicitly from the builder UI state.
-        const grant = {
-            _id: grantId,
-            tenant: DEFAULT_TENANT,
-            principalType: "GROUP" as const,
-            principalId: selectedGroupId,
-            permission,
-            effect,
-            scope: { kind: "GLOBAL" as const },
+        const selectedGroup = snapshot?.groups.find((group) => group._id === selectedGroupId);
+
+        // Enterprise rule: for the same group + resource permission there must be one final state only:
+        // NONE, ALLOW or DENY. ALLOW and DENY are mutually exclusive and the draft list is compacted
+        // so multiple UI clicks do not create multiple contradictory pending changes.
+        const isSameGrantTarget = (value: unknown) => {
+            const payload = value as {
+                principalType?: string;
+                principalId?: ObjectIdString;
+                permission?: string;
+            };
+
+            return payload.principalType === "GROUP"
+                && payload.principalId === selectedGroupId
+                && payload.permission === permission;
         };
 
-        setSnapshot((current) => current ? {
-            ...current,
-            grants: [
-                ...current.grants,
-                grant,
-            ],
-            groups: current.groups.map((group) => group._id === selectedGroupId ? { ...group, grantsCount: (group.grantsCount ?? 0) + 1 } : group),
-        } : current);
+        const existingGrants = snapshot?.grants.filter((grant) => (
+            grant.principalType === "GROUP"
+            && grant.principalId === selectedGroupId
+            && grant.permission === permission
+        )) ?? [];
 
-        addPendingChange({
-            type: "GRANT_ADD",
-            label: `${effect} ${permission}`,
-            payload: {
+        const alreadyInTargetState = existingGrants.length === (effect ? 1 : 0)
+            && (!effect || existingGrants[0]?.effect === effect)
+            && pendingChanges.every((change) => {
+                if (change.type !== "GRANT_ADD" && change.type !== "GRANT_REMOVE") return true;
+                return !isSameGrantTarget(change.payload);
+            });
+
+        if (alreadyInTargetState) return;
+
+        const persistedGrantsToRemove = existingGrants.filter((grant) => !String(grant._id).startsWith("draft:"));
+        const nextGrant = effect
+            ? {
+                _id: makeDraftId("grant"),
                 tenant: DEFAULT_TENANT,
-                principalType: "GROUP",
+                principalType: "GROUP" as const,
                 principalId: selectedGroupId,
                 permission,
                 effect,
-                scope: { kind: "GLOBAL" },
-            },
+                scope: { kind: "GLOBAL" as const },
+            }
+            : null;
+
+        setSnapshot((current) => {
+            if (!current) return current;
+
+            const previousCount = current.grants.filter((grant) => (
+                grant.principalType === "GROUP"
+                && grant.principalId === selectedGroupId
+                && grant.permission === permission
+            )).length;
+
+            const grantsWithoutPermission = current.grants.filter((grant) => !(
+                grant.principalType === "GROUP"
+                && grant.principalId === selectedGroupId
+                && grant.permission === permission
+            ));
+            const nextGrants = nextGrant ? [...grantsWithoutPermission, nextGrant] : grantsWithoutPermission;
+            const nextCount = nextGrant ? 1 : 0;
+            const delta = nextCount - previousCount;
+
+            return {
+                ...current,
+                grants: nextGrants,
+                groups: current.groups.map((group) => group._id === selectedGroupId
+                    ? { ...group, grantsCount: Math.max(0, (group.grantsCount ?? 0) + delta) }
+                    : group),
+            };
         });
-    }, [addPendingChange, selectedGroupId]);
+
+        setPendingChanges((current) => {
+            const retained = current.filter((change) => {
+                if (change.type !== "GRANT_ADD" && change.type !== "GRANT_REMOVE") return true;
+                return !isSameGrantTarget(change.payload);
+            });
+
+            const removalChanges = persistedGrantsToRemove.map((grant) => createPendingChange({
+                type: "GRANT_REMOVE",
+                label: `Rimuovi ${grant.effect} ${permission}${selectedGroup ? ` da ${selectedGroup.name}` : ""}`,
+                payload: {
+                    tenant: DEFAULT_TENANT,
+                    grantId: grant._id,
+                    principalType: grant.principalType,
+                    principalId: grant.principalId,
+                    permission: grant.permission,
+                    effect: grant.effect,
+                    scope: grant.scope,
+                },
+            }));
+
+            const addChange = effect ? [createPendingChange({
+                type: "GRANT_ADD",
+                label: `${effect} ${permission}${selectedGroup ? ` a ${selectedGroup.name}` : ""}`,
+                payload: {
+                    tenant: DEFAULT_TENANT,
+                    principalType: "GROUP",
+                    principalId: selectedGroupId,
+                    permission,
+                    effect,
+                    scope: { kind: "GLOBAL" },
+                },
+            })] : [];
+
+            return [...retained, ...removalChanges, ...addChange];
+        });
+    }, [pendingChanges, selectedGroupId, snapshot]);
 
     const removeGrant = useCallback((grantId: ObjectIdString) => {
         if (!snapshot) return;
@@ -873,7 +944,7 @@ export function useAccessBuilderState() {
         removeGrant,
         createEdge,
         removeEdge,
-        grantResourceToSelectedGroup,
+        setResourceGrantForSelectedGroup,
         addPendingChange,
         recordCanvasLayoutPositions,
         recordNavigationLayoutPositions,

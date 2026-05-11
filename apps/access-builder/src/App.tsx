@@ -386,7 +386,9 @@ function App() {
                     {activePanel === "resources" ? (
                         <ResourceLibraryPanel
                             resources={state.snapshot.resources}
-                            onGrant={state.grantResourceToSelectedGroup}
+                            directGrants={state.selectedGroupGrants}
+                            selectedGroupName={state.selectedGroup?.name}
+                            onGrantChange={state.setResourceGrantForSelectedGroup}
                         />
                     ) : null}
 
