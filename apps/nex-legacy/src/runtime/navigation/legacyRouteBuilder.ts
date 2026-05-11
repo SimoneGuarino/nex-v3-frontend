@@ -6,6 +6,10 @@ type RegistryIndex = {
     byKey: Map<string, LegacyRouteRegistryEntry>;
 };
 
+type NavigationIconSpec = NonNullable<
+    NonNullable<NavigationResourceContext["presentation"]>["icon"]
+>;
+
 const NAVIGATION_TYPES = new Set(["GROUP", "PANEL"]);
 
 function normalizeRoutePath(value: unknown): string {
@@ -43,29 +47,106 @@ function sortResources(a: NavigationRuntimeResource, b: NavigationRuntimeResourc
     return String(a.name || a.key).localeCompare(String(b.name || b.key), "it");
 }
 
+type UnknownRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is UnknownRecord {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function toRecord(value: unknown): UnknownRecord {
+    return isRecord(value) ? value : {};
+}
+
+function toOptionalString(value: unknown): string | undefined {
+    return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function toNullableString(value: unknown): string | null | undefined {
+    if (value === null) return null;
+    return toOptionalString(value);
+}
+
+function toOptionalBoolean(value: unknown): boolean | undefined {
+    if (typeof value === "boolean") return value;
+
+    // Defensive compatibility for historical JSON imports / manual Mongo edits.
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === "true") return true;
+        if (normalized === "false") return false;
+    }
+
+    if (typeof value === "number") {
+        if (value === 1) return true;
+        if (value === 0) return false;
+    }
+
+    return undefined;
+}
+
+function toIconSpec(value: unknown): NavigationIconSpec | undefined {
+    if (typeof value === "string" && value.trim()) {
+        return value.trim() as NavigationIconSpec;
+    }
+
+    if (!isRecord(value)) {
+        return undefined;
+    }
+
+    const pack = toOptionalString(value.pack);
+    const name = toOptionalString(value.name);
+
+    if (!pack || !name) {
+        return undefined;
+    }
+
+    return { pack, name } as NavigationIconSpec;
+}
+
 function getContext(resource: NavigationRuntimeResource): NavigationResourceContext {
-    const context = resource.context && typeof resource.context === "object" ? resource.context : {};
-    const meta = resource.meta && typeof resource.meta === "object" ? resource.meta : {};
+    const rawContext = toRecord(resource.context);
+    const rawMeta = toRecord(resource.meta);
+
+    const context = rawContext as Partial<NavigationResourceContext>;
+    const contextPresentation = toRecord(rawContext.presentation);
+    const metaPresentation = toRecord(rawMeta.presentation);
+    const contextLegacy = toRecord(rawContext.legacy);
+    const metaLegacy = toRecord(rawMeta.legacy);
 
     // Backward compatibility for resources created before context existed.
+    // All values coming from `meta` are unknown by design, so they must be
+    // normalized before entering the typed runtime context. This keeps the
+    // sidebar deterministic and avoids leaking arbitrary MongoDB values into
+    // React route configuration.
     return {
         ...context,
-        route: context.route ?? resource.route,
-        hidden: context.hidden ?? meta.hidden,
-        isNew: context.isNew ?? meta.isNew,
-        redirect: context.redirect ?? meta.redirect,
-        system: context.system ?? meta.system,
-        showWhenEmpty: context.showWhenEmpty ?? meta.showWhenEmpty,
-        public: context.public ?? meta.public,
-        alwaysVisible: context.alwaysVisible ?? meta.alwaysVisible,
+        route: toOptionalString(rawContext.route) ?? toOptionalString(resource.route),
+        hidden: toOptionalBoolean(rawContext.hidden) ?? toOptionalBoolean(rawMeta.hidden),
+        isNew: toOptionalBoolean(rawContext.isNew) ?? toOptionalBoolean(rawMeta.isNew),
+        redirect: toOptionalString(rawContext.redirect) ?? toOptionalString(rawMeta.redirect),
+        system: toOptionalBoolean(rawContext.system) ?? toOptionalBoolean(rawMeta.system),
+        showWhenEmpty: toOptionalBoolean(rawContext.showWhenEmpty) ?? toOptionalBoolean(rawMeta.showWhenEmpty),
+        public: toOptionalBoolean(rawContext.public) ?? toOptionalBoolean(rawMeta.public),
+        alwaysVisible: toOptionalBoolean(rawContext.alwaysVisible) ?? toOptionalBoolean(rawMeta.alwaysVisible),
         presentation: {
-            ...(context.presentation || {}),
-            icon: context.presentation?.icon ?? meta.icon,
+            ...(isRecord(rawContext.presentation) ? rawContext.presentation : {}),
+            icon:
+                toIconSpec(contextPresentation.icon) ??
+                toIconSpec(metaPresentation.icon) ??
+                toIconSpec(rawMeta.icon),
+            badge: toNullableString(contextPresentation.badge) ?? toNullableString(metaPresentation.badge),
+            tone: toNullableString(contextPresentation.tone) ?? toNullableString(metaPresentation.tone),
         },
         legacy: {
-            ...(context.legacy || {}),
-            componentKey: context.legacy?.componentKey ?? meta.legacyRouteKey,
-            routeKey: context.legacy?.routeKey ?? meta.legacyRouteKey,
+            ...(isRecord(rawContext.legacy) ? rawContext.legacy : {}),
+            componentKey:
+                toOptionalString(contextLegacy.componentKey) ??
+                toOptionalString(metaLegacy.componentKey) ??
+                toOptionalString(rawMeta.legacyRouteKey),
+            routeKey:
+                toOptionalString(contextLegacy.routeKey) ??
+                toOptionalString(metaLegacy.routeKey) ??
+                toOptionalString(rawMeta.legacyRouteKey),
         },
     };
 }
