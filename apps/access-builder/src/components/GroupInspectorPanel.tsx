@@ -101,7 +101,7 @@ export function GroupInspectorPanel({ group, memberships, grants, users, selecte
                                 </FDButton>
                             </div>
                             <code className="mt-3 block truncate rounded-xl bg-white px-3 py-2 text-xs font-bold text-neutral-700 dark:bg-neutral-950 dark:text-neutral-200">{grant.permission}</code>
-                            <small className="mt-2 block text-xs font-semibold text-neutral-500">{grant.context?.actorRoles?.length ? `actorRole: ${grant.context.actorRoles.join(", ")}` : "role-agnostic"}</small>
+                            <small className="mt-2 block text-xs font-semibold text-neutral-500">{grant.context?.actorRoles?.length ? `Legacy actorRole: ${grant.context.actorRoles.join(", ")}` : "Contesto globale gruppo"}</small>
                         </div>
                     ))}
                 </div>

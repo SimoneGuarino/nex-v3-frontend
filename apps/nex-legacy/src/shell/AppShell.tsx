@@ -1,4 +1,3 @@
-import React, { useEffect } from "react";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { Tooltip } from "react-tooltip";
@@ -20,6 +19,7 @@ export default function AppShell({
     sidenavColor,
     darkMode,
     routes,
+    navigationRuntimeManaged = false,
     children,
 }: any) {
     const activeTheme = darkMode ? themeDark : theme;
@@ -54,6 +54,7 @@ export default function AppShell({
                             brand={brandWhite}
                             brandName="Focelda Dashboard"
                             routes={routes}
+                            runtimeManaged={navigationRuntimeManaged}
                         />
                         {window.location.href
                             .split("/")

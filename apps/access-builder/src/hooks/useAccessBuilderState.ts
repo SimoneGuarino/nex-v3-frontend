@@ -463,20 +463,25 @@ export function useAccessBuilderState() {
         if (!selectedGroupId) return;
         const grantId = makeDraftId("grant");
 
+        // Enterprise rule: navigation/panel/action grants are group-based by default.
+        // They must not inherit the currently selected numeric actorRole from the preview panel.
+        // If a future domain policy needs a runtime condition, it should be modeled explicitly
+        // as a scope/condition, not implicitly from the builder UI state.
+        const grant = {
+            _id: grantId,
+            tenant: DEFAULT_TENANT,
+            principalType: "GROUP" as const,
+            principalId: selectedGroupId,
+            permission,
+            effect,
+            scope: { kind: "GLOBAL" as const },
+        };
+
         setSnapshot((current) => current ? {
             ...current,
             grants: [
                 ...current.grants,
-                {
-                    _id: grantId,
-                    tenant: DEFAULT_TENANT,
-                    principalType: "GROUP",
-                    principalId: selectedGroupId,
-                    permission,
-                    effect,
-                    scope: { kind: "GLOBAL" },
-                    context: { actorRoles: [selectedActorRole] },
-                },
+                grant,
             ],
             groups: current.groups.map((group) => group._id === selectedGroupId ? { ...group, grantsCount: (group.grantsCount ?? 0) + 1 } : group),
         } : current);
@@ -491,10 +496,9 @@ export function useAccessBuilderState() {
                 permission,
                 effect,
                 scope: { kind: "GLOBAL" },
-                context: { actorRoles: [selectedActorRole] },
             },
         });
-    }, [addPendingChange, selectedActorRole, selectedGroupId]);
+    }, [addPendingChange, selectedGroupId]);
 
     const removeGrant = useCallback((grantId: ObjectIdString) => {
         if (!snapshot) return;

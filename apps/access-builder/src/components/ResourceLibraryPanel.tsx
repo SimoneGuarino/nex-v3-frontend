@@ -35,6 +35,10 @@ export function ResourceLibraryPanel({ resources, onGrant }: Props) {
 
     return (
         <div className="flex h-full min-h-0 flex-col gap-4">
+            <FDBox variant="gradient-simple" radius="2xl" pad="sm" border className="text-xs font-semibold leading-5 text-neutral-600 dark:text-neutral-300">
+                I grant assegnati da qui sono globali sul gruppo selezionato. Non vengono più vincolati automaticamente all’actorRole numerico della preview.
+            </FDBox>
+
             <div className="grid gap-3">
                 <FDInput
                     label="Cerca risorsa"

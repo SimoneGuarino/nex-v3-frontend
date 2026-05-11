@@ -14,6 +14,7 @@ import useExternalScriptBootstrap from "bootstrap/useExternalScriptBootstrap";
 import ShellRouteHost from "shell/ShellRouteHost";
 import LegacyRealtimeAdapter from "./runtime/LegacyRealtimeAdapter";
 import { useNexTheme } from "@nex/theme-system";
+import { useLegacyNavigationRoutes } from "runtime/navigation/useLegacyNavigationRoutes";
 
 const Permission = new PermissionMoudle();
 
@@ -40,17 +41,28 @@ export default function App() {
     useRootThemeClass(darkMode);
     useExternalScriptBootstrap();
 
+    const navigationRuntime = useLegacyNavigationRoutes({
+        staticRoutes: routes,
+        userDetails: userContext?.details,
+        tenant: "Focelda",
+        appId: "legacy",
+    });
+
+    const effectiveRoutes = navigationRuntime.routes;
+    const navigationRuntimeManaged = navigationRuntime.source === "navigation-resources";
+
     const shellContent = useMemo(() => {
         if (!userContext?.details) return null;
 
         return (
             <ShellRouteHost
-                routes={routes}
+                routes={effectiveRoutes}
                 permission={Permission}
                 userDetails={userContext.details}
+                runtimeManaged={navigationRuntimeManaged}
             />
         );
-    }, [userContext]);
+    }, [userContext, effectiveRoutes, navigationRuntimeManaged]);
 
     return (
         <AppRuntimeEffects
@@ -79,7 +91,8 @@ export default function App() {
                 sidenavColor={sidenavColor}
                 transparentSidenav={transparentSidenav}
                 darkMode={darkMode}
-                routes={routes}
+                routes={effectiveRoutes}
+                navigationRuntimeManaged={navigationRuntimeManaged}
             >
                 {shellContent}
             </AppShell>

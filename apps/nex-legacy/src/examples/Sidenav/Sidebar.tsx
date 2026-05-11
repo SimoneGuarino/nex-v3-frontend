@@ -42,6 +42,7 @@ type SidenavProps = {
     brand?: string;
     brandName: string;
     routes: RouteElement[];
+    runtimeManaged?: boolean;
     [key: string]: any;
 };
 
@@ -108,7 +109,7 @@ const RenderedRoutes = memo(function RenderedRoutes({
     );
 });
 
-function Sidenav({ color = "info", brand = "", brandName, routes, ...rest }: SidenavProps) {
+function Sidenav({ color = "info", brand = "", brandName, routes, runtimeManaged = false, ...rest }: SidenavProps) {
     const [userContext, setUserContext] = useContext(UserContext) as [
         UserState | null,
         React.Dispatch<React.SetStateAction<UserState | null>>
@@ -159,6 +160,10 @@ function Sidenav({ color = "info", brand = "", brandName, routes, ...rest }: Sid
         const details = userContext?.details;
         if (!details) return [];
 
+        if (runtimeManaged) {
+            return routes;
+        }
+
         const result = Permission.RouteToShow(
             details.ruolo,
             routes,
@@ -167,7 +172,7 @@ function Sidenav({ color = "info", brand = "", brandName, routes, ...rest }: Sid
         );
 
         return (result?.Data as RouteElement[] | undefined) ?? [];
-    }, [userContext?.details, routes]);
+    }, [userContext?.details, routes, runtimeManaged]);
 
 
 

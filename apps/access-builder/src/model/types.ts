@@ -212,6 +212,10 @@ export interface PermissionGrant {
   permission: string;
   effect: GrantEffect;
   scope: PermissionScope;
+  /**
+   * Legacy optional condition. New group/panel/action grants created by Access Builder
+   * are intentionally role-agnostic and should not set actorRoles by default.
+   */
   context?: {
     actorRoles?: number[];
   };
