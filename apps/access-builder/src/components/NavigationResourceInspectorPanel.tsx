@@ -143,7 +143,7 @@ export function NavigationResourceInspectorPanel({
 
     return (
         <div className="flex h-full min-h-0 min-w-0 flex-col gap-4 overflow-hidden">
-            <FDBox radius="2xl" border pad="md" className="bg-white/70 dark:bg-neutral-950/30">
+            <FDBox variant="gradient-simple" radius="2xl" border pad="md">
                 <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                     <div className="min-w-0">
                         <div className="text-xs font-black uppercase tracking-[0.18em] text-neutral-500">Navigation Engine</div>
@@ -152,13 +152,14 @@ export function NavigationResourceInspectorPanel({
                         </div>
                     </div>
                     <div className="flex min-w-0 flex-wrap gap-2">
-                        <FDButton size="small" radius="xl" variant="solid" color="primary" icon={<MdFolder />} onClick={() => openCreate("GROUP")}>
+                        <FDButton size="small" radius="xl" variant="outline" color={createOpen && createDraft.type === "GROUP" ? "primary" : "neutral"} icon={<MdFolder />} onClick={() => openCreate("GROUP")}>
                             Gruppo
                         </FDButton>
-                        <FDButton size="small" radius="xl" variant="outline" color="primary" icon={<MdRoute />} onClick={() => openCreate("PANEL")}>
+                        <FDButton size="small" radius="xl" variant="outline" color={createOpen && createDraft.type === "PANEL" ? "primary" : "neutral"} 
+                        icon={<MdRoute />} onClick={() => openCreate("PANEL")}>
                             Pannello
                         </FDButton>
-                        <FDButton size="small" radius="xl" variant="outline" icon={<MdBolt />} onClick={() => openCreate("ACTION")}>
+                        <FDButton size="small" radius="xl" variant="outline" color={createOpen && createDraft.type === "ACTION" ? "primary" : "neutral"} icon={<MdBolt />} onClick={() => openCreate("ACTION")}>
                             Azione
                         </FDButton>
                     </div>
@@ -166,7 +167,7 @@ export function NavigationResourceInspectorPanel({
             </FDBox>
 
             {createOpen ? (
-                <FDBox radius="2xl" border pad="md" shadow="lg" className="min-w-0 bg-blue-50/70 dark:bg-blue-950/20">
+                <FDBox variant="gradient-simple" radius="2xl" border pad="md" shadow="lg" className="min-w-0">
                     <div className="flex items-center gap-2 text-sm font-black">
                         <MdAdd /> Crea {typeLabel(createDraft.type)}
                     </div>
@@ -203,7 +204,7 @@ export function NavigationResourceInspectorPanel({
             ) : null}
 
             <div className="grid min-h-0 min-w-0 flex-1 gap-4 xl:grid-cols-[minmax(220px,0.78fr)_minmax(0,1.22fr)]">
-                <FDBox radius="2xl" border pad="sm" className="min-h-0 min-w-0 overflow-hidden bg-white/70 dark:bg-neutral-950/30">
+                <FDBox variant="gradient-simple" radius="2xl" border pad="sm" className="min-h-0 min-w-0 overflow-hidden">
                     <input
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
@@ -230,7 +231,7 @@ export function NavigationResourceInspectorPanel({
                     </div>
                 </FDBox>
 
-                <FDBox radius="2xl" border pad="md" className="min-h-0 min-w-0 overflow-auto bg-white/70 dark:bg-neutral-950/30">
+                <FDBox variant="gradient-simple" radius="2xl" border pad="md" className="min-h-0 min-w-0 overflow-auto">
                     {selectedResource ? (
                         <>
                             <div className="mb-4 min-w-0">
