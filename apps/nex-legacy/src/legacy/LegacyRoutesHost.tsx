@@ -1,11 +1,16 @@
-import React, { createElement, useMemo } from "react";
+import React, { Suspense, createElement, useMemo } from "react";
 import { Routes, Route } from "react-router-dom";
 
-export default function LegacyRoutesHost({ routes, permission, userDetails, runtimeManaged = false } : {
-    routes: any[],
-    permission: any,
-    userDetails: any,
-    runtimeManaged?: boolean
+export default function LegacyRoutesHost({
+    routes,
+    userDetails,
+    navigationLoading = false,
+    navigationError = null,
+}: {
+    routes: any[];
+    userDetails: any;
+    navigationLoading?: boolean;
+    navigationError?: string | null;
 }) {
     const getRoutes = (allRoutes: any[]): (JSX.Element | null)[] => {
         return allRoutes.flatMap((route) => {
@@ -30,22 +35,33 @@ export default function LegacyRoutesHost({ routes, permission, userDetails, runt
         });
     };
 
-    const allowedRoutes = useMemo(() => {
-        if (!userDetails) return null;
+    const routeElements = useMemo(() => {
+        if (!userDetails || navigationLoading || navigationError) return null;
+        return (
+            <Suspense fallback={<div className="min-h-[60vh] px-6 py-8 text-sm text-neutral-600 dark:text-neutral-300">Caricamento modulo...</div>}>
+                <Routes>{getRoutes(routes)}</Routes>
+            </Suspense>
+        );
+    }, [routes, userDetails, navigationLoading, navigationError]);
 
-        const resolved = runtimeManaged
-            ? routes
-            : permission.RouteToShow(
-                userDetails.ruolo,
-                routes,
-                userDetails.username,
-                userDetails.permissions
-            )?.Data;
+    if (navigationLoading) {
+        return (
+            <div className="min-h-[60vh] px-6 py-8 text-sm text-neutral-600 dark:text-neutral-300">
+                Caricamento navigazione...
+            </div>
+        );
+    }
 
-        if (!resolved) return null;
+    if (navigationError) {
+        return (
+            <div className="min-h-[60vh] px-6 py-8">
+                <div className="max-w-xl rounded-2xl border border-amber-300/60 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-100">
+                    <div className="font-semibold">Navigazione non disponibile</div>
+                    <div className="mt-1 opacity-80">{navigationError}</div>
+                </div>
+            </div>
+        );
+    }
 
-        return <Routes>{getRoutes(resolved)}</Routes>;
-    }, [routes, permission, userDetails, runtimeManaged]);
-
-    return allowedRoutes;
+    return routeElements;
 }

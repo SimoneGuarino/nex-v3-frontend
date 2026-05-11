@@ -162,6 +162,8 @@ declare global {
     name: string;
     route?: string;
     icon?: React.ReactNode | string;
+    component?: React.ComponentType<any> | React.LazyExoticComponent<React.ComponentType<any>>;
+    meta?: Record<string, unknown>;
     hide?: boolean;
     nested?: RouteElement[] | NestedRoute;
     type?: "visible" | "nested" | "divider" | "title";

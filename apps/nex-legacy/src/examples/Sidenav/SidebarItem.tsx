@@ -60,12 +60,15 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
                 <Icon className={clsx(active ? "opacity-100" : "opacity-90")}>{icon}</Icon>
             ) : (<>
                 {isNew ? <MdOutlineFiberNewIcon size={25} className="mr-2 rounded-md text-red-500 dark:text-red-400  bg-red-200/30 dark:bg-red-800/20" /> : null}
-                <span
-                    className={`inline-flex items-center h-[25px] 
-                        ${active ? "text-sky-600 dark:text-red-700" : "text-gray-400 dark:text-neutral-600"}`}
-                >
-                    {createElement(icon as React.ElementType)}
-                </span></>
+                {icon ? (
+                    <span
+                        className={`inline-flex items-center h-[25px] 
+                            ${active ? "text-sky-600 dark:text-red-700" : "text-gray-400 dark:text-neutral-600"}`}
+                    >
+                        {createElement(icon as React.ElementType)}
+                    </span>
+                ) : null}
+            </>
             )}
         </ListItemIcon>
     ), [icon, active, darkMode, isNew]);

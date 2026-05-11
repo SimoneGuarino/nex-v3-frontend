@@ -2,23 +2,23 @@ import LegacyRoutesHost from "../legacy/LegacyRoutesHost";
 
 export default function ShellRouteHost({
     routes,
-    permission,
     userDetails,
-    runtimeManaged = false,
+    navigationLoading = false,
+    navigationError = null,
 }: {
     routes: any[];
-    permission: any;
     userDetails: any;
-    runtimeManaged?: boolean;
+    navigationLoading?: boolean;
+    navigationError?: string | null;
 }) {
     if (!userDetails) return null;
 
     return (
         <LegacyRoutesHost
             routes={routes}
-            permission={permission}
             userDetails={userDetails}
-            runtimeManaged={runtimeManaged}
+            navigationLoading={navigationLoading}
+            navigationError={navigationError}
         />
     );
 }

@@ -25,6 +25,7 @@ import type { CanvasPoint, NavigationResource, ObjectIdString } from "../model/t
 import type { CanvasMode } from "./OrganizationCanvas";
 import { useCanvasSelection } from "../engine/canvas/useCanvasSelection";
 import { normalizeCanvasPoint, normalizeCanvasPositions } from "../engine/canvas/layout";
+import { renderNavigationIcon } from "../engine/icons/navigationIconCatalog";
 
 interface Props {
     resources: NavigationResource[];
@@ -150,10 +151,12 @@ function reconcileOrphanLayoutPositions(
     }, {});
 }
 
-function resourceIcon(type: string) {
-    if (type === "GROUP") return <MdFolder />;
-    if (type === "ACTION") return <MdBolt />;
-    if (type === "DATA_SCOPE") return <MdDataObject />;
+function resourceIcon(resource: NavigationResource) {
+    const customIcon = renderNavigationIcon(resource.context?.presentation?.icon ?? resource.meta?.icon, "h-[20px] w-[20px]");
+    if (customIcon) return customIcon;
+    if (resource.type === "GROUP") return <MdFolder />;
+    if (resource.type === "ACTION") return <MdBolt />;
+    if (resource.type === "DATA_SCOPE") return <MdDataObject />;
     return <MdArticle />;
 }
 
@@ -639,7 +642,7 @@ const ResourceNode = memo(function ResourceNode({ nodeRef, resource, point, sele
                     className={cx("flex w-full items-start gap-3 p-4 text-left", cursorClass)}
                 >
                     <span className={cx("mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-xl text-white", resourceTone(resource.type))}>
-                        {resourceIcon(resource.type)}
+                        {resourceIcon(resource)}
                     </span>
                     <span className="min-w-0 flex-1">
                         <span className="block truncate text-base font-black tracking-tight text-neutral-900 dark:text-neutral-100">{resource.name}</span>
@@ -652,8 +655,8 @@ const ResourceNode = memo(function ResourceNode({ nodeRef, resource, point, sele
                                 <MdSelectAll /> Selezionato
                             </span>
                         ) : null}
-                        {resource.route ? (
-                            <span className="mt-2 block truncate rounded-xl bg-blue-50 px-2 py-1 text-[0.68rem] font-bold text-blue-700 dark:bg-blue-950/30 dark:text-blue-200">{resource.route}</span>
+                        {(resource.context?.route ?? resource.route) ? (
+                            <span className="mt-2 block truncate rounded-xl bg-blue-50 px-2 py-1 text-[0.68rem] font-bold text-blue-700 dark:bg-blue-950/30 dark:text-blue-200">{resource.context?.route ?? resource.route}</span>
                         ) : (
                             <span className="mt-2 block truncate rounded-xl bg-neutral-100 px-2 py-1 text-[0.68rem] font-bold text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">Contenitore / capability senza route</span>
                         )}

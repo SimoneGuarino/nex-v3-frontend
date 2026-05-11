@@ -1,18 +1,10 @@
-import type { NavigationRuntimeResource } from "./types";
+import type { NavigationRuntimeResource, NavigationResourceContext } from "./types";
+import type { LegacyRouteRegistry, LegacyRouteRegistryEntry } from "./legacyRouteRegistry";
+import { resolveNavigationIcon } from "./navigationIconRegistry";
 
-type StaticRouteIndex = {
-    byKey: Map<string, RouteElement>;
-    byRoute: Map<string, RouteElement>;
-    systemRoutes: RouteElement[];
+type RegistryIndex = {
+    byKey: Map<string, LegacyRouteRegistryEntry>;
 };
-
-const SYSTEM_ROUTE_KEYS = new Set([
-    "dashboard",
-    "sign_in",
-    "profile",
-    "404",
-    "dettagli_quotazione",
-]);
 
 const NAVIGATION_TYPES = new Set(["GROUP", "PANEL"]);
 
@@ -33,34 +25,15 @@ function normalizeRouteKey(value: unknown): string {
     return typeof value === "string" ? value.trim() : "";
 }
 
-function flattenStaticRoutes(routes: RouteElement[], output: RouteElement[] = []): RouteElement[] {
-    for (const route of routes || []) {
-        output.push(route);
-        const nested = Array.isArray(route.nested) ? route.nested : route.nested?.elements;
-        if (Array.isArray(nested)) flattenStaticRoutes(nested, output);
+function buildRegistryIndex(registry: LegacyRouteRegistry): RegistryIndex {
+    const byKey = new Map<string, LegacyRouteRegistryEntry>();
+
+    for (const entry of registry || []) {
+        const key = normalizeRouteKey(entry.key);
+        if (key && !byKey.has(key)) byKey.set(key, entry);
     }
 
-    return output;
-}
-
-function buildStaticRouteIndex(staticRoutes: RouteElement[]): StaticRouteIndex {
-    const byKey = new Map<string, RouteElement>();
-    const byRoute = new Map<string, RouteElement>();
-    const systemRoutes: RouteElement[] = [];
-
-    for (const route of flattenStaticRoutes(staticRoutes)) {
-        const key = normalizeRouteKey(route.key);
-        if (key && !byKey.has(key)) byKey.set(key, route);
-
-        const routePath = normalizeRoutePath(route.route);
-        if (routePath && !byRoute.has(routePath)) byRoute.set(routePath, route);
-
-        if (key && SYSTEM_ROUTE_KEYS.has(key)) {
-            systemRoutes.push(route);
-        }
-    }
-
-    return { byKey, byRoute, systemRoutes };
+    return { byKey };
 }
 
 function sortResources(a: NavigationRuntimeResource, b: NavigationRuntimeResource): number {
@@ -70,68 +43,116 @@ function sortResources(a: NavigationRuntimeResource, b: NavigationRuntimeResourc
     return String(a.name || a.key).localeCompare(String(b.name || b.key), "it");
 }
 
-function findStaticRoute(index: StaticRouteIndex, resource: NavigationRuntimeResource): RouteElement | undefined {
+function getContext(resource: NavigationRuntimeResource): NavigationResourceContext {
+    const context = resource.context && typeof resource.context === "object" ? resource.context : {};
+    const meta = resource.meta && typeof resource.meta === "object" ? resource.meta : {};
+
+    // Backward compatibility for resources created before context existed.
+    return {
+        ...context,
+        route: context.route ?? resource.route,
+        hidden: context.hidden ?? meta.hidden,
+        isNew: context.isNew ?? meta.isNew,
+        redirect: context.redirect ?? meta.redirect,
+        system: context.system ?? meta.system,
+        showWhenEmpty: context.showWhenEmpty ?? meta.showWhenEmpty,
+        public: context.public ?? meta.public,
+        alwaysVisible: context.alwaysVisible ?? meta.alwaysVisible,
+        presentation: {
+            ...(context.presentation || {}),
+            icon: context.presentation?.icon ?? meta.icon,
+        },
+        legacy: {
+            ...(context.legacy || {}),
+            componentKey: context.legacy?.componentKey ?? meta.legacyRouteKey,
+            routeKey: context.legacy?.routeKey ?? meta.legacyRouteKey,
+        },
+    };
+}
+
+function findRegistryEntry(index: RegistryIndex, resource: NavigationRuntimeResource): LegacyRouteRegistryEntry | undefined {
+    const context = getContext(resource);
+
+    const componentKey = normalizeRouteKey(context.legacy?.componentKey || context.legacy?.routeKey);
+    if (componentKey) {
+        const byComponentKey = index.byKey.get(componentKey);
+        if (byComponentKey) return byComponentKey;
+    }
+
     const byKey = index.byKey.get(resource.key);
     if (byKey) return byKey;
-
-    const routePath = normalizeRoutePath(resource.route);
-    if (routePath) return index.byRoute.get(routePath);
 
     return undefined;
 }
 
-function buildPanelRoute(resource: NavigationRuntimeResource, staticRoute: RouteElement | undefined): RouteElement | null {
-    const meta = resource.meta || {};
+function buildPanelRoute(resource: NavigationRuntimeResource, registryEntry: LegacyRouteRegistryEntry | undefined): RouteElement | null {
+    const context = getContext(resource);
 
-    if (!staticRoute?.route || !(staticRoute as any).component) {
+    if (!registryEntry?.component) {
         console.warn(
-            "[legacy-navigation] navigation_resource ignorata: nessun componente statico trovato per il pannello",
-            { key: resource.key, route: resource.route },
+            "[legacy-navigation] navigation_resource ignorata: nessun componente registry trovato per il pannello",
+            { key: resource.key, componentKey: context.legacy?.componentKey, route: context.route },
         );
         return null;
     }
 
-    const runtimeRoute = normalizeRoutePath(resource.route) || normalizeRoutePath(staticRoute.route);
+    const runtimeRoute = normalizeRoutePath(context.route);
+
+    if (!runtimeRoute) {
+        console.warn(
+            "[legacy-navigation] navigation_resource ignorata: route runtime assente nel context",
+            { key: resource.key, componentKey: context.legacy?.componentKey },
+        );
+        return null;
+    }
+
+    const hidden = context.hidden === true;
 
     return {
-        ...staticRoute,
         key: resource.key,
-        name: resource.name || staticRoute.name,
-        route: runtimeRoute || staticRoute.route,
-        type: (meta.hidden === true || (staticRoute as any).type === "hidden") ? ("hidden" as any) : "visible",
-        hide: Boolean(meta.hidden ?? staticRoute.hide),
-        isNew: Boolean(meta.isNew ?? staticRoute.isNew),
-        redirect: typeof meta.redirect === "string" ? meta.redirect : staticRoute.redirect,
+        name: resource.name || registryEntry.key,
+        route: runtimeRoute,
+        type: hidden ? ("hidden" as any) : "visible",
+        hide: hidden,
+        isNew: context.isNew === true,
+        redirect: typeof context.redirect === "string" ? context.redirect : undefined,
+        icon: resolveNavigationIcon(context.presentation?.icon),
+        component: registryEntry.component,
         meta: {
-            ...(staticRoute as any).meta,
             navigationResourceId: resource._id,
             navigationPermission: resource.permission,
             source: "navigation_resources",
+            system: context.system === true,
+            context,
         },
     } as RouteElement;
 }
 
-function buildGroupRoute(resource: NavigationRuntimeResource, staticRoute: RouteElement | undefined, children: RouteElement[]): RouteElement | null {
-    const meta = resource.meta || {};
+function buildGroupRoute(resource: NavigationRuntimeResource, registryEntry: LegacyRouteRegistryEntry | undefined, children: RouteElement[]): RouteElement | null {
+    const context = getContext(resource);
 
-    if (children.length === 0 && meta.showWhenEmpty !== true) return null;
+    if (children.length === 0 && context.showWhenEmpty !== true) return null;
 
-    const runtimeRoute = normalizeRoutePath(resource.route) || normalizeRoutePath(staticRoute?.route);
+    const runtimeRoute = normalizeRoutePath(context.route);
+    const hidden = context.hidden === true;
 
     return {
-        ...(staticRoute || {}),
         key: resource.key,
-        name: resource.name || staticRoute?.name || resource.key,
-        route: runtimeRoute || staticRoute?.route || undefined,
-        type: "nested",
-        icon: staticRoute?.icon,
-        component: (staticRoute as any)?.component,
+        name: resource.name || registryEntry?.key || resource.key,
+        route: runtimeRoute || undefined,
+        type: hidden ? ("hidden" as any) : "nested",
+        hide: hidden,
+        isNew: context.isNew === true,
+        redirect: typeof context.redirect === "string" ? context.redirect : undefined,
+        icon: resolveNavigationIcon(context.presentation?.icon),
+        component: registryEntry?.component,
         nested: { elements: children },
         meta: {
-            ...((staticRoute as any)?.meta || {}),
             navigationResourceId: resource._id,
             navigationPermission: resource.permission,
             source: "navigation_resources",
+            system: context.system === true,
+            context,
         },
     } as RouteElement;
 }
@@ -152,9 +173,9 @@ function uniqueRoutesByKey(routes: RouteElement[]): RouteElement[] {
 
 export function buildLegacyRoutesFromNavigationResources(args: {
     resources: NavigationRuntimeResource[];
-    staticRoutes: RouteElement[];
+    registry: LegacyRouteRegistry;
 }): RouteElement[] {
-    const index = buildStaticRouteIndex(args.staticRoutes);
+    const index = buildRegistryIndex(args.registry);
 
     const activeResources = (args.resources || [])
         .filter((resource) => resource?.status !== "DISABLED")
@@ -162,10 +183,8 @@ export function buildLegacyRoutesFromNavigationResources(args: {
         .sort(sortResources);
 
     const byParentKey = new Map<string, NavigationRuntimeResource[]>();
-    const byKey = new Map<string, NavigationRuntimeResource>();
 
     for (const resource of activeResources) {
-        byKey.set(resource.key, resource);
         const parentKey = normalizeRouteKey(resource.parentKey);
         const values = byParentKey.get(parentKey) || [];
         values.push(resource);
@@ -182,19 +201,19 @@ export function buildLegacyRoutesFromNavigationResources(args: {
                 continue;
             }
 
-            const staticRoute = findStaticRoute(index, child);
+            const registryEntry = findRegistryEntry(index, child);
 
             if (child.type === "GROUP") {
                 const nextVisiting = new Set(visiting);
                 nextVisiting.add(child.key);
                 const nestedChildren = buildChildren(child.key, nextVisiting);
-                const groupRoute = buildGroupRoute(child, staticRoute, nestedChildren);
+                const groupRoute = buildGroupRoute(child, registryEntry, nestedChildren);
                 if (groupRoute) output.push(groupRoute);
                 continue;
             }
 
             if (child.type === "PANEL") {
-                const panelRoute = buildPanelRoute(child, staticRoute);
+                const panelRoute = buildPanelRoute(child, registryEntry);
                 if (panelRoute) output.push(panelRoute);
             }
         }
@@ -202,12 +221,5 @@ export function buildLegacyRoutesFromNavigationResources(args: {
         return output;
     };
 
-    const rootRoutes = buildChildren("");
-
-    // Preserve non-menu/system routes required by the legacy router. These are not
-    // the source of the side-nav anymore, but they keep deep links and detail pages alive
-    // while navigation_resources progressively becomes the canonical navigation registry.
-    const systemRoutes = index.systemRoutes.map((route) => ({ ...route }));
-
-    return uniqueRoutesByKey([...rootRoutes, ...systemRoutes]);
+    return uniqueRoutesByKey(buildChildren(""));
 }

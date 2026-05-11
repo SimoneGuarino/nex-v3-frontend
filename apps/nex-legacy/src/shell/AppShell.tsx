@@ -19,7 +19,9 @@ export default function AppShell({
     sidenavColor,
     darkMode,
     routes,
-    navigationRuntimeManaged = false,
+    navigationRuntimeManaged = true,
+    navigationLoading = false,
+    navigationError = null,
     children,
 }: any) {
     const activeTheme = darkMode ? themeDark : theme;
@@ -55,6 +57,8 @@ export default function AppShell({
                             brandName="Focelda Dashboard"
                             routes={routes}
                             runtimeManaged={navigationRuntimeManaged}
+                            navigationLoading={navigationLoading}
+                            navigationError={navigationError}
                         />
                         {window.location.href
                             .split("/")

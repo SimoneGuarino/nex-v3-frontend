@@ -43,6 +43,8 @@ type SidenavProps = {
     brandName: string;
     routes: RouteElement[];
     runtimeManaged?: boolean;
+    navigationLoading?: boolean;
+    navigationError?: string | null;
     [key: string]: any;
 };
 
@@ -109,7 +111,7 @@ const RenderedRoutes = memo(function RenderedRoutes({
     );
 });
 
-function Sidenav({ color = "info", brand = "", brandName, routes, runtimeManaged = false, ...rest }: SidenavProps) {
+function Sidenav({ color = "info", brand = "", brandName, routes, runtimeManaged = true, navigationLoading = false, navigationError = null, ...rest }: SidenavProps) {
     const [userContext, setUserContext] = useContext(UserContext) as [
         UserState | null,
         React.Dispatch<React.SetStateAction<UserState | null>>
@@ -155,15 +157,17 @@ function Sidenav({ color = "info", brand = "", brandName, routes, runtimeManaged
     }, [isMobile, dispatch]);
 
 
-    // calcolo delle route permesse UNA sola volta quando cambiano user/routes
+    // Navigation is now owned by navigation_resources.
+    // Fail closed: never render the legacy static routes while the runtime navigation is loading/failing.
     const filteredRoutes = useMemo(() => {
         const details = userContext?.details;
-        if (!details) return [];
+        if (!details || navigationLoading || navigationError) return [];
 
         if (runtimeManaged) {
             return routes;
         }
 
+        // Development-only legacy fallback path. Production should always use runtimeManaged=true.
         const result = Permission.RouteToShow(
             details.ruolo,
             routes,
@@ -172,7 +176,7 @@ function Sidenav({ color = "info", brand = "", brandName, routes, runtimeManaged
         );
 
         return (result?.Data as RouteElement[] | undefined) ?? [];
-    }, [userContext?.details, routes, runtimeManaged]);
+    }, [userContext?.details, routes, runtimeManaged, navigationLoading, navigationError]);
 
 
 
@@ -231,11 +235,27 @@ function Sidenav({ color = "info", brand = "", brandName, routes, runtimeManaged
                     style={{ flexBasis: "100%" }}
                     translate="no"
                 >
-                    <RenderedRoutes
-                        collapseName={collapseName}
-                        miniSidenav={miniSidenav}
-                        filteredRoutes={filteredRoutes}
-                    />
+                    {navigationLoading ? (
+                        <div className="space-y-3 px-4 py-3" aria-label="Caricamento navigazione">
+                            {Array.from({ length: 6 }).map((_, index) => (
+                                <div
+                                    key={index}
+                                    className="h-10 animate-pulse rounded-xl bg-neutral-200/80 dark:bg-neutral-800/80"
+                                />
+                            ))}
+                        </div>
+                    ) : navigationError ? (
+                        <div className="mx-3 my-4 rounded-xl border border-amber-300/50 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-100">
+                            <div className="font-semibold">Navigazione non disponibile</div>
+                            {!miniSidenav && <div className="mt-1 opacity-80">{navigationError}</div>}
+                        </div>
+                    ) : (
+                        <RenderedRoutes
+                            collapseName={collapseName}
+                            miniSidenav={miniSidenav}
+                            filteredRoutes={filteredRoutes}
+                        />
+                    )}
                 </List>
 
                 <SideNavFooter menuRef={menuRef} setMenuRole={setMenuRole} />

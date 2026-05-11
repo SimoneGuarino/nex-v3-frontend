@@ -617,12 +617,13 @@ export function useAccessBuilderState() {
             key,
             type: input.type || "PANEL",
             name: input.name,
-            route: input.type === "PANEL" ? (input.route || "") : (input.route || ""),
+            route: "",
             parentKey: input.parentKey ?? null,
             permission: input.permission || defaultNavigationPermission(input.type || "PANEL", key),
             order,
             status: input.status || "ACTIVE",
             meta: input.meta || {},
+            context: input.context || {},
         };
 
         setSnapshot((current) => current ? {

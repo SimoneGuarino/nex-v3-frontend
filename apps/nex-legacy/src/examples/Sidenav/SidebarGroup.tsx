@@ -3,12 +3,9 @@ import Collapse from "@mui/material/Collapse";
 import List from "@mui/material/List";
 import { NavLink } from "react-router-dom";
 import SidebarItem from "./SidebarItem";
-import PermissionMoudle from "../../classes/permission";
-import { useUserContext } from "context/UserContext";
 import { IoIosArrowUp } from "react-icons/io";
 import { IoChevronForwardOutline } from "react-icons/io5";
 
-const Permission = new PermissionMoudle();
 
 const IconsArrowUp = IoIosArrowUp as React.FC<{ size?: number; className?: string, style?: React.CSSProperties }>;
 const ChevronRightIcon = IoChevronForwardOutline as React.FC<{ size?: number, className?: string, style?: React.CSSProperties }>;
@@ -28,7 +25,6 @@ export default function SidebarGroup({
     collapseName,
     items,
 }: SidebarGroupProps) {
-    const [userContext] = useUserContext();
     const children = useMemo<RouteElement[]>(
         () => (Array.isArray(items) ? items.filter((e) => e.hide !== true) : []),
         [items]
@@ -61,18 +57,6 @@ export default function SidebarGroup({
             <Collapse in={open} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
                     {children.map((data) => {
-                        const details = userContext?.details;
-                        if (!details) return null;
-
-                        const res = Permission.RouteToShow(
-                            details.ruolo,
-                            [data],
-                            details.username,
-                            details.permissions
-                        );
-                        const allowed: RouteElement[] = Array.isArray(res?.Data) ? res!.Data : [];
-                        if (allowed.length === 0) return null;
-
                         const active =
                             collapseName !== ""
                                 ? `${collapseKey}/${data.key}` === collapseName

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { FDBox, FDButton } from "@nex/fd-ui";
 import { MdAdd, MdBolt, MdFolder, MdRoute } from "react-icons/md";
-import type { NavigationResource, NavigationResourceCreatePayload, NavigationResourcePatch, ResourceType } from "../model/types";
+import type { NavigationResource, NavigationResourceCreatePayload, NavigationResourcePatch, ResourceType, NavigationResourceIconSpec, NavigationResourceContext } from "../model/types";
+import { NAVIGATION_ICON_CATALOG, normalizeNavigationIconSpec, renderNavigationIcon } from "../engine/icons/navigationIconCatalog";
 
 interface Props {
     resources: NavigationResource[];
@@ -37,18 +38,43 @@ function defaultPermission(type: ResourceType, key: string): string {
     return safeKey.includes(".") ? safeKey : `action.${safeKey}`;
 }
 
+function buildRuntimeContext(resource: NavigationResource | null, fallbackType: ResourceType = "PANEL"): NavigationResourceContext {
+    const context: NavigationResourceContext = resource?.context && typeof resource.context === "object" ? resource.context : {};
+    const meta: any = resource?.meta && typeof resource.meta === "object" ? resource.meta : {};
+
+    return {
+        ...context,
+        route: context.route ?? resource?.route ?? (fallbackType === "PANEL" ? "/legacy/" : ""),
+        presentation: {
+            ...(context.presentation || {}),
+            icon: context.presentation?.icon ?? meta.icon ?? null,
+        },
+        legacy: {
+            ...(context.legacy || {}),
+            componentKey: context.legacy?.componentKey ?? meta.legacyRouteKey ?? resource?.key,
+            routeKey: context.legacy?.routeKey ?? meta.legacyRouteKey,
+        },
+        hidden: context.hidden ?? meta.hidden ?? false,
+        isNew: context.isNew ?? meta.isNew ?? false,
+        redirect: context.redirect ?? meta.redirect ?? "",
+        system: context.system ?? meta.system ?? false,
+        showWhenEmpty: context.showWhenEmpty ?? meta.showWhenEmpty ?? false,
+    };
+}
+
 function createDraftFrom(resource: NavigationResource | null): NavigationResourcePatch {
     return {
         appId: resource?.appId ?? "legacy",
         key: resource?.key ?? "",
         type: resource?.type ?? "PANEL",
         name: resource?.name ?? "",
-        route: resource?.route ?? "",
+        route: "",
         parentKey: resource?.parentKey ?? null,
         permission: resource?.permission ?? "",
         order: resource?.order ?? 0,
         status: resource?.status ?? "ACTIVE",
         meta: resource?.meta ?? {},
+        context: buildRuntimeContext(resource, resource?.type ?? "PANEL"),
     };
 }
 
@@ -58,12 +84,21 @@ function createEmptyDraft(type: ResourceType, resourcesCount: number, parentKey:
         key: "",
         type,
         name: "",
-        route: type === "PANEL" ? "/legacy/" : "",
+        route: "",
         parentKey,
         permission: "",
         order: resourcesCount * 10 + 10,
         status: "ACTIVE",
         meta: {},
+        context: {
+            route: type === "PANEL" ? "/legacy/" : "",
+            hidden: false,
+            isNew: false,
+            system: false,
+            showWhenEmpty: false,
+            presentation: { icon: null },
+            legacy: { componentKey: "" },
+        },
     };
 }
 
@@ -79,14 +114,45 @@ function typeLabel(type: ResourceType | undefined) {
     return "Resource";
 }
 
+function mergeContext(context: NavigationResourcePatch["context"], patch: Partial<NavigationResourceContext>): NavigationResourceContext {
+    return {
+        ...(context || {}),
+        ...patch,
+        presentation: {
+            ...((context || {}).presentation || {}),
+            ...(patch.presentation || {}),
+        },
+        legacy: {
+            ...((context || {}).legacy || {}),
+            ...(patch.legacy || {}),
+        },
+    };
+}
+
+function mergeContextIcon(context: NavigationResourcePatch["context"], icon: NavigationResourceIconSpec | null): NavigationResourceContext {
+    const next = mergeContext(context, { presentation: { ...((context || {}).presentation || {}) } });
+    next.presentation = { ...(next.presentation || {}) };
+    if (icon) next.presentation.icon = icon;
+    else delete next.presentation.icon;
+    return next;
+}
+
 function normalizedCreateDraft(draft: NavigationResourceCreatePayload): NavigationResourceCreatePayload {
     const key = slugify(draft.key || draft.name);
     const type = draft.type || "PANEL";
+    const context = mergeContext(draft.context, {
+        route: type === "PANEL" ? (draft.context?.route || "/legacy/") : (draft.context?.route || ""),
+        legacy: {
+            componentKey: draft.context?.legacy?.componentKey || key,
+        },
+    });
+
     return {
         ...draft,
         key,
         type,
-        route: type === "PANEL" ? (draft.route || "/legacy/") : (draft.route || ""),
+        route: "",
+        context,
         permission: draft.permission?.trim() || defaultPermission(type, key),
     };
 }
@@ -116,7 +182,7 @@ export function NavigationResourceInspectorPanel({
             .sort((a, b) => (a.appId || "").localeCompare(b.appId || "") || (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name))
             .filter((resource) => {
                 if (!normalized) return true;
-                return `${resource.appId} ${resource.key} ${resource.type} ${resource.name} ${resource.route ?? ""} ${resource.permission}`.toLowerCase().includes(normalized);
+                return `${resource.appId} ${resource.key} ${resource.type} ${resource.name} ${resource.context?.route ?? resource.route ?? ""} ${resource.permission}`.toLowerCase().includes(normalized);
             })
             .slice(0, 250);
     }, [query, resources]);
@@ -289,8 +355,13 @@ function ResourceForm({ value, parentOptions, onChange }: { value: NavigationRes
             <Field label="Key">
                 <input className="w-full min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-blue-500 dark:border-neutral-800 dark:bg-neutral-900" value={value.key ?? ""} onChange={(event) => onChange({ key: event.target.value })} />
             </Field>
-            <Field label="Route">
-                <input className="w-full min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-blue-500 dark:border-neutral-800 dark:bg-neutral-900" value={value.route ?? ""} onChange={(event) => onChange({ route: event.target.value })} placeholder={value.type === "GROUP" ? "Vuoto per gruppi contenitore" : "/legacy/..."} />
+            <Field label="Runtime route">
+                <input
+                    className="w-full min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-blue-500 dark:border-neutral-800 dark:bg-neutral-900"
+                    value={value.context?.route ?? ""}
+                    onChange={(event) => onChange({ context: mergeContext(value.context, { route: event.target.value }) })}
+                    placeholder={value.type === "GROUP" ? "Vuoto per gruppi contenitore" : "/legacy/..."}
+                />
             </Field>
             <Field label="Permission">
                 <input className="w-full min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-blue-500 dark:border-neutral-800 dark:bg-neutral-900" value={value.permission ?? ""} onChange={(event) => onChange({ permission: event.target.value })} />
@@ -310,7 +381,118 @@ function ResourceForm({ value, parentOptions, onChange }: { value: NavigationRes
                     <option value="DISABLED">DISABLED</option>
                 </select>
             </Field>
+            <Field label="Component key">
+                <input
+                    className="w-full min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-blue-500 dark:border-neutral-800 dark:bg-neutral-900"
+                    value={value.context?.legacy?.componentKey ?? ""}
+                    onChange={(event) => onChange({ context: mergeContext(value.context, { legacy: { componentKey: event.target.value } }) })}
+                    placeholder="Es. quotazioni"
+                />
+            </Field>
+            <Field label="Redirect">
+                <input
+                    className="w-full min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-blue-500 dark:border-neutral-800 dark:bg-neutral-900"
+                    value={value.context?.redirect ?? ""}
+                    onChange={(event) => onChange({ context: mergeContext(value.context, { redirect: event.target.value }) })}
+                    placeholder="https://... oppure vuoto"
+                />
+            </Field>
+            <div className="sm:col-span-2 grid gap-2 rounded-2xl border border-neutral-200 bg-white/60 p-3 dark:border-neutral-800 dark:bg-neutral-950/30 sm:grid-cols-2 xl:grid-cols-4">
+                <BooleanOption label="Nascosto dalla side-nav" checked={value.context?.hidden === true} onChange={(checked) => onChange({ context: mergeContext(value.context, { hidden: checked }) })} />
+                <BooleanOption label="Badge Nuovo" checked={value.context?.isNew === true} onChange={(checked) => onChange({ context: mergeContext(value.context, { isNew: checked }) })} />
+                <BooleanOption label="Route di sistema" checked={value.context?.system === true} onChange={(checked) => onChange({ context: mergeContext(value.context, { system: checked }) })} />
+                <BooleanOption label="Mostra anche se vuoto" checked={value.context?.showWhenEmpty === true} onChange={(checked) => onChange({ context: mergeContext(value.context, { showWhenEmpty: checked }) })} />
+            </div>
+            <div className="sm:col-span-2">
+                <IconPicker
+                    value={value.context?.presentation?.icon ?? null}
+                    onChange={(icon) => onChange({ context: mergeContextIcon(value.context, icon) })}
+                />
+            </div>
         </div>
+    );
+}
+
+function IconPicker({ value, onChange }: { value: unknown; onChange: (icon: NavigationResourceIconSpec | null) => void }) {
+    const [query, setQuery] = useState("");
+    const selected = normalizeNavigationIconSpec(value);
+    const selectedKey = selected ? `${selected.pack}:${selected.name}` : "";
+    const normalizedQuery = query.trim().toLowerCase();
+
+    const options = useMemo(() => {
+        return NAVIGATION_ICON_CATALOG
+            .filter((icon) => {
+                if (!normalizedQuery) return true;
+                return `${icon.pack} ${icon.name} ${icon.label} ${icon.keywords.join(" ")}`.toLowerCase().includes(normalizedQuery);
+            })
+            .slice(0, 72);
+    }, [normalizedQuery]);
+
+    return (
+        <div className="min-w-0 rounded-2xl border border-neutral-200 bg-white/70 p-3 dark:border-neutral-800 dark:bg-neutral-950/40">
+            <div className="mb-2 flex min-w-0 items-center justify-between gap-2">
+                <div className="min-w-0">
+                    <div className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-neutral-500">Icona navigation</div>
+                    <div className="mt-0.5 truncate text-xs font-semibold text-neutral-500">Salvata in navigation_resources.context.presentation.icon</div>
+                </div>
+                {selected ? (
+                    <button
+                        type="button"
+                        className="rounded-xl px-2 py-1 text-xs font-black text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                        onClick={() => onChange(null)}
+                    >
+                        Rimuovi
+                    </button>
+                ) : null}
+            </div>
+            <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Cerca icona react-icons..."
+                className="mb-3 w-full min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-blue-500 dark:border-neutral-800 dark:bg-neutral-900"
+            />
+            <div className="grid max-h-[260px] grid-cols-2 gap-2 overflow-auto pr-1 sm:grid-cols-3 xl:grid-cols-4">
+                {options.map((icon) => {
+                    const key = `${icon.pack}:${icon.name}`;
+                    const active = key === selectedKey;
+                    return (
+                        <button
+                            key={key}
+                            type="button"
+                            onClick={() => onChange({ pack: icon.pack, name: icon.name })}
+                            className={cx(
+                                "flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-left text-xs font-bold transition",
+                                active
+                                    ? "border-blue-500 bg-blue-50 text-blue-900 dark:bg-blue-950/40 dark:text-blue-100"
+                                    : "border-neutral-200 bg-white hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:bg-neutral-800",
+                            )}
+                        >
+                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-neutral-100 text-lg dark:bg-neutral-800">
+                                {renderNavigationIcon({ pack: icon.pack, name: icon.name })}
+                            </span>
+                            <span className="min-w-0">
+                                <span className="block truncate">{icon.label}</span>
+                                <span className="block truncate text-[0.63rem] uppercase tracking-[0.12em] text-neutral-500">{key}</span>
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+function BooleanOption({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
+    return (
+        <label className="flex items-center gap-2 rounded-xl px-2 py-1 text-xs font-bold text-neutral-700 dark:text-neutral-200">
+            <input
+                type="checkbox"
+                checked={checked}
+                onChange={(event) => onChange(event.target.checked)}
+                className="h-4 w-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>{label}</span>
+        </label>
     );
 }
 

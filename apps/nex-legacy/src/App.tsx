@@ -1,10 +1,8 @@
 import { useContext, useState, useMemo, useRef } from "react";
 
 import { UserContext } from "./context/UserContext";
-import routes from "routes";
 import { useMaterialUIController } from "context";
 import { useGSettingsContext } from "./context/GSettingsContext";
-import PermissionMoudle from './classes/permission';
 import { useGeneralDataContext } from "context/GeneralDataContext";
 import AppShell from "./shell/AppShell";
 import AppRuntimeEffects from "./runtime/AppRuntimeEffects";
@@ -15,8 +13,7 @@ import ShellRouteHost from "shell/ShellRouteHost";
 import LegacyRealtimeAdapter from "./runtime/LegacyRealtimeAdapter";
 import { useNexTheme } from "@nex/theme-system";
 import { useLegacyNavigationRoutes } from "runtime/navigation/useLegacyNavigationRoutes";
-
-const Permission = new PermissionMoudle();
+import legacyRouteRegistry from "runtime/navigation/legacyRouteRegistry";
 
 export default function App() {
     const { preferences } = useNexTheme();
@@ -42,14 +39,14 @@ export default function App() {
     useExternalScriptBootstrap();
 
     const navigationRuntime = useLegacyNavigationRoutes({
-        staticRoutes: routes,
+        registry: legacyRouteRegistry,
         userDetails: userContext?.details,
         tenant: "Focelda",
         appId: "legacy",
     });
 
     const effectiveRoutes = navigationRuntime.routes;
-    const navigationRuntimeManaged = navigationRuntime.source === "navigation-resources";
+    const navigationRuntimeManaged = true;
 
     const shellContent = useMemo(() => {
         if (!userContext?.details) return null;
@@ -57,12 +54,12 @@ export default function App() {
         return (
             <ShellRouteHost
                 routes={effectiveRoutes}
-                permission={Permission}
                 userDetails={userContext.details}
-                runtimeManaged={navigationRuntimeManaged}
+                navigationLoading={navigationRuntime.loading}
+                navigationError={navigationRuntime.error}
             />
         );
-    }, [userContext, effectiveRoutes, navigationRuntimeManaged]);
+    }, [userContext, effectiveRoutes, navigationRuntime.loading, navigationRuntime.error]);
 
     return (
         <AppRuntimeEffects
@@ -93,6 +90,8 @@ export default function App() {
                 darkMode={darkMode}
                 routes={effectiveRoutes}
                 navigationRuntimeManaged={navigationRuntimeManaged}
+                navigationLoading={navigationRuntime.loading}
+                navigationError={navigationRuntime.error}
             >
                 {shellContent}
             </AppShell>

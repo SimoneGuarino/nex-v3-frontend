@@ -225,6 +225,50 @@ export interface PermissionGrant {
   sourceGroupId?: ObjectIdString;
 }
 
+export interface NavigationResourceIconSpec {
+  pack: string;
+  name: string;
+}
+
+export interface NavigationResourceContext {
+  /** Runtime path used by the target microfrontend. Example: /legacy/commerciale/quotazioni. */
+  route?: string;
+  /** Keep the resource routable but hidden from side navigation. */
+  hidden?: boolean;
+  /** Sidebar/new badge hint. */
+  isNew?: boolean;
+  /** Optional hard redirect URL. */
+  redirect?: string;
+  /** System/core route. Still data-driven and editable through the builder. */
+  system?: boolean;
+  /** Allow empty container groups to remain visible. */
+  showWhenEmpty?: boolean;
+  /** Backend may treat public/alwaysVisible as cap bypass for selected resources. */
+  public?: boolean;
+  alwaysVisible?: boolean;
+  presentation?: {
+    icon?: NavigationResourceIconSpec | string | null;
+    badge?: string | null;
+    tone?: string | null;
+  };
+  legacy?: {
+    /** Technical component key in the target MFE registry. */
+    componentKey?: string;
+    routeKey?: string;
+  };
+  [key: string]: unknown;
+}
+
+export interface NavigationResourceMeta {
+  description?: string;
+  source?: string;
+  /** @deprecated Use context.legacy.componentKey. */
+  legacyRouteKey?: string;
+  /** @deprecated Use context.presentation.icon. */
+  icon?: NavigationResourceIconSpec | string | null;
+  [key: string]: unknown;
+}
+
 export interface NavigationResource {
   _id: ObjectIdString;
   tenant: TenantKey;
@@ -232,12 +276,14 @@ export interface NavigationResource {
   key: string;
   type: ResourceType;
   name: string;
+  /** @deprecated Use context.route. Kept for backward compatibility during migration. */
   route?: string;
   parentKey?: string | null;
   permission: string;
   order?: number;
   status: "ACTIVE" | "DISABLED";
-  meta?: Record<string, unknown>;
+  meta?: NavigationResourceMeta;
+  context?: NavigationResourceContext;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -247,12 +293,14 @@ export interface NavigationResourcePatch {
   key?: string;
   type?: ResourceType;
   name?: string;
+  /** @deprecated Use context.route. */
   route?: string;
   parentKey?: string | null;
   permission?: string;
   order?: number;
   status?: "ACTIVE" | "DISABLED";
-  meta?: Record<string, unknown>;
+  meta?: NavigationResourceMeta;
+  context?: NavigationResourceContext;
 }
 
 export interface NavigationResourceCreatePayload extends NavigationResourcePatch {
