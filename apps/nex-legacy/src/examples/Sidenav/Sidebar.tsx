@@ -27,15 +27,9 @@ import SidebarContainer from "./SidebarContainer";
 import { useResponsiveSidebar } from "./useResponsiveSidebar";
 import SidebarItem from "./SidebarItem";
 import SidebarGroup from "./SidebarGroup";
-import { ContextMenu } from "components/UI/menu/ContextMenu";
-
-import { AiOutlineUser } from "react-icons/ai";
-import { ChangeSessionRole } from "classes/log-out";
 import { useNexTheme } from "@nex/theme-system";
 
 const Permission = new PermissionMoudle();
-
-const UserIcon = AiOutlineUser as React.FC<{ size?: number; className?: string }>;
 
 type SidenavProps = {
     color?: "primary" | "secondary" | "info" | "success" | "warning" | "error" | "dark" | "purple";
@@ -261,22 +255,6 @@ function Sidenav({ color = "info", brand = "", brandName, routes, runtimeManaged
                 <SideNavFooter menuRef={menuRef} setMenuRole={setMenuRole} />
             </SidebarContainer>
 
-            {userContext && userContext.details && userContext.details.multiRuolo &&
-                Array.isArray(userContext.details.multiRuolo) &&
-                userContext.details.multiRuolo.length > 0 && <ContextMenu
-                    openFor={menuRole}
-                    pos={menuRef}
-                    onClose={() => setMenuRole(false)}
-                    menuButtons={
-                        userContext.details.multiRuolo.map((role: { ruolo: string; descrizione: string }) => ({
-                            title: role.ruolo,
-                            icon: <UserIcon size={16} />,
-                            onClick: () => userContext?.details?.ruolo !== role.ruolo && ChangeSessionRole({ userContext, setUserContext, abortController, role_: role.ruolo, loadStatus, ChangeLoadStatus }),
-                            className: `${userContext?.details?.ruolo === role.ruolo ?
-                                "bg-neutral-700 hover:bg-neutral-600 active:bg-neutral-600 focus:bg-neutral-600 text-white" : ""}`
-                        }))}
-                />
-            }
 
             <Tooltip
                 id="general-sidenav-tooltip"

@@ -57,7 +57,13 @@ export interface NavigationRuntimeResource {
 export interface NavigationRuntimeResponse {
     tenant: string;
     appId: string;
-    actorRole: number;
+    /** @deprecated numeric role context. Use actorTeamKey/activeGroupKey. */
+    actorRole?: number | null;
+    actorTeamKey?: string | null;
+    activeGroupKey?: string | null;
+    activeGroupId?: string | null;
+    defaultGroupContextId?: string | null;
+    groupContexts?: Array<Record<string, unknown>>;
     version: string;
     caps: string[];
     resources: NavigationRuntimeResource[];

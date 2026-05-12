@@ -40,7 +40,7 @@ import { useGeneralDataContext } from "context/GeneralDataContext";
 import { CheckAdminPermissions } from "utils/index";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import { UserInfo } from "./components/userInfo";
-import { ChangeSessionRole } from "classes/log-out";
+import { ChangeSessionGroupContext } from "classes/log-out";
 import { OnlineUsers } from "examples/Navbars/components/usersOnline";
 import FDButton from "components/UI/buttons/FDButton";
 import { AIContext } from "context/AIContext";
@@ -300,6 +300,11 @@ const DashboardNavbar: FC<DashboardNavbarProps> = ({
     }, [userContext, abortController]);
 
 
+    const groupContexts = Array.isArray(userContext?.details?.authz?.groupContexts)
+        ? userContext.details.authz.groupContexts
+        : [];
+    const activeGroupId = userContext?.details?.authz?.activeGroupId ?? null;
+
     // ----------------------------------------
     // CONTEXT USER MENU
     // ----------------------------------------
@@ -340,31 +345,37 @@ const DashboardNavbar: FC<DashboardNavbarProps> = ({
             onClick: () => navigate('/profile'),
         },
         {
-            title: 'Cambia ruolo',
+            title: 'Cambia team',
             icon: <DiamondIcon size={20} />,
-            hide: !(userContext && userContext.details && userContext.details.multiRuolo &&
-                Array.isArray(userContext.details.multiRuolo) &&
-                userContext.details.multiRuolo.length > 0),
+            hide: groupContexts.length <= 1,
             childrenMenu: [
                 {
                     component: (
-                        <div className="flex flex-col items-start gap-2">
-                            {userContext?.details?.multiRuolo.map((role: { ruolo: string; descrizione: string }) => (
-                                <FDButton
-                                    key={role.ruolo}
-                                    variant="ghost"
-                                    color="primary"
-                                    icon={<UserIcon size={16} />}
-                                    className={
-                                        `${userContext?.details?.ruolo === role.ruolo ?
-                                            "!bg-blue-600 hover:!bg-blue-700 "
-                                            : "hover:!bg-[#2e2e2e] focus:!bg-[#2e2e2e] focus:!outline-none"} justify-start w-full !px-3 !py-2`
-                                    }
-                                    onClick={() => ChangeSessionRole({ userContext, setUserContext, abortController, role_: role.ruolo, loadStatus, ChangeLoadStatus })}
-                                >
-                                    <span className="text-sm">{role.ruolo}</span>
-                                </FDButton>
-                            ))}
+                        <div className="flex max-w-72 flex-col items-start gap-2">
+                            <div className="px-2 pb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-neutral-400">
+                                Gruppo operativo attivo
+                            </div>
+                            {groupContexts.map((group: { _id: string; name?: string; key?: string; description?: string }) => {
+                                const active = activeGroupId === group._id;
+                                return (
+                                    <FDButton
+                                        key={group._id}
+                                        variant="ghost"
+                                        color="primary"
+                                        icon={<UserIcon size={16} />}
+                                        className={
+                                            `${active ? "!bg-blue-600 hover:!bg-blue-700 "
+                                                : "hover:!bg-[#2e2e2e] focus:!bg-[#2e2e2e] focus:!outline-none"} justify-start w-full !px-3 !py-2`
+                                        }
+                                        onClick={() => ChangeSessionGroupContext({ userContext, setUserContext, abortController, groupId: group._id, loadStatus, ChangeLoadStatus })}
+                                    >
+                                        <span className="flex min-w-0 flex-col items-start text-left">
+                                            <span className="max-w-56 truncate text-sm">{group.name || group.key || group._id}</span>
+                                            {group.description ? <span className="max-w-56 truncate text-[11px] text-neutral-400">{group.description}</span> : null}
+                                        </span>
+                                    </FDButton>
+                                );
+                            })}
                         </div>
                     )
                 }

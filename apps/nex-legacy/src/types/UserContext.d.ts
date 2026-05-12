@@ -1,17 +1,42 @@
 import type React from "react";
 
+export interface GroupContextOption {
+    _id: string;
+    tenant?: string;
+    key?: string;
+    name?: string;
+    description?: string;
+    status?: string;
+    kind?: string;
+    isDefault?: boolean;
+    isActive?: boolean;
+    directGroupIds?: string[];
+    branchGroupIds?: string[];
+    [key: string]: any;
+}
+
 export type AuthzPayload = {
-  tenant: string;
-  caps: string[];
-  version?: string;
+    tenant: string;
+    caps: string[];
+    panels?: any[];
+    denied?: any[];
+    version?: string;
+    activeGroupId?: string | null;
+    defaultGroupContextId?: string | null;
+    activeGroup?: GroupContextOption | null;
+    groupContexts: GroupContextOption[];
+    groups?: any[];
+    directGroupIds?: string[];
+    groupIds?: string[];
 };
 
 export interface UserDetails {
     username: string;
     nome: string;
     cognome: string;
-    ruolo: string;
-    permissions: string[];
+    /** @deprecated Legacy numeric/string role. UI must use authz.activeGroupId/groupContexts. */
+    ruolo?: string;
+    permissions?: string[];
     immagini?: {
         avatar?: string;
         cover?: string;
@@ -22,7 +47,7 @@ export interface UserDetails {
 
 export interface UserState {
     token?: string;
-    details?: UserDetails; // Può essere undefined, ma quando c'è ha tutti i campi obbligatori
+    details?: UserDetails;
 }
 
 export type UserContextType = [

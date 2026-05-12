@@ -3,7 +3,7 @@ import { SendLogs } from "../logs/index.js";
 import { RemoveCookie } from 'utils/cookie';
 import { enqueueSnackbar } from "components/MessageBox";
 import { UserState } from 'types/UserContext';
-import { ChangeRoleAPI } from 'examples/Sidenav/footer/multiRole/fetchData/changeRole';
+import { ChangeGroupContextAPI, GroupContextOption } from 'examples/Sidenav/footer/multiRole/fetchData/changeGroupContext';
 import { setAuthToken } from 'utils/auth/authToken';
 import { broadcastLogout, clearSession, persistSessionSnapshot, readRememberMePreference } from '@nex/shared-platform';
 
@@ -14,14 +14,17 @@ interface LogoutLogicProps {
     type?: string;
 }
 
-type ChangeRoleFuncProps = {
+
+
+type ChangeGroupContextFuncProps = {
     userContext: any | null;
     setUserContext: React.Dispatch<React.SetStateAction<any | null>>;
     abortController?: any | null;
-    role_: string;
+    groupId: string;
     loadStatus: { [key: string]: boolean };
     ChangeLoadStatus?: any;
 };
+
 
 export function LogoutLogic({ userContext, setUserContext }: LogoutLogicProps) {
     SendLogs(userContext.token, `Log-out`, window.location.href.toString());
@@ -41,57 +44,49 @@ export function RemoveSessions() {
     RemoveCookie({ name: "vi" });
 };
 
-export function ChangeSessionRole({ userContext, setUserContext, abortController, role_, loadStatus, ChangeLoadStatus }: ChangeRoleFuncProps) {
+export function ChangeSessionGroupContext({ userContext, setUserContext, abortController, groupId, loadStatus, ChangeLoadStatus }: ChangeGroupContextFuncProps) {
     if (!userContext || !userContext.details) return;
-    if (!role_) {
-        enqueueSnackbar("Il ruolo selezionato non sembra essere valido.", {
-            title: 'Ops..',
-            type: 'error',
-        });
-        return;
-    }
-    if (!userContext.details.multiRuolo || userContext.details.multiRuolo.length === 0) {
-        enqueueSnackbar("Nessun ruolo disponibile per la selezione.", {
-            title: 'Attenzione',
-            type: 'info',
-        });
-        return;
-    }
-    if (role_ === userContext.details.ruolo) {
-        enqueueSnackbar("Il ruolo selezionato è già attivo.", {
-            title: 'Attenzione',
-            type: 'info',
-        });
-        return;
-    }
-    if (loadStatus && loadStatus.new_role) {
-        enqueueSnackbar("Cambio ruolo già in corso...", {
-            title: 'Attendere',
-            type: 'info',
-        });
+    if (!groupId) {
+        enqueueSnackbar("Il team selezionato non sembra essere valido.", { title: 'Ops..', type: 'error' });
         return;
     }
 
-    if (ChangeLoadStatus) {
-        ChangeLoadStatus({ from: 'new_role', bool: true });
+    const currentActiveGroupId = userContext.details?.authz?.activeGroupId;
+    if (groupId === currentActiveGroupId) {
+        enqueueSnackbar("Il team selezionato è già attivo.", { title: 'Attenzione', type: 'info' });
+        return;
     }
 
-    function HandleComplete(props: { newToken: string, ruolo: string; descrizione: string }) {
+    if (loadStatus && loadStatus.new_group_context) {
+        enqueueSnackbar("Cambio team già in corso...", { title: 'Attendere', type: 'info' });
+        return;
+    }
+
+    if (ChangeLoadStatus) ChangeLoadStatus({ from: 'new_group_context', bool: true });
+
+    function HandleComplete(payload: { newToken: string; activeGroupId: string; activeGroupKey?: string; actorTeamKey?: string; activeGroup: GroupContextOption; groupContexts: GroupContextOption[] }) {
         setUserContext((prev: UserState | null) => {
-            if (!prev) return null;
-            if (!prev.details) return prev;
+            if (!prev?.details) return prev;
+
             const nextState: UserState = {
                 ...prev,
-                token: props.newToken,
+                token: payload.newToken,
                 details: {
                     ...prev.details,
-                    ruolo: props.ruolo,
-                    descrizioneRuolo: props.descrizione,
-                }
+                    authz: {
+                        ...(prev.details as any).authz,
+                        activeGroupId: payload.activeGroupId,
+                        activeGroupKey: payload.activeGroupKey ?? payload.actorTeamKey ?? payload.activeGroup?.key ?? null,
+                        actorTeamKey: payload.actorTeamKey ?? payload.activeGroupKey ?? payload.activeGroup?.key ?? null,
+                        activeGroup: payload.activeGroup,
+                        groupContexts: payload.groupContexts,
+                        version: `${(prev.details as any).authz?.version || 'authz'}:group:${payload.activeGroupId}:${Date.now()}`,
+                    },
+                },
             };
 
             persistSessionSnapshot({
-                token: props.newToken,
+                token: payload.newToken,
                 details: nextState.details,
                 issuedAt: Date.now(),
             }, {
@@ -101,20 +96,16 @@ export function ChangeSessionRole({ userContext, setUserContext, abortController
             return nextState;
         });
 
-        setAuthToken(props.newToken);
-        if (ChangeLoadStatus) {
-            ChangeLoadStatus({ from: 'new_role', bool: false });
-        }
+        setAuthToken(payload.newToken);
+        enqueueSnackbar(`Team attivo: ${payload.activeGroup?.name || 'selezionato'}`, { title: 'Team aggiornato', type: 'success' });
+        if (ChangeLoadStatus) ChangeLoadStatus({ from: 'new_group_context', bool: false });
     }
 
     function HandleError(errorMessage: string) {
-        console.error("ChangeRoleAPI error:", errorMessage);
-        enqueueSnackbar(errorMessage, {
-            title: 'Errore',
-            type: 'error',
-        });
-        ChangeLoadStatus({ from: 'new_role', bool: false });
+        console.error("ChangeGroupContextAPI error:", errorMessage);
+        enqueueSnackbar(errorMessage, { title: 'Errore', type: 'error' });
+        if (ChangeLoadStatus) ChangeLoadStatus({ from: 'new_group_context', bool: false });
     }
 
-    ChangeRoleAPI({ role: role_, abortController, HandleComplete, HandleError });
-};
+    ChangeGroupContextAPI({ groupId, abortController, HandleComplete, HandleError });
+}

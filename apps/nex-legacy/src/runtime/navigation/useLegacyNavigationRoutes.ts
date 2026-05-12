@@ -26,9 +26,10 @@ export function useLegacyNavigationRoutes(args: {
     const { registry, userDetails, tenant = "Focelda", appId = "legacy" } = args;
     const [state, setState] = useState<LegacyNavigationRoutesState>(EMPTY_NAVIGATION_STATE);
 
-    const actorRole = userDetails?.ruolo;
     const username = userDetails?.username;
     const authzVersion = userDetails?.authz?.version;
+    const activeGroupId = userDetails?.authz?.activeGroupId;
+    const activeGroupKey = userDetails?.authz?.activeGroupKey ?? userDetails?.authz?.actorTeamKey;
 
     useEffect(() => {
         if (!userDetails) {
@@ -125,7 +126,7 @@ export function useLegacyNavigationRoutes(args: {
             mounted = false;
             controller.abort();
         };
-    }, [appId, tenant, username, actorRole, authzVersion, registry, userDetails]);
+    }, [appId, tenant, username, authzVersion, activeGroupId, activeGroupKey, registry, userDetails]);
 
     return useMemo(() => state, [state]);
 }
