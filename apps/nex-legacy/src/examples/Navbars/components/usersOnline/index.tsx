@@ -9,7 +9,7 @@ import FDBox from "components/UI/box/FDBox";
 import { UserAvatar } from "../userInfo";
 
 
-export const OnlineUsers: React.FC<{ miniSidenav: boolean }> = ({ miniSidenav }) => {
+export const OnlineUsers: React.FC<{ miniSidenav: boolean, canViewOnlineUsers: boolean }> = ({ miniSidenav, canViewOnlineUsers }) => {
     const [userContext] = useUserContext();
     const { usersOnline } = useGeneralDataContext();
 
@@ -31,10 +31,7 @@ export const OnlineUsers: React.FC<{ miniSidenav: boolean }> = ({ miniSidenav })
 
     if(!userContext || !userContext.details) { return <></> };
 
-    return CheckAdminPermissions({
-        userRole: userContext.details.ruolo,
-        permissions: userContext.details.permissions, panelToCheck: 'user_management', where: 0
-    }) ? <FDBox variant="ghost" className="ml-6">
+    return canViewOnlineUsers ? <FDBox variant="ghost" className="ml-6">
         <MDTypography variant="body2" sx={{ fontSize: '0.7rem', textAlign: 'center' }}>Utenti Online</MDTypography>
         {userOnlineList}
     </FDBox> : <></>

@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState } from 'react';
 import { UserContext } from 'context/UserContext';
 import { GlobalDataAPI } from './FetchData/globalDataAPI';
-import { CheckAdminPermissions } from 'utils/checkAdminPermissions';
 import { enqueueSnackbar } from 'components/MessageBox';
 import { getChatSocket } from '@nex/realtime-core';
 const chatSocket = getChatSocket();
 import { LoadMessagesAPI } from 'examples/Navbars/components/chat/fetchData/loadMessages';
 import { ActionsOnRemoteBlocksAPI } from 'examples/Navbars/components/chat/fetchData/actionsOnRemoteBlocks';
+import { CAPS } from 'authz/caps';
+import { useAuthz } from 'authz/useAuthz';
 
 // ——————————————————————————————————————————————————————————
 // TYPESCRIPT INTERFACES
@@ -272,7 +273,8 @@ export function GeneralDataProvider({ children }: ProviderProps) {
     const [userContext, setUserContext] = React.useContext(
         UserContext as unknown as React.Context<[UserContextValue, React.Dispatch<any>]>
     );
-    const CheckAdminDev = React.useRef<boolean | null>(null);
+
+    const { isReady } = useAuthz();
 
     // stato di abort per il controller delle chiamate Fetch.
     const abortController = React.useRef<AbortController | null>(null);
@@ -861,26 +863,14 @@ export function GeneralDataProvider({ children }: ProviderProps) {
     };
 
     React.useEffect(() => {
-        if (!userContext || !userContext?.details) return;
+        if (!isReady) return;
 
-        CheckAdminDev.current = (CheckAdminPermissions as any)({
-            userRole: userContext.details.ruolo,
-            permissions: userContext.details.permissions,
-            rolesToCheck: [0, 1, 2, 3, 4],
-        });
-
-        if (
-            !CheckAdminDev.current ||
-            ((globalData.agents && globalData.agents.length > 0) &&
-                (globalData.buyers && globalData.buyers.length > 0))
-        ) {
+        if (((globalData.agents && globalData.agents.length > 0) &&
+            (globalData.buyers && globalData.buyers.length > 0))) {
             return;
         };
 
         GlobalDataAPI({ abortController, setGlobalData });
-
-        //return () => cancelRequest();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userContext]);
 
     const value: GeneralDataContextValue = {

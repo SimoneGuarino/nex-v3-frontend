@@ -14,6 +14,7 @@ import {
     persistSessionSnapshot,
     publishSessionSnapshot,
     readRememberMePreference,
+    subscribeSessionSnapshot,
 } from "@nex/shared-platform";
 
 export type UserContextValue = [
@@ -39,6 +40,13 @@ function readInitialLegacyUserState(): UserState | null {
     } as UserState;
 }
 
+function areLegacyUserStatesEquivalent(
+    current: UserState | null,
+    next: UserState | null,
+): boolean {
+    return current?.token === next?.token && current?.details === next?.details;
+}
+
 export const UserProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
     const [state, setState] = useState<UserState | null>(() => readInitialLegacyUserState());
     const hadTokenRef = useRef(Boolean(state?.token));
@@ -52,6 +60,18 @@ export const UserProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     useLayoutEffect(() => {
         setAuthToken(state?.token ?? null);
     }, [state?.token]);
+
+    useEffect(() => {
+        return subscribeSessionSnapshot((snapshot) => {
+            const nextState = snapshot?.token
+                ? ({ token: snapshot.token, details: snapshot.details } as UserState)
+                : null;
+
+            setState((current) => (
+                areLegacyUserStatesEquivalent(current, nextState) ? current : nextState
+            ));
+        });
+    }, []);
 
     useEffect(() => {
         if (state?.token) {

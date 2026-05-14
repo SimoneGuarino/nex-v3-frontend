@@ -56,6 +56,8 @@ import TourModal from "tour/components/UI/TourModal";
 import { MdOutlineExplore as MdOutlineExploreRaw } from "react-icons/md";
 import { clearSession, getAnchorRectFromElement, navigateToApp, toggleGlobalPanel } from "@nex/shared-platform";
 import { useNexTheme } from "@nex/theme-system";
+import { useAuthz } from "authz/useAuthz";
+import { CAPS } from "authz/caps";
 
 const MdOutlineExploreIcon = MdOutlineExploreRaw as React.FC<{ size?: number }>;
 
@@ -179,8 +181,12 @@ const DashboardNavbar: FC<DashboardNavbarProps> = ({
         openChat,
         setOpenChat,
     } = (useGeneralDataContext() as unknown) as GeneralDataCtx;
-
     const navigate = useNavigate();
+
+    const { hasCap } = useAuthz();
+
+    const canUseBuyerAssistant = hasCap(CAPS.BUYER_ASSISTANT_USE);
+    const canViewOnlineUsers = hasCap(CAPS.USERS_ONLINE_VIEW);
 
     // Data about User
     const [userContext, setUserContext] = useContext(UserContext) as unknown as UserContextType;
@@ -459,11 +465,8 @@ const DashboardNavbar: FC<DashboardNavbarProps> = ({
         }
     ];
 
-    // Controllo permessi per il pannello AI
-    const CheckAdminPermissions_ = CheckAdminPermissions({
-        userRole: userContext?.details?.ruolo,
-        permissions: userContext?.details?.permissions, panelToCheck: 'buyer_assistant', where: 0
-    })
+
+    useEffect(() => console.log("canUseBuyerAssistant", canUseBuyerAssistant), [canUseBuyerAssistant]);
 
     return (
         <Fragment>
@@ -476,8 +479,7 @@ const DashboardNavbar: FC<DashboardNavbarProps> = ({
             >
                 <div className="flex items-center gap-2">
                     {/*---------------AI*/}
-                    {CheckAdminPermissions_ && (
-
+                    {canUseBuyerAssistant && (
                         <div className="inline-flex gradient-border-animated rounded-full overflow-hidden p-[3px]">
                             <FDButton
                                 variant="ghost"
@@ -496,9 +498,9 @@ const DashboardNavbar: FC<DashboardNavbarProps> = ({
                                 </Badge>
                             </FDButton>
                         </div>
-
                     )}
-                    {window.innerWidth > 1280 && <OnlineUsers miniSidenav={miniSidenav} />}
+                    
+                    {window.innerWidth > 1280 && <OnlineUsers miniSidenav={miniSidenav} canViewOnlineUsers={canViewOnlineUsers} />}
                 </div>
 
                 {!isMini && (
@@ -563,6 +565,7 @@ const DashboardNavbar: FC<DashboardNavbarProps> = ({
 
             {/* Componente per l'Ultima Release Notes */}
             {openLatestNotes && <LatestRelease onClose={() => setOpenLatestNotes(false)} />}
+
             {/* Context Menu per i Release Notes */}
             <ContextMenu
                 openFor={releaseNotesMenu}

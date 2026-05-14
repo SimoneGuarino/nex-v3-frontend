@@ -17,10 +17,15 @@ export interface GroupContextOption {
 
 export type AuthzPayload = {
     tenant: string;
+    appId?: string;
+    actorTeamKey?: string | null;
+    activeGroupKey?: string | null;
     caps: string[];
     panels?: any[];
+    resources?: any[];
+    grants?: any[];
     denied?: any[];
-    version?: string;
+    version?: string | null;
     activeGroupId?: string | null;
     defaultGroupContextId?: string | null;
     activeGroup?: GroupContextOption | null;
@@ -28,6 +33,7 @@ export type AuthzPayload = {
     groups?: any[];
     directGroupIds?: string[];
     groupIds?: string[];
+    meta?: Record<string, unknown>;
 };
 
 export interface UserDetails {

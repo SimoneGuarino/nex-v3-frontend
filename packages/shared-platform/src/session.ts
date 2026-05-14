@@ -30,12 +30,37 @@ export type SessionInvalidationDetail = {
     at: number;
 };
 
+export type SharedAuthzPayload = {
+    tenant?: string;
+    appId?: string;
+    actorTeamKey?: string | null;
+    activeGroupKey?: string | null;
+    activeGroupId?: string | null;
+    defaultGroupContextId?: string | null;
+    groupContexts?: unknown[];
+    version?: string | null;
+    directGroupIds?: string[];
+    groupIds?: string[];
+    groups?: unknown[];
+    grants?: unknown[];
+    caps?: string[];
+    panels?: unknown[];
+    resources?: unknown[];
+    denied?: unknown[];
+    meta?: Record<string, unknown>;
+    [key: string]: unknown;
+};
+
 export type SharedSessionDetails = {
     _id?: string;
     nome?: string;
     cognome?: string;
+    tenant?: string;
+    /** @deprecated Legacy role. Use authz.activeGroupId/activeGroupKey/caps instead. */
     ruolo?: string | number;
+    /** @deprecated Legacy permissions. Use authz.caps instead. */
     permissions?: Array<string | number>;
+    authz?: SharedAuthzPayload;
     stato?: {
         ultimoAccesso?: string;
         codice?: string;

@@ -4,13 +4,72 @@ import {
     persistCryptoSession,
     persistSessionSnapshot,
     persistToken,
-    persistUserDetails,
     publishSessionSnapshot,
     type SharedSessionDetails,
     readSharedSessionSnapshot,
     readRememberMePreference,
     type SharedSessionSnapshot,
 } from "./session";
+
+const DEFAULT_TENANT = "Focelda";
+const DEFAULT_APP_ID = "legacy";
+
+type RuntimeEntitlementsResponse = {
+    tenant?: string;
+    appId?: string;
+    actorTeamKey?: string | null;
+    activeGroupKey?: string | null;
+    activeGroupId?: string | null;
+    defaultGroupContextId?: string | null;
+    groupContexts?: unknown[];
+    version?: string | null;
+    directGroupIds?: string[];
+    groupIds?: string[];
+    groups?: unknown[];
+    grants?: unknown[];
+    caps?: string[];
+    panels?: unknown[];
+    resources?: unknown[];
+    denied?: unknown[];
+    meta?: Record<string, unknown>;
+};
+
+function normalizeBaseUrl(value: string): string {
+    if (!value) return "";
+    return value.endsWith("/") ? value : `${value}/`;
+}
+
+function joinUrl(base: string, path: string): string {
+    const normalizedBase = normalizeBaseUrl(base);
+    const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+    return `${normalizedBase}${cleanPath}`;
+}
+
+function toStringArray(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+
+    const seen = new Set<string>();
+    const out: string[] = [];
+
+    for (const item of value) {
+        if (typeof item !== "string") continue;
+        const next = item.trim();
+        if (!next || seen.has(next)) continue;
+        seen.add(next);
+        out.push(next);
+    }
+
+    return out;
+}
+
+function asNonEmptyString(value: unknown, fallback: string): string {
+    return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function readAuthzTenant(details: SharedSessionDetails): string {
+    const authz = details.authz as Record<string, unknown> | undefined;
+    return asNonEmptyString(authz?.tenant ?? details.tenant, DEFAULT_TENANT);
+}
 
 function hexStringToArrayBuffer(hexString: string): ArrayBuffer {
     const byteArray = new Uint8Array(
@@ -88,6 +147,39 @@ function normalizeSharedUserDetails(details: SharedSessionDetails): SharedSessio
     return nextDetails;
 }
 
+function mergeDetailsWithEntitlements(
+    details: SharedSessionDetails,
+    entitlements: RuntimeEntitlementsResponse,
+): SharedSessionDetails {
+    const previousAuthz = details.authz && typeof details.authz === "object"
+        ? details.authz as Record<string, unknown>
+        : {};
+
+    return {
+        ...details,
+        authz: {
+            ...previousAuthz,
+            tenant: asNonEmptyString(entitlements.tenant, readAuthzTenant(details)),
+            appId: asNonEmptyString(entitlements.appId, DEFAULT_APP_ID),
+            actorTeamKey: entitlements.actorTeamKey ?? null,
+            activeGroupKey: entitlements.activeGroupKey ?? entitlements.actorTeamKey ?? null,
+            activeGroupId: entitlements.activeGroupId ?? null,
+            defaultGroupContextId: entitlements.defaultGroupContextId ?? null,
+            groupContexts: Array.isArray(entitlements.groupContexts) ? entitlements.groupContexts : [],
+            version: entitlements.version ?? null,
+            directGroupIds: toStringArray(entitlements.directGroupIds),
+            groupIds: toStringArray(entitlements.groupIds),
+            groups: Array.isArray(entitlements.groups) ? entitlements.groups : [],
+            grants: Array.isArray(entitlements.grants) ? entitlements.grants : [],
+            caps: toStringArray(entitlements.caps),
+            panels: Array.isArray(entitlements.panels) ? entitlements.panels : (Array.isArray(previousAuthz.panels) ? previousAuthz.panels : []),
+            resources: Array.isArray(entitlements.resources) ? entitlements.resources : [],
+            denied: Array.isArray(entitlements.denied) ? entitlements.denied : [],
+            meta: entitlements.meta && typeof entitlements.meta === "object" ? entitlements.meta : undefined,
+        },
+    };
+}
+
 async function fetchUserDetailsByToken(args: {
     apiEndpoint: string;
     token: string;
@@ -95,7 +187,7 @@ async function fetchUserDetailsByToken(args: {
     vi: string;
 }): Promise<SharedSessionDetails> {
     const userPayload = await fetchJson<any>(
-        `${args.apiEndpoint}842980hdjabfsy72/812has`,
+        joinUrl(args.apiEndpoint, "842980hdjabfsy72/812has"),
         {
             method: "POST",
             credentials: "include",
@@ -114,15 +206,72 @@ async function fetchUserDetailsByToken(args: {
     return normalizeSharedUserDetails(details);
 }
 
+async function fetchSessionEntitlements(args: {
+    apiEndpoint: string;
+    token: string;
+    tenant: string;
+    appId?: string;
+    includeActions?: boolean;
+}): Promise<RuntimeEntitlementsResponse> {
+    const query = new URLSearchParams({
+        tenant: args.tenant,
+        appId: args.appId || DEFAULT_APP_ID,
+    });
+
+    if (args.includeActions !== false) {
+        query.set("includeActions", "true");
+    }
+
+    return fetchJson<RuntimeEntitlementsResponse>(
+        joinUrl(args.apiEndpoint, `entitlements/navigation?${query.toString()}`),
+        {
+            method: "GET",
+            credentials: "include",
+            headers: {
+                Authorization: `Bearer ${args.token}`,
+            },
+        },
+    );
+}
+
+async function fetchHydratedSessionDetails(args: {
+    apiEndpoint: string;
+    token: string;
+    aes: string;
+    vi: string;
+    tenant?: string;
+    appId?: string;
+    includeActions?: boolean;
+}): Promise<SharedSessionDetails> {
+    const details = await fetchUserDetailsByToken({
+        apiEndpoint: args.apiEndpoint,
+        token: args.token,
+        aes: args.aes,
+        vi: args.vi,
+    });
+
+    const entitlements = await fetchSessionEntitlements({
+        apiEndpoint: args.apiEndpoint,
+        token: args.token,
+        tenant: args.tenant || readAuthzTenant(details),
+        appId: args.appId || DEFAULT_APP_ID,
+        includeActions: args.includeActions,
+    });
+
+    return mergeDetailsWithEntitlements(details, entitlements);
+}
+
 export async function loginWithCredentials(args: {
     apiEndpoint: string;
     username: string;
     password: string;
     rememberMe: boolean;
+    tenant?: string;
+    appId?: string;
 }): Promise<{ token: string; details: SharedSessionDetails }> {
     const username = args.username.toLowerCase();
     const tempKey = await fetchJson<{ pbk: string }>(
-        `${args.apiEndpoint}hNzsua12vkie421O/8d21as`,
+        joinUrl(args.apiEndpoint, "hNzsua12vkie421O/8d21as"),
         {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -136,7 +285,7 @@ export async function loginWithCredentials(args: {
     );
 
     const loginResponse = await fetchJson<any>(
-        `${args.apiEndpoint}hNz5S3AxgzodGuzD/hdaa1A`,
+        joinUrl(args.apiEndpoint, "hNz5S3AxgzodGuzD/hdaa1A"),
         {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -152,11 +301,14 @@ export async function loginWithCredentials(args: {
     persistToken(token, args.rememberMe);
     persistCryptoSession({ aes, rsa, vi });
 
-    const details = await fetchUserDetailsByToken({
+    const details = await fetchHydratedSessionDetails({
         apiEndpoint: args.apiEndpoint,
         token,
         aes,
         vi,
+        tenant: args.tenant,
+        appId: args.appId,
+        includeActions: true,
     });
 
     persistSessionSnapshot(
@@ -174,6 +326,8 @@ export function hydrateSharedSession(): SharedSessionSnapshot | null {
 export async function ensureHydratedSharedSession(args: {
     apiEndpoint: string;
     force?: boolean;
+    tenant?: string;
+    appId?: string;
 }): Promise<SharedSessionSnapshot | null> {
     const snapshot = readSharedSessionSnapshot();
     if (!snapshot?.token) return null;
@@ -194,11 +348,14 @@ export async function ensureHydratedSharedSession(args: {
     try {
         const parsedAes = JSON.parse(aes) as string;
         const parsedVi = JSON.parse(vi) as string;
-        const details = await fetchUserDetailsByToken({
+        const details = await fetchHydratedSessionDetails({
             apiEndpoint: args.apiEndpoint,
             token: snapshot.token,
             aes: parsedAes,
             vi: parsedVi,
+            tenant: args.tenant,
+            appId: args.appId,
+            includeActions: true,
         });
 
         const nextSnapshot: SharedSessionSnapshot = {
@@ -207,8 +364,9 @@ export async function ensureHydratedSharedSession(args: {
             issuedAt: Date.now(),
         };
 
-        persistUserDetails(details, readRememberMePreference());
-        publishSessionSnapshot(nextSnapshot);
+        persistSessionSnapshot(nextSnapshot, {
+            rememberMe: readRememberMePreference(),
+        });
         return nextSnapshot;
     } catch (error) {
         console.error("[shared-platform] ensureHydratedSharedSession failed", error);

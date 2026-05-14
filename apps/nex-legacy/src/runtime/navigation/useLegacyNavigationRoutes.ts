@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { isAuthInvalidationError } from "@nex/shared-platform";
-import { fetchRuntimeNavigation } from "./api";
+import { useMemo } from "react";
 import { buildLegacyRoutesFromNavigationResources } from "./legacyRouteBuilder";
 import type { LegacyRouteRegistry } from "./legacyRouteRegistry";
-import type { LegacyNavigationRoutesState } from "./types";
-
-const ENABLE_STATIC_NAVIGATION_FALLBACK =
-    import.meta.env.VITE_LEGACY_NAVIGATION_STATIC_FALLBACK === "true";
+import type {
+    LegacyNavigationRoutesState,
+    NavigationRuntimeResource,
+} from "./types";
 
 const EMPTY_NAVIGATION_STATE: LegacyNavigationRoutesState = {
     routes: [],
@@ -17,116 +15,85 @@ const EMPTY_NAVIGATION_STATE: LegacyNavigationRoutesState = {
     failedClosed: false,
 };
 
+function isNavigationRuntimeResource(value: unknown): value is NavigationRuntimeResource {
+    if (!value || typeof value !== "object") return false;
+
+    const candidate = value as Partial<NavigationRuntimeResource>;
+
+    return (
+        typeof candidate.key === "string" &&
+        typeof candidate.type === "string" &&
+        typeof candidate.name === "string"
+    );
+}
+
+function readAuthzResources(userDetails: any): NavigationRuntimeResource[] {
+    const resources = userDetails?.authz?.resources;
+    if (!Array.isArray(resources)) return [];
+
+    return resources.filter(isNavigationRuntimeResource);
+}
+
+function hasHydratedAuthz(userDetails: any): boolean {
+    const authz = userDetails?.authz;
+    if (!authz || typeof authz !== "object") return false;
+
+    return (
+        typeof authz.version === "string" ||
+        Array.isArray(authz.resources) ||
+        Array.isArray(authz.caps)
+    );
+}
+
 export function useLegacyNavigationRoutes(args: {
     registry: LegacyRouteRegistry;
     userDetails: any;
     tenant?: string;
     appId?: string;
 }): LegacyNavigationRoutesState {
-    const { registry, userDetails, tenant = "Focelda", appId = "legacy" } = args;
-    const [state, setState] = useState<LegacyNavigationRoutesState>(EMPTY_NAVIGATION_STATE);
+    const { registry, userDetails } = args;
 
-    const username = userDetails?.username;
-    const authzVersion = userDetails?.authz?.version;
-    const activeGroupId = userDetails?.authz?.activeGroupId;
-    const activeGroupKey = userDetails?.authz?.activeGroupKey ?? userDetails?.authz?.actorTeamKey;
-
-    useEffect(() => {
+    return useMemo<LegacyNavigationRoutesState>(() => {
         if (!userDetails) {
-            setState(EMPTY_NAVIGATION_STATE);
-            return;
+            return EMPTY_NAVIGATION_STATE;
         }
 
-        const controller = new AbortController();
-        let mounted = true;
+        const authzReady = hasHydratedAuthz(userDetails);
+        const authz = userDetails?.authz ?? {};
+        const version = typeof authz.version === "string" ? authz.version : null;
 
-        setState((previous) => ({
-            ...previous,
-            loading: true,
+        if (!authzReady) {
+            return {
+                ...EMPTY_NAVIGATION_STATE,
+                loading: true,
+                version,
+            };
+        }
+
+        const resources = readAuthzResources(userDetails);
+        const runtimeRoutes = buildLegacyRoutesFromNavigationResources({
+            resources,
+            registry,
+        });
+
+        if (runtimeRoutes.length === 0) {
+            return {
+                routes: [],
+                source: "navigation-resources",
+                loading: false,
+                error: "Nessuna navigation_resource applicabile trovata nello snapshot AuthZ condiviso.",
+                version,
+                failedClosed: true,
+            };
+        }
+
+        return {
+            routes: runtimeRoutes,
+            source: "navigation-resources",
+            loading: false,
             error: null,
+            version,
             failedClosed: false,
-        }));
-
-        fetchRuntimeNavigation({ tenant, appId, signal: controller.signal })
-            .then((response) => {
-                if (!mounted) return;
-
-                const runtimeRoutes = buildLegacyRoutesFromNavigationResources({
-                    resources: response.resources || [],
-                    registry,
-                });
-
-                if (runtimeRoutes.length === 0) {
-                    const message = "Nessuna navigation_resource applicabile trovata.";
-
-                    if (ENABLE_STATIC_NAVIGATION_FALLBACK) {
-                        console.warn("[legacy-navigation]", message, "Fallback statico abilitato da env.");
-                        setState({
-                            routes: [],
-                            source: "navigation-resources",
-                            loading: false,
-                            error: `${message} Fallback statico non disponibile: usare legacyRouteRegistry + navigation_resources.`,
-                            version: response.version ?? null,
-                            failedClosed: false,
-                        });
-                        return;
-                    }
-
-                    setState({
-                        routes: [],
-                        source: "navigation-resources",
-                        loading: false,
-                        error: message,
-                        version: response.version ?? null,
-                        failedClosed: true,
-                    });
-                    return;
-                }
-
-                setState({
-                    routes: runtimeRoutes,
-                    source: "navigation-resources",
-                    loading: false,
-                    error: null,
-                    version: response.version ?? null,
-                    failedClosed: false,
-                });
-            })
-            .catch((error) => {
-                if (!mounted || controller.signal.aborted) return;
-                if (isAuthInvalidationError(error)) return;
-
-                const message = error instanceof Error ? error.message : "Runtime navigation non disponibile";
-
-                if (ENABLE_STATIC_NAVIGATION_FALLBACK) {
-                    console.warn("[legacy-navigation] runtime navigation non disponibile: fallback statico DEV", error);
-                    setState({
-                        routes: [],
-                        source: "navigation-resources",
-                        loading: false,
-                        error: `${message}. Fallback statico non disponibile: usare legacyRouteRegistry + navigation_resources.`,
-                        version: null,
-                        failedClosed: false,
-                    });
-                    return;
-                }
-
-                console.error("[legacy-navigation] runtime navigation non disponibile: fail-closed", error);
-                setState({
-                    routes: [],
-                    source: "navigation-resources",
-                    loading: false,
-                    error: message,
-                    version: null,
-                    failedClosed: true,
-                });
-            });
-
-        return () => {
-            mounted = false;
-            controller.abort();
         };
-    }, [appId, tenant, username, authzVersion, activeGroupId, activeGroupKey, registry, userDetails]);
-
-    return useMemo(() => state, [state]);
+    }, [registry, userDetails]);
 }
