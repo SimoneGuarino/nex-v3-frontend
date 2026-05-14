@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useRef } from "react";
 import nexLogoWhite from "assets/images/login/logo_nex_transp_white.webp";
+import { Important } from "./UI/Important";
 
 type Side = "top" | "bottom" | "left" | "right" | "center";
 
@@ -21,6 +22,7 @@ export function Popover({
     onClose,
     nextDisabled,
     hint,
+    important,
 }: {
     target: HTMLElement | null;
     side: Side;
@@ -33,6 +35,7 @@ export function Popover({
     onClose: () => void;
     nextDisabled?: boolean;
     hint?: React.ReactNode;
+    important?: React.ReactNode;
 }) {
     const floatingRef = useRef<HTMLDivElement>(null);
 
@@ -173,7 +176,10 @@ export function Popover({
                     {hint && (
                         <p className="mt-2 text-xs text-amber-300/90">{hint}</p>
                     )}
-                    {!hint && nextDisabled && (
+                    {important && (
+                        <Important>{important}</Important>
+                    )}
+                    {!hint && !important && nextDisabled && (
                         <p className="mt-2 text-xs text-amber-300/90">
                             Suggerimento: clicca il pulsante evidenziato per continuare.
                         </p>

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FiX, FiCheckCircle, FiXCircle, FiLink2 } from "react-icons/fi";
 
@@ -14,6 +14,8 @@ import { FDSelect } from "components/UI/input/FDSelect";
 import { FDInput } from "components/UI/input/FDInput";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import FDBox from "components/UI/box/FDBox";
+import { computeTourClosureWizardOrchestration } from "layouts/quotazioni/tour/runtime";
+import { useTour } from "tour/TourProvider";
 
 const FiLink2Icon = FiLink2 as React.FC<{ size?: number; className?: string }>;
 const FiXIcon = FiX as React.FC<{ size?: number; className?: string }>;
@@ -53,7 +55,7 @@ export const ClosureWizard: React.FC<Props> = ({
 
     /**
      * Step UI:
-     * A) Esito (MEPA: VINTA/PERSA | NON MEPA: OK/KO)
+     * A) Esito OK/KO
      * B) Associazione OC/FB (solo se esito “positivo”)
      */
     const STEP_ESITO = 1;
@@ -64,9 +66,7 @@ export const ClosureWizard: React.FC<Props> = ({
     const [error, setError] = useState<string | null>(null);
 
     const [draft, setDraft] = useState<ClosureDraft>({
-        mepaOutcome: qts?.mepa_closure?.outcome,
-        mepaLostReasonCode: qts?.mepa_closure?.lost_reason_code,
-        mepaNote: qts?.mepa_closure?.note,
+        lost_reason_code: qts?.final_outcome?.lost_reason_code,
 
         finalOutcome: qts?.final_outcome?.outcome,
         finalNote: qts?.final_outcome?.note,
@@ -74,16 +74,17 @@ export const ClosureWizard: React.FC<Props> = ({
         okLinks: qts?.final_ok_links ?? [],
     });
 
-    React.useEffect(() => {
+    // LockInteraction tour system
+    const { isOpen, activeStepSelector } = useTour();
+
+    useEffect(() => {
         if (!open) return;
 
         setError(null);
         setSaving(false);
 
         setDraft({
-            mepaOutcome: qts?.mepa_closure?.outcome,
-            mepaLostReasonCode: qts?.mepa_closure?.lost_reason_code,
-            mepaNote: qts?.mepa_closure?.note,
+            lost_reason_code: qts?.final_outcome?.lost_reason_code,
 
             finalOutcome: qts?.final_outcome?.outcome,
             finalNote: qts?.final_outcome?.note,
@@ -96,17 +97,39 @@ export const ClosureWizard: React.FC<Props> = ({
     }, [open]);
 
     /**
-     * Titolo dinamico step Esito: se MEPA è VINTA/PERSA, allora “Esito gara (MEPA)”, altrimenti “Esito finale
+     * Wrapper leggero lato componente:
+     * delega al runtime tour la regia dei passaggi finali del wizard.
+     *
+     * In questo modo `ClosureWizard` resta snello e la logica tour rimane
+     * centralizzata nella cartella `layouts/quotazioni/tour`.
+     */
+    useEffect(() => {
+        const result = computeTourClosureWizardOrchestration({
+            isTourOpen: isOpen,
+            activeStepSelector,
+            stepEsito: STEP_ESITO,
+            stepMapping: STEP_MAPPING,
+            draft,
+            productRows,
+        });
+        if (!result) return;
+
+        setStep(result.nextStep);
+        if (!result.nextDraft) return;
+        setDraft(result.nextDraft);
+    }, [isOpen, activeStepSelector, draft, productRows]);
+
+    /**
+     * Titolo dinamico step Esito: se MEPA è VINTA(OK)/PERSA(KO), allora “Esito gara (MEPA)”, altrimenti “Esito finale
      */
     const stepEsitoTitle = useMemo(() => (isMepa ? "Esito gara (MEPA)" : "Esito finale"), [isMepa]);
 
     /**
-     * Determino se serve o meno lo step di mapping OC/FB: se MEPA è VINTA, o NON MEPA è OK, allora serve associare OC/FB ai prodotti, altrimenti no.
+     * Determino se serve o meno lo step di mapping OC/FB: se MEPA è OK, o NON MEPA è OK, allora serve associare OC/FB ai prodotti, altrimenti no.
      */
     const needsMapping = useMemo(() => {
-        if (isMepa) return draft.mepaOutcome === "VINTA";
         return draft.finalOutcome === "OK";
-    }, [isMepa, draft.mepaOutcome, draft.finalOutcome]);
+    }, [isMepa, draft.finalOutcome]);
 
     const isFinalNoteRequired = useMemo(() => {
         return !isMepa && draft.finalOutcome === "KO";
@@ -133,9 +156,9 @@ export const ClosureWizard: React.FC<Props> = ({
         if (!isRequester) return "Solo il creatore della quotazione può eseguire la chiusura.";
 
         if (isMepa) {
-            if (!draft.mepaOutcome) return "Seleziona se la gara è VINTA o PERSA.";
-            if (draft.mepaOutcome === "PERSA" && !draft.mepaLostReasonCode) {
-                return "Se la gara è PERSA, seleziona una motivazione.";
+            if (!draft.finalOutcome) return "Seleziona se la gara è OK o KO.";
+            if (draft.finalOutcome === "KO" && !draft.lost_reason_code) {
+                return "Se la gara è KO, seleziona una motivazione.";
             }
             return null;
         }
@@ -144,10 +167,10 @@ export const ClosureWizard: React.FC<Props> = ({
         if (draft.finalOutcome === "KO" && !(draft.finalNote ?? "").trim()) {
             return "Con esito KO la nota di chiusura è obbligatoria.";
         }
-        
+
         // se la quotazione selezionata è OK e se nei prodotti della quotazione non è presente nemmeno 1 prodotto con esito quotazione positivo allora mostro 
         // un messaggio di warning che avvisa l'utente che non potrà associare OC/FB ai prodotti (perché non ci sono prodotti con esito positivo) e che quindi la chiusura avverrà senza associazione OC/FB DONE_PRODUCT_STATES
-        if(draft.finalOutcome === "OK" && (!productRows || (productRows && Array.isArray(productRows) && productRows.length === 0))) {
+        if (draft.finalOutcome === "OK" && (!productRows || (productRows && Array.isArray(productRows) && productRows.length === 0))) {
             return "Hai selezionato esito OK ma nessun prodotto quotato ha esito positivo. Seleziona KO per chiudere la quotazione senza associazione OC/FB.";
         };
 
@@ -155,8 +178,8 @@ export const ClosureWizard: React.FC<Props> = ({
     }, [
         isRequester,
         isMepa,
-        draft.mepaOutcome,
-        draft.mepaLostReasonCode,
+        draft.finalOutcome,
+        draft.lost_reason_code,
         draft.finalOutcome,
         draft.finalNote,
     ]);
@@ -224,6 +247,15 @@ export const ClosureWizard: React.FC<Props> = ({
     const chipActive = "border-sky-300 text-sky-700 bg-white/80 dark:bg-neutral-900/70 dark:border-sky-500/40 dark:text-sky-200";
     const chipIdle = "border-neutral-200 text-neutral-600 bg-white/60 dark:bg-neutral-900/40 dark:border-neutral-700 dark:text-neutral-300";
 
+    /**
+     * Lock tour del wizard:
+     * blocchiamo la select solo nello step introduttivo del pannello chiusura.
+     * Usiamo il selector (non l'indice) per evitare sfasamenti quando cambiano gli step.
+     */
+    const lockInteractions =
+        (isOpen && activeStepSelector === '[data-tour="quotazioni-chiusura"]') || (isOpen && activeStepSelector === '[data-tour="quotazioni-chiusura-OK-OC-FB"]');
+    //
+
 
     return (
         <AnimatePresence>
@@ -246,6 +278,7 @@ export const ClosureWizard: React.FC<Props> = ({
                         transition={{ duration: 0.2, ease: "easeInOut" }}
                     >
                         <FDBox
+                            data-tour="quotazioni-chiusura"
                             variant="gradient"
                             color="light"
                             border
@@ -272,6 +305,8 @@ export const ClosureWizard: React.FC<Props> = ({
 
                                 {/* Close button coerente con productsDetails */}
                                 <FDIconButton
+                                    // Anchor tour per eventuale step di chiusura guidata del wizard.
+                                    data-tour="quotazioni-chiusura-close"
                                     icon={<FiXIcon />}
                                     variant="text"
                                     onClick={onClose}
@@ -293,6 +328,16 @@ export const ClosureWizard: React.FC<Props> = ({
                                         <div className="text-sm text-rose-800 dark:text-rose-200">{error}</div>
                                     </FDBox>
                                 )}
+
+                                {/*qts?.tipologia == "BID_PASSIVO" && <FDBox
+                                    variant="soft"
+                                    color="error"
+                                    radius="2xl"
+                                    pad="sm"
+                                    className="mb-4 border border-blue-200/70 dark:border-blue-500/20 bg-blue-50/70 dark:bg-blue-500/10"
+                                >
+                                    <div className="text-sm text-blue-800 dark:text-blue-200">Nella testata dell'ordine cambiare canale di vendita in as400 con: 0019 BID DA VENDOR</div>
+                                </FDBox>*/}
 
                                 {/* Step indicator */}
                                 <div className="mb-5 flex items-center gap-2">
@@ -329,7 +374,7 @@ export const ClosureWizard: React.FC<Props> = ({
 
                                             <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
                                                 {isMepa
-                                                    ? "Indica se la gara è stata vinta o persa. Se persa, seleziona una motivazione."
+                                                    ? "Indica se la gara è stata vinta (OK) o persa (KO). Se persa, seleziona una motivazione."
                                                     : "Indica l’esito finale della quotazione. Se OK, dovrai associare OC e/o FB ai prodotti."}
                                             </p>
 
@@ -343,34 +388,34 @@ export const ClosureWizard: React.FC<Props> = ({
                                                             </div>
                                                             <FDSelect
                                                                 size="sm"
-                                                                value={draft.mepaOutcome ?? ""}
+                                                                value={draft.finalOutcome ?? ""}
                                                                 onChange={(v: any) =>
                                                                     setDraft((d) => ({
                                                                         ...d,
-                                                                        mepaOutcome: (v?.target?.value ?? v) as any,
+                                                                        finalOutcome: (v?.target?.value ?? v) as any,
                                                                     }))
                                                                 }
                                                                 options={[
                                                                     { value: "", label: "Seleziona…" },
-                                                                    { value: "VINTA", label: "VINTA" },
-                                                                    { value: "PERSA", label: "PERSA" },
+                                                                    { value: "OK", label: "VINTA" },
+                                                                    { value: "KO", label: "PERSA" },
                                                                 ]}
                                                                 disabled={!isRequester}
                                                             />
                                                         </div>
 
-                                                        {draft.mepaOutcome === "PERSA" && (
+                                                        {draft.finalOutcome === "KO" && (
                                                             <div>
                                                                 <div className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
                                                                     Motivazione KO
                                                                 </div>
                                                                 <FDSelect
                                                                     size="sm"
-                                                                    value={draft.mepaLostReasonCode ?? ""}
+                                                                    value={draft.lost_reason_code ?? ""}
                                                                     onChange={(v: any) =>
                                                                         setDraft((d) => ({
                                                                             ...d,
-                                                                            mepaLostReasonCode: v?.target?.value ?? v,
+                                                                            lost_reason_code: v?.target?.value ?? v,
                                                                         }))
                                                                     }
                                                                     options={[
@@ -392,11 +437,11 @@ export const ClosureWizard: React.FC<Props> = ({
                                                         </div>
                                                         <FDInput
                                                             size="sm"
-                                                            value={draft.mepaNote ?? ""}
+                                                            value={draft.finalNote ?? ""}
                                                             onChange={(e: any) =>
                                                                 setDraft((d) => ({
                                                                     ...d,
-                                                                    mepaNote: e?.target?.value ?? "",
+                                                                    finalNote: e?.target?.value ?? "",
                                                                 }))
                                                             }
                                                             placeholder="Aggiungi dettagli utili (opzionale)"
@@ -415,6 +460,14 @@ export const ClosureWizard: React.FC<Props> = ({
                                                                 Esito finale
                                                             </div>
                                                             <FDSelect
+                                                                dataTourMenuScope="firstOption"
+                                                                /**
+                                                                 * Trigger e prima opzione menu usano selector diversi:
+                                                                 * evitiamo collisioni sullo stesso `data-tour`.
+                                                                 */
+                                                                dataTour="quotazioni-chiusura-select"
+                                                                dataTourMenu="quotazioni-chiusura-OK"
+                                                                placeholder="Seleziona..."
                                                                 size="sm"
                                                                 value={draft.finalOutcome ?? ""}
                                                                 onChange={(v: any) =>
@@ -424,11 +477,11 @@ export const ClosureWizard: React.FC<Props> = ({
                                                                     }))
                                                                 }
                                                                 options={[
-                                                                    { value: "", label: "Seleziona…" },
+                                                                    // { value: "", label: "Seleziona…" },
                                                                     { value: "OK", label: "OK (conclusa positivamente)" },
                                                                     { value: "KO", label: "KO (persa / non conclusa)" },
                                                                 ]}
-                                                                disabled={!isRequester}
+                                                                disabled={!isRequester || lockInteractions}
                                                             />
                                                         </div>
 
@@ -485,6 +538,7 @@ export const ClosureWizard: React.FC<Props> = ({
                                         exit={{ opacity: 0, x: -10 }}
                                     >
                                         <FDBox
+                                            data-tour="quotazioni-chiusura-OK-OC-FB"
                                             radius="2xl"
                                             pad="md"
                                             border
@@ -522,6 +576,7 @@ export const ClosureWizard: React.FC<Props> = ({
 
                                             <div className="mt-4">
                                                 <OCFBMappingTable
+                                                    disabled={lockInteractions}
                                                     rows={productRows}
                                                     value={draft.okLinks}
                                                     onChange={(next) => setDraft((d) => ({ ...d, okLinks: next }))}
@@ -542,13 +597,13 @@ export const ClosureWizard: React.FC<Props> = ({
 
                                 <div className="flex items-center gap-2">
                                     {step === STEP_ESITO && (
-                                        <FDButton color="primary" onClick={goNext} disabled={saving || !isRequester}>
+                                        <FDButton color="primary" onClick={goNext} disabled={saving || !isRequester || lockInteractions} data-tour="quotazioni-chiusura-OK-avanti">
                                             {needsMapping ? "Avanti" : "Conferma chiusura"}
                                         </FDButton>
                                     )}
 
                                     {step === STEP_MAPPING && (
-                                        <FDButton color="primary" onClick={onSave} disabled={saving || !isRequester}>
+                                        <FDButton color="primary" onClick={onSave} disabled={saving || !isRequester || lockInteractions} data-tour="quotazioni-chiusura-OK-conferma">
                                             {saving ? "Salvataggio…" : "Conferma chiusura"}
                                         </FDButton>
                                     )}

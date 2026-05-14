@@ -9,6 +9,7 @@ export type Step = {
     title?: React.ReactNode;
     description?: React.ReactNode;
     hint?: React.ReactNode;
+    important?: React.ReactNode;
     side?: Side;
     /** Condizione per mostrare lo step (ruolo, feature flags, ecc.) */
     when?: (ctx: { role: Role }) => boolean;
@@ -42,6 +43,7 @@ export type Step = {
                 title?: React.ReactNode;
                 description?: React.ReactNode;
                 hint?: React.ReactNode;
+                important?: React.ReactNode;
             }
         >
     >;

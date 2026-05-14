@@ -1,10 +1,10 @@
 ﻿import { motion } from "framer-motion";
-import { clsx } from "components/UI/box/FDBox"
-import FDIconButton from "components/UI/buttons/FDIconButton"
+import { clsx } from "components/UI/box/FDBox";
+import FDIconButton from "components/UI/buttons/FDIconButton";
 import LineChart from "./charts/LineChart";
-//icons
+// icons
 import { FaRegChartBar } from "react-icons/fa";
-import { MdOutlineTrendingUp, MdOutlineTrendingDown } from "react-icons/md";
+import { MdOutlineTrendingDown, MdOutlineTrendingUp } from "react-icons/md";
 
 // ——————————————————————————————————————————————————————————
 // ICONS
@@ -31,80 +31,104 @@ interface PannelloQuotazioniProps {
 // ——————————————————————————————————————————————————————————
 // UTILS
 // ——————————————————————————————————————————————————————————
-const fmtPct = (n: any) => `${Math.round(Number(n ?? 0))}%`;
+const fmtPct = (n: number) => `${Math.round(Math.abs(Number(n ?? 0)))}%`;
 const fmtCount = (n: number) => new Intl.NumberFormat("it-IT").format(Number(n ?? 0));
+
 const pctChange = (curr: number, prev: number): number | null => {
     if (prev === 0) return curr === 0 ? 0 : null;
     return ((curr - prev) / prev) * 100;
 };
 
+interface TrendBadgeProps {
+    trend: number | null;
+    loading?: boolean;
+    tooltip: string;
+    className?: string;
+}
+
+function TrendBadge({ trend, loading, tooltip, className }: TrendBadgeProps) {
+    const isUp = typeof trend === "number" ? trend >= 0 : true;
+    const trendText = trend === null ? "100" : fmtPct(trend);
+
+    return (
+        <span
+            data-tooltip-id="general-quotations-tooltip"
+            data-tooltip-content={tooltip}
+            className={clsx(
+                "flex items-center border border-solid rounded-xl px-2 py-1 text-xs cursor-default",
+                isUp
+                    ? "border-emerald-400 bg-emerald-500/40 text-emerald-700 dark:text-emerald-200"
+                    : "border-red-400 bg-red-500/40 text-red-700 dark:text-red-200",
+                className
+            )}
+        >
+            {isUp ? <LineUp className="mr-1" /> : <LineDown className="mr-1" />}
+            {loading ? "..." : trendText}
+        </span>
+    );
+}
+
 
 // ——————————————————————————————————————————————————————————
 // COMPONENT
 // ——————————————————————————————————————————————————————————
-export function PannelloQuotazioni({ mese, isClienteHidden, showChart, onShowChart, onHideChart, kpi, loading }: PannelloQuotazioniProps) {
+export function PannelloQuotazioni({
+    mese,
+    isClienteHidden,
+    showChart,
+    onShowChart,
+    onHideChart,
+    kpi,
+    loading,
+}: PannelloQuotazioniProps) {
     const statuses = (kpi?.statuses ?? {}) as Record<string, number>;
 
     const total = Number(kpi?.totalQuotations ?? 0);
+    const previousTotal = Number(kpi?.previousTotalQuotations ?? 0);
     const trend = (kpi?.trendPct ?? null) as number | null;
 
-    const bozze = Number(statuses?.BOZZA ?? 0);
-    const validazione = Number(statuses?.VALIDAZIONE ?? 0);
     const aperte = Number(statuses?.APERTA ?? 0);
     const daChiudere = Number(statuses?.DA_CHIUDERE ?? 0);
+    const waitingForAgent = Number(kpi?.waitingForAgent ?? 0);
+    const waitingForBuyer = Number(kpi?.waitingForBuyer ?? 0);
+    const openAndToClose = aperte + daChiudere;
+
     const ok = Number(statuses?.OK ?? 0);
     const ko = Number(statuses?.KO ?? 0);
 
-    // Fallback legacy: se nei dati storici non ci sono ancora OK/KO,
-    // usiamo CHIUSA/COMPLETATA come proxy per non perdere informazione in UI.
+    // Fallback legacy per ambienti con storico precedente al workflow OK/KO.
     const legacyChiusa = Number(statuses?.CHIUSA ?? 0);
     const legacyCompletata = Number(statuses?.COMPLETATA ?? 0);
-    const annullate = Number(statuses?.ANNULLATA ?? 0);
 
-    // Chiuse finali workflow attuale.
-    // Se il BE ha giÃ  calcolato closedOutcomes lo usiamo direttamente,
-    // altrimenti ricalcoliamo da OK+KO; in assenza totale usiamo fallback legacy.
     const closedOutcomesRaw = Number(kpi?.closedOutcomes ?? (ok + ko));
-    const closedOutcomes = closedOutcomesRaw > 0 ? closedOutcomesRaw : (legacyChiusa + legacyCompletata);
+    const closedOutcomes = closedOutcomesRaw > 0 ? closedOutcomesRaw : legacyChiusa + legacyCompletata;
+    const previousClosedOutcomes = Number(kpi?.previousClosedOutcomes ?? 0);
+    const closedTrend = pctChange(closedOutcomes, previousClosedOutcomes);
 
-    // KPI sintetici giÃ  restituiti dal BE.
-    // Se mancanti, ricostruiamo localmente con la stessa logica ibrida (corrente + legacy)
-    // per mantenere coerenza visiva del pannello in tutti gli ambienti.
-    const negative = Number(kpi?.negative ?? (ko + annullate + legacyChiusa));
-    const positive = Number(kpi?.positive ?? (ok + legacyCompletata));
-
-    const prevPositiveRaw = kpi?.previousPositive;
-    const positiveTrend = (typeof prevPositiveRaw === "number")
-        ? pctChange(positive, prevPositiveRaw)
-        : null;
-
-    const isUp = typeof trend === "number" ? trend >= 0 : true;
-    const trendText = trend === null ? "—" : fmtPct(Math.abs(trend));
-
-    const posIsUp = typeof positiveTrend === "number" ? positiveTrend >= 0 : true;
-    const posTrendText = positiveTrend === null ? null : fmtPct(Math.abs(positiveTrend));
-
+    const renderCount = (value: number) => (loading ? "..." : fmtCount(value));
 
     const CmpHeader = ({ hideTopRank }: { hideTopRank: boolean }) => {
-        return <div className="flex items-center justify-between">
-            <h1 className="text-sm">Quotazioni ({mese})</h1>
+        return (
+            <div className="flex items-center justify-between">
+                <h1 className="text-sm">Quotazioni ({mese})</h1>
 
-            <FDIconButton
-                size="small"
-                icon={<FaRegChartBarIcon />}
-                variant="secondary"
-                onClick={!hideTopRank ? onHideChart : onShowChart}
-                dataTooltipId="general-quotations-tooltip"
-                dataTooltipContent="Vedi Grafico"
-            />
-        </div>
+                <FDIconButton
+                    size="small"
+                    icon={<FaRegChartBarIcon />}
+                    variant="secondary"
+                    onClick={!hideTopRank ? onHideChart : onShowChart}
+                    dataTooltipId="general-quotations-tooltip"
+                    dataTooltipContent="Vedi Grafico"
+                />
+            </div>
+        );
     };
 
     return (
         <div className="relative w-full" style={{ perspective: 1000 }}>
             <motion.div
                 className={clsx(
-                    "grid w-full p-2 px-3 pb- rounded-md",
+                    "grid w-full p-2 px-3 rounded-md",
                     "bg-gradient-to-br from-white/90 to-white/60 dark:from-neutral-900/80 dark:to-neutral-900/60",
                     "border border-black/5 dark:border-white/10",
                     "shadow-sm",
@@ -115,76 +139,79 @@ export function PannelloQuotazioni({ mese, isClienteHidden, showChart, onShowCha
                 style={{ transformStyle: "preserve-3d" }}
             >
                 <div
-                    className="col-start-1 row-start-1 flex flex-col overflow-hidden"
+                    className="col-start-1 row-start-1 flex flex-col overflow-hidden h-full"
                     style={{ backfaceVisibility: "hidden", pointerEvents: showChart ? "none" : "auto" }}
                 >
                     <CmpHeader hideTopRank={true} />
 
-                    <div className={`flex flex-col h-full overflow-hidden ${isClienteHidden && "max-h-[0px]"}`}>
-                        <div className={`flex items-center justify-between `}>
-                            <div className="flex flex-col gap-1">
-                                <span className="text-xs text-gray-600 dark:text-gray-400">Quotazioni totali:</span>
-                                <span className="font-bold text-lg">{loading ? "…" : fmtCount(total)}</span>
-                            </div>
-                            <span
-                                data-tooltip-id="general-quotations-tooltip"
-                                data-tooltip-content="Quantità % rispetto al mese precedente"
-                                className={`flex cursor-default items-center border border-solid rounded-xl px-2 py-1 text-sm ${isUp ? "border-emerald-400 bg-emerald-500/40 text-emerald-700 dark:text-emerald-200" : "border-red-400 bg-red-500/40 text-red-700 dark:text-red-200"}`}
-                            >
-                                {isUp ? <LineUp className="mr-1.5" /> : <LineDown className="mr-1.5" />}
-                                {loading ? "…" : trendText}
-                            </span>
-                        </div>
+                    <div className={`flex flex-col h-full overflow-auto ${isClienteHidden ? "max-h-[0px]" : ""}`}>
+                        <div className="mt-1 h-full flex flex-col gap-2 text-xs">
+                            <div className="rounded-md border border-black/10 bg-black/[0.03] p-1 dark:border-white/10 dark:bg-white/[0.04]">
 
-                        <div className="text-xs mt-auto">
-                            <span className="text-xs text-gray-600 dark:text-gray-400">Stati quotazioni:</span>
-                            <ul>
-                                <li>
-                                    Bozze
-                                    {": "}
-                                    <span className="font-bold">{loading ? "…" : fmtCount(bozze)}</span>
-                                </li>
-                                {/* <li>
-                                    Validazione
-                                    {": "}
-                                    <span className="font-bold">{loading ? "…" : new Intl.NumberFormat("it-IT").format(validazione)}</span>
-                                </li> */}
-                                <li>
-                                    Aperte
-                                    {": "}
-                                    <span className="font-bold">{loading ? "…" : fmtCount(aperte)}</span>
-                                </li>
-                                <li>
-                                    Da chiudere
-                                    {": "}
-                                    <span className="font-bold">{loading ? "…" : fmtCount(daChiudere)}</span>
-                                </li>
-                                {/* Riepilogo richiesto dal task:
-                                    "quante quotazioni sono state chiuse, di cui quante OK e quante KO".
-                                    Se OK/KO non sono presenti su dati storici, usiamo fallback legacy. */}
-                                <li>
-                                    Chiuse <span className="font-bold">{loading ? "…" : fmtCount(closedOutcomes)}</span> di cui:<br />
-                                    {' '}Esito positivo (OK): <span className="font-bold">{loading ? "…" : fmtCount(ok || legacyCompletata)}</span><br />
-                                    {' '}Esito negativo (KO): <span className="font-bold">{loading ? "…" : fmtCount(ko || legacyChiusa)}</span>
-                                </li>
-                                {/* <li>Esito negativo: <span className="font-bold">{loading ? "…" : fmtCount(negative)}</span></li> */}
-                                <li className="flex items-center justify-between">
-                                    {/* <div className="flex items-center gap-1">
-                                        <span>Esito positivo:</span>
-                                        <span className="font-bold">{loading ? "…" : fmtCount(positive)}</span>
-                                    </div> */}
-                                    {posTrendText ? (
-                                        <span
-                                            data-tooltip-id="general-quotations-tooltip"
-                                            data-tooltip-content="Quantità % rispetto al mese precedente"
-                                            className={`flex items-center border border-solid rounded-xl px-1 py-0.5 text-xs ${posIsUp ? "border-emerald-400 bg-emerald-500/40 text-emerald-700 dark:text-emerald-200" : "border-red-400 bg-red-500/40 text-red-700 dark:text-red-200"}`}
-                                        >
-                                            {posIsUp ? <LineUp className="mr-1.5" /> : <LineDown className="mr-1.5" />}
-                                            {loading ? "…" : posTrendText}
-                                        </span>
-                                    ) : null}
-                                </li>
-                            </ul>
+                                <div className="flex justify-between">
+                                    {/* <div className="min-w-0"> */}
+                                    <p className="text-base">Quotazioni totali: <span className="truncate text-lg font-bold">{renderCount(total)}</span></p>
+                                    <TrendBadge
+                                        trend={trend}
+                                        loading={loading}
+                                        tooltip="Confronto percentuale con mese precedente"
+                                    />
+
+                                </div>
+                                <p className="text-[11px] leading-4">
+                                    Mese precedente:{" "}
+                                    <span className="font-semibold text-gray-800 dark:text-gray-200">
+                                        {renderCount(previousTotal)}
+                                    </span>
+                                </p>
+
+
+                            </div>
+
+                            <div className="flex min-h-0 justify-between w-full gap-2">
+                                <section className="w-full rounded-md border border-black/10 bg-black/[0.03] p-1 dark:border-white/10 dark:bg-white/[0.04] text-[11px] leading-4">
+                                    <p>
+                                        Aperte: <span className="font-semibold">{renderCount(aperte)}</span>
+                                    </p>
+                                    <p>
+                                        Da chiudere: <span className="font-semibold">{renderCount(daChiudere)}</span>
+                                    </p>
+                                    <p>
+                                        In attesa del commerciale:{" "}
+                                        <span className="font-semibold">{renderCount(waitingForAgent)}</span>
+                                    </p>
+                                    <p>
+                                        In attesa del buyer: <span className="font-semibold">{renderCount(waitingForBuyer)}</span>
+                                    </p>
+                                </section>
+
+                                <section className=" w-full rounded-md border border-black/10 bg-black/[0.03] p-1 dark:border-white/10 dark:bg-white/[0.04]">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[11px] leading-4">Chiuse: <span className="text-[11px] font-bold">{renderCount(closedOutcomes)}</span></p>
+                                        <TrendBadge
+                                            trend={closedTrend}
+                                            loading={loading}
+                                            tooltip="Confronto chiuse con mese precedente"
+                                            className="px-1.5 py-0.5 text-[10px]"
+                                        />
+                                    </div>
+
+                                    {/* <p className="text-base font-bold">{renderCount(closedOutcomes)}</p> */}
+
+                                    <div className="text-[11px] leading-4">
+                                        <p>
+                                            OK: <span className="font-semibold">{renderCount(ok || legacyCompletata)}</span>
+                                        </p>
+                                        <p>
+                                            KO: <span className="font-semibold">{renderCount(ko || legacyChiusa)}</span>
+                                        </p>
+                                        <p>
+                                            Mese precedente:{" "}
+                                            <span className="font-semibold">{renderCount(previousClosedOutcomes)}</span>
+                                        </p>
+                                    </div>
+                                </section>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -194,7 +221,7 @@ export function PannelloQuotazioni({ mese, isClienteHidden, showChart, onShowCha
                     style={{
                         backfaceVisibility: "hidden",
                         transform: "rotateY(180deg)",
-                        pointerEvents: showChart ? "auto" : "none"
+                        pointerEvents: showChart ? "auto" : "none",
                     }}
                 >
                     <CmpHeader hideTopRank={false} />
@@ -209,14 +236,14 @@ export function PannelloQuotazioni({ mese, isClienteHidden, showChart, onShowCha
                             />
                         ) : (
                             <div className="flex-1 flex items-center justify-center text-xs text-gray-600 dark:text-gray-400">
-                                Caricamento…
+                                Caricamento...
                             </div>
                         )}
                     </div>
                 </div>
             </motion.div>
         </div>
-    )
+    );
 }
 
 export default PannelloQuotazioni;

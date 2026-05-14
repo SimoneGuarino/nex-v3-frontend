@@ -16,7 +16,6 @@ import { ImportFromFileSummary, UploadCartFromFileAPI } from "../fetchdata/cart/
 import { AddProductEventAPI } from "../fetchdata/post/productEvents";
 import { clearCartData } from "../fetchdata/cart/clearCartData";
 import SendLogs from "logs";
-import { Notifications } from "utils/notifications/notifications";
 import { CapitalizeFirstLetter } from "utils/string/capitalize";
 import { EditQuotationValidityAPI } from "../fetchdata/post/editQuotationWindowValidity";
 import { EditQuotationCustomerAPI } from "../fetchdata/post/editQuotationCustomer";
@@ -25,6 +24,18 @@ import { getCartProduct } from "../fetchdata/cart/getCartProduct";
 import { GetQuotationOkLinksAPI } from "../fetchdata/get/getQuotationOkLinks";
 import { CheckAdminPermissions } from "utils";
 import { FDSelectOption } from "components/UI/input/FDSelect";
+import {
+    buildTourBuyerMockStepCallbacks,
+    buildTourCadMockStepCallbacks,
+    clearTourAddToCartLoading,
+    getTourMockSubstitutionSearchResults,
+    hydrateTourQuotationDetailsState,
+    isTourDetailsRuntimeActive,
+    restoreTourMockBeforeOpenRuntime,
+    tryAddProductToTourMockCart,
+    tryUpdateTourMockQuotationState,
+    tryUpdateTourMockQtsProductState,
+} from "../tour/runtime";
 
 
 // ——————————————————————————————————————————————————————————
@@ -465,10 +476,37 @@ export function useDetailsQuotation() {
 
     // Tiene memoria dell’ultima richiesta di apertura bloccata per duplicato
     const pendingOpenRef = useRef<{ id: string; state: string } | null>(null);
+    /**
+     * Snapshot del carrello mock prima dell'apertura quotazione nel tour.
+     * Viene usato quando si torna indietro allo step "Richiedi quotazione"
+     * per ripristinare la situazione iniziale del carrello fake.
+     */
+    const tourMockCartBeforeOpenRef = useRef<Array<CartProductDTO | TextRequestCartDTO>>([]);
+    /**
+     * Snapshot del carrello mock prima dello step CAD "Ricezione controproposta".
+     * Serve per ripristinare la label di stato "In attesa di valutazione"
+     * quando si torna allo step precedente nel tour.
+     */
+    const tourMockCartBeforeCommercialCounterproposalRef = useRef<Array<CartProductDTO | TextRequestCartDTO>>([]);
+    /**
+     * Snapshot del carrello mock prima dello step CAD "Accetta":
+     * usato per ripristinare la UI se il tour torna indietro dopo l'accettazione.
+     */
+    const tourMockCartBeforeCommercialAcceptanceRef = useRef<Array<CartProductDTO | TextRequestCartDTO>>([]);
+    /**
+     * Snapshot buyer "pre-invio proposta al commerciale" (tour-only).
+     * Serve a rendere ripetibile lo step `quotazioni-product-sost-submit`
+     * quando l'utente torna indietro.
+     */
+    const tourMockBuyerBeforeSubmitRef = useRef<{
+        cart: Array<CartProductDTO | TextRequestCartDTO>;
+        qts: QuotazioneDTO | null;
+    } | null>(null);
 
     // Evita doppia gestione error (snackbar + modale)
     const duplicateHandledRef = useRef(false);
     const isPassiveBid = qts?.tipologia === "BID_PASSIVO";
+
 
     // ——————————————————————————————————————————————————————————
     // FETCHES
@@ -518,6 +556,27 @@ export function useDetailsQuotation() {
      * @returns SearchResponse
      */
     const fetchSearchOnCart = useCallback(async ({ query, signal, fromScroll, offset }: fetchSearchParams): Promise<SearchResponseWithPagination> => {
+        /**
+         * Branch tour:
+         * se siamo nel dettaglio della quotazione fake, non dobbiamo interrogare il BE.
+         * Torniamo quindi una risposta vuota ma formalmente valida.
+         */
+        if (isTourDetailsRuntimeActive(quotationId)) {
+            return {
+                items: [],
+                pagination: {
+                    limit: 0,
+                    mode: "offset",
+                    offset: 0,
+                    nextOffset: null,
+                    hasMore: false,
+                    loadingInitial: false,
+                    loadingMore: false,
+                },
+                counts: { raw: 0, flat: 0 },
+            };
+        }
+
         const params = new URLSearchParams();
 
         if (query.trim() !== "") {
@@ -557,6 +616,40 @@ export function useDetailsQuotation() {
     /** fetch details */
     const fetchDetails = ({ avoidCartFetch = false, avoidProductFetch = false, avoidCategoriesFetch = false }:
         { avoidCartFetch?: boolean, avoidProductFetch?: boolean, avoidCategoriesFetch?: boolean }) => {
+        /**
+         * Branch tour centralizzato:
+         * se l'ID route è la quotazione mock del tour, idratiamo lo stato locale
+         * e usciamo subito senza invocare `getOwnQuotationDetailsData`.
+         *
+         * Questo evita il classico errore "id quotazione non valido" (ObjectId check),
+         * mantenendo però inalterato tutto il flusso reale per gli ID backend.
+         */
+        if (isTourDetailsRuntimeActive(quotationId)) {
+            hydrateTourQuotationDetailsState({
+                // Passiamo il ruolo utente corrente per permettere al runtime mock
+                // di costruire una visualizzazione coerente (Buyer vs CAD).
+                viewerRole: userState?.details?.ruolo ?? null,
+                // Wiring minimale: il runtime tour usa questo valore per allineare
+                // il `codice_buyer` della riga fake all'utente buyer loggato.
+                viewerBuyerCode: userState?.details?.codici?.buyer ?? null,
+                setQts,
+                setCustomer,
+                setCart,
+                setRaw,
+                setSearchItems,
+                setSearchCartItems,
+                setInpagination,
+                setErrorMsg,
+                setLoading,
+            });
+
+            // Le categorie restano opzionali anche in tour: utile per UI filtri,
+            // ma non bloccante per il rendering del dettaglio fake.
+            if (!avoidCategoriesFetch) fetchCategories();
+
+            return;
+        }
+
         getOwnQuotationDetailsData({
             abortController: (abortQtsRef.current = new AbortController()),
             user: userState,
@@ -583,6 +676,15 @@ export function useDetailsQuotation() {
     /** fetch cart */
     const fetchCart = () => {
         setLoading(prev => ({ ...prev, cart: true }));
+        /**
+         * Branch tour:
+         * nessuna chiamata BE con ID mock; non alteriamo il carrello gia seedato
+         * dall'hydration runtime per evitare overwrite involontari.
+         */
+        if (isTourDetailsRuntimeActive(quotationId)) {
+            return Promise.resolve({ data: [] as CartProductDTO[] });
+        }
+
         return getCartData({
             abortController: (abortCartRef.current = new AbortController()),
             quotationId,
@@ -817,6 +919,31 @@ export function useDetailsQuotation() {
 
     // esegue una ricerca IMMEDIATA (non debounced), rispettando abort & latest-only
     const runSearch = useCallback(async (query: string, fromDebounced: boolean, fromScroll?: boolean) => {
+        /**
+         * Branch tour (Buyer + CAD nel pannello sostituzione):
+         * ritorna risultati locali senza chiamare API reali.
+         */
+        if (fromDebounced) {
+            const tourMockResults = getTourMockSubstitutionSearchResults({
+                quotationId,
+                viewerRole: userState?.details?.ruolo ?? null,
+                query,
+                isSubstitutionContext: Boolean(openProductQtsSettings && !openSearch),
+            });
+
+            if (tourMockResults) {
+                setSearchItems(tourMockResults);
+                setInpagination(undefined);
+                setLoadingSearch(false);
+                setLoading((prev) => ({
+                    ...prev,
+                    search: false,
+                    search_replace_products: false,
+                }));
+                return;
+            }
+        }
+
         const offset = fromScroll ? (inpagination?.nextOffset ?? undefined) : undefined;
         const baseKey = buildKey(query, fromScroll, offset);
 
@@ -895,7 +1022,11 @@ export function useDetailsQuotation() {
         fetchSearch,
         commitSearchIfNeeded,
         inpagination,
-        filters
+        filters,
+        quotationId,
+        userState?.details?.ruolo,
+        openProductQtsSettings,
+        openSearch,
     ]);
 
     const runSearchOnCart = useCallback(async (query: string, fromScroll?: boolean, fromCart: boolean = true, applyResponseOnCart: boolean = false) => {
@@ -1038,6 +1169,31 @@ export function useDetailsQuotation() {
             extraParams = { ...extraParams, closureDraft: params.closureDraft };
         };
 
+        /**
+         * Branch tour centralizzato:
+         * sulla quotazione fake non chiamiamo API `open/close`,
+         * aggiorniamo lo stato solo in memoria locale.
+         */
+        const handledByTourRuntime = tryUpdateTourMockQuotationState({
+            quotationId,
+            qts,
+            nextState,
+            setQts,
+        });
+
+        if (handledByTourRuntime) {
+            /**
+             * Se nel tour fake passiamo da BOZZA -> APERTA,
+             * memorizziamo il carrello corrente per poterlo ripristinare
+             * quando l'utente torna indietro allo step "quotazioni-open".
+             */
+            if (qts?.stato === "BOZZA" && nextState === "APERTA") {
+                tourMockCartBeforeOpenRef.current = Array.isArray(cart) ? [...cart] : [];
+            }
+            enqueueSnackbar("Il cambio di stato della quotazione è stato completato con successo.", { type: "success" });
+            return;
+        }
+
         OpenQuotationAPI({
             abortController: new AbortController(),
             quotationId,
@@ -1063,6 +1219,25 @@ export function useDetailsQuotation() {
         });
     }, [qts, quotationId, cart]);
 
+    /**
+     * Ripristina lo scenario "pre-apertura" della quotazione fake nel tour.
+     * Chiamata tipica: navigazione indietro allo step `data-tour="quotazioni-open"`.
+     */
+    const restoreTourMockBeforeOpenStep = useCallback(() => {
+        /**
+         * Wiring minimale:
+         * demandiamo al runtime tour la logica di restore "pre-apertura"
+         * per mantenere il hook business più leggero.
+         */
+        restoreTourMockBeforeOpenRuntime({
+            quotationId,
+            qts,
+            tourMockCartBeforeOpenSnapshot: tourMockCartBeforeOpenRef.current,
+            setQts,
+            setCart,
+        });
+    }, [quotationId, qts, setQts, setCart]);
+
     const closeDuplicateModal = useCallback(() => {
         setDuplicateModalOpen(false);
         setDuplicateCandidates([]);
@@ -1082,6 +1257,55 @@ export function useDetailsQuotation() {
             forceOpen: true,
         });
     }, [HandleQuotationState]);
+
+    /**
+     * Callback CAD tour-only aggregate:
+     * tutta la logica è costruita nel runtime tour per non appesantire il hook.
+     */
+    const {
+        prepareTourMockCommercialCounterproposal,
+        restoreTourMockBeforeCommercialCounterproposalStep,
+        snapshotTourMockBeforeCommercialAcceptanceStep,
+        restoreTourMockBeforeCommercialAcceptanceStep,
+        markTourMockQuotationReadyToCloseStep,
+    } = useMemo(
+        () =>
+            buildTourCadMockStepCallbacks({
+                quotationId,
+                qts,
+                cart,
+                commercialCounterproposalSnapshotRef: tourMockCartBeforeCommercialCounterproposalRef,
+                commercialAcceptanceSnapshotRef: tourMockCartBeforeCommercialAcceptanceRef,
+                setQts,
+                setCart,
+                setOpenProductQtsSettings,
+            }),
+        [quotationId, qts, cart, setQts, setCart, setOpenProductQtsSettings],
+    );
+
+    /**
+     * Callback buyer/cad tour-only aggregate:
+     * la logica resta nel runtime tour, qui teniamo solo il wiring.
+     */
+    const {
+        prepareTourMockBuyerReadyToCloseStep,
+        completeTourMockBuyerClosureCounterStep,
+        resetTourMockCartForAddProductStep,
+        snapshotTourMockBuyerBeforeSubmitStep,
+        restoreTourMockBuyerBeforeSubmitStep,
+    } = useMemo(
+        () =>
+            buildTourBuyerMockStepCallbacks({
+                quotationId,
+                qts,
+                cart,
+                buyerBeforeSubmitSnapshotRef: tourMockBuyerBeforeSubmitRef,
+                setQts,
+                setCart,
+                setOpenProductQtsSettings,
+            }),
+        [quotationId, qts, cart, setQts, setCart, setOpenProductQtsSettings],
+    );
 
 
     // ——————————————————————————————————————————————————————————
@@ -1478,7 +1702,7 @@ export function useDetailsQuotation() {
                         prev ? { ...prev, dettagli_prodotto: { ...(prev as CartProductDTO).dettagli_prodotto, [from]: value } } : prev,
                     );
 
-                    if (openProductQtsSettings_?.dettagli_prodotto ? openProductQtsSettings_.dettagli_prodotto[from] : null !== value) {
+                    if (openProductQtsSettings_.dettagli_prodotto[from] !== value) {
                         const fromLabel = openProductQtsSettings_?.dettagli_prodotto ? openProductQtsSettings_.dettagli_prodotto[from] : "N/A";
                         const toLabel = value ?? "N/A";
 
@@ -1598,7 +1822,7 @@ export function useDetailsQuotation() {
              * @DEVELOPER_NOTE che incapsula tutta la logica di costruzione del messaggio, audience, e invio, così da mantenere il command handler pulito e focalizzato solo sulla logica di business.
              */
 
-            return Notifications({ _id: user._id, body: body_, userToken: userState.token });
+            //return Notifications({ _id: user._id, body: body_, userToken: userState.token });
         },
         [quotationId, userState, CheckAdminDev],
     );
@@ -1694,6 +1918,26 @@ export function useDetailsQuotation() {
             };
         });
 
+        /**
+         * Branch tour centralizzato:
+         * se siamo nella quotazione fake e il ruolo è CAD (Commerciale/Admin/Dev),
+         * deleghiamo la mutation al runtime tour locale.
+         *
+         * - evitiamo la chiamata API reale che validerebbe l'ObjectId e fallirebbe;
+         * - manteniamo in `tour/runtime.ts` la logica speciale del tour.
+         */
+        const handledByTourRuntime = tryAddProductToTourMockCart({
+            quotationId,
+            viewerRole: userState?.details?.ruolo ?? null,
+            product: ProductDoc,
+            setCart,
+        });
+        if (handledByTourRuntime) {
+            enqueueSnackbar("Prodotto aggiunto al carrello.", { type: 'success' });
+            clearTourAddToCartLoading({ setLoading, productId: ProductDoc._id }); //pulizia loading state anche se gestito dal tour, per sicurezza
+            return;
+        }
+
         let obj_product: any = {
             product_id: ProductDoc._id,
             quantita: 1,
@@ -1764,6 +2008,7 @@ export function useDetailsQuotation() {
             },
             HandleError: (msg) => {
                 enqueueSnackbar(msg, { type: 'error' });
+                clearTourAddToCartLoading({ setLoading, productId: ProductDoc._id });
             },
             item: obj_product,
         });
@@ -2262,6 +2507,58 @@ export function useDetailsQuotation() {
 
         if (!body) return; // es: nessuna controproposta attiva
 
+        /**
+         * Branch tour centralizzato:
+         * se siamo nel dettaglio fake del tour, aggiorniamo solo stato locale
+         * senza invocare `UpdateQtsProductStateAPI`.
+         *
+         * Nota:
+         * lasciamo inalterato il flusso reale per tutte le quotazioni backend.
+         */
+        const handledByTourRuntime = tryUpdateTourMockQtsProductState({
+            quotationId,
+            viewerRole: userState?.details?.ruolo ?? null,
+            idDoc,
+            nextState: state,
+            setCart,
+            setOpenProductQtsSettings,
+        });
+
+        if (handledByTourRuntime) {
+            // Feedback UX coerente con il ramo reale.
+            switch (state) {
+                case "CONTROPROPOSTA_INVIATA":
+                    /**
+                     * Tour-only:
+                     * evitiamo il toast in questo punto perché copre il CTA
+                     * "Dettagli avanzati" dello step successivo.
+                     */
+                    break;
+                case "ATTESA_APPROVAZIONE":
+                    enqueueSnackbar(
+                        prevState === "ATTESA_APPROVAZIONE"
+                            ? "Proposta di quotazione aggiornata con successo."
+                            : "Proposta di quotazione inviata con successo.",
+                        { type: "success" },
+                    );
+                    break;
+                default:
+                    enqueueSnackbar("Stato prodotto aggiornato in modalità tour.", { type: "success" });
+                    break;
+            }
+
+            // Nel tour mock azzeriamo comunque la nota draft dopo l'invio riuscito.
+            if (currentProposalNote && currentProposalNote.trim().length > 0) {
+                setCurrentProposalNote("");
+            }
+            /**
+             * Stop qui intenzionale:
+             * nel runtime tour non inviamo eventi/timeline backend,
+             * perché la mutation è completamente locale.
+             */
+            return;
+        }
+
         // optimistic update: aggiorno subito lo stato in memoria
         changeQtsProductState(state);
 
@@ -2605,6 +2902,13 @@ export function useDetailsQuotation() {
                     ? crypto.randomUUID()
                     : `tmp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
+            const seededPriceRaw =
+                (replacement as any)?.prezzoDealer ??
+                (replacement as any)?.prezzoFocelda ??
+                (replacement as any)?.price ??
+                0;
+            const seededPrice = Number(seededPriceRaw);
+
             return {
                 _id: tempID,
                 quotation_id: quotationId,
@@ -2638,7 +2942,8 @@ export function useDetailsQuotation() {
                     descrizioneFamiglia: (replacement as any).descrizioneFamiglia,
                 },
                 quotazione: {
-                    prezzo_finale: 0,
+                    // Nel tour buyer possiamo precompilare un prezzo di esempio dal risultato selezionato.
+                    prezzo_finale: Number.isFinite(seededPrice) ? seededPrice : 0,
                 },
                 createdBy: {
                     nome: userState?.details?.nome ?? null,
@@ -3123,6 +3428,17 @@ export function useDetailsQuotation() {
         handleSelectFromSearch,
         //operazioni sulla quotazione
         HandleQuotationState,
+        restoreTourMockBeforeOpenStep,
+        prepareTourMockCommercialCounterproposal,
+        restoreTourMockBeforeCommercialCounterproposalStep,
+        snapshotTourMockBeforeCommercialAcceptanceStep,
+        restoreTourMockBeforeCommercialAcceptanceStep,
+        markTourMockQuotationReadyToCloseStep,
+        prepareTourMockBuyerReadyToCloseStep,
+        completeTourMockBuyerClosureCounterStep,
+        resetTourMockCartForAddProductStep,
+        snapshotTourMockBuyerBeforeSubmitStep,
+        restoreTourMockBuyerBeforeSubmitStep,
 
         //operazioni carrello
         addToCart, addTextToCart,

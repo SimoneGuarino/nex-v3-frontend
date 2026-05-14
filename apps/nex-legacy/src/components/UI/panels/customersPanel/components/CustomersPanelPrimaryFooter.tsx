@@ -5,6 +5,8 @@ import { IoMapSharp } from "react-icons/io5";
 import { BiNote } from "react-icons/bi";
 import AddressesDialog from "layouts/clienti/components/AddressesDialog";
 import type { AnyRecord } from "../types";
+import { TourCtx } from "tour/TourProvider";
+import { CUSTOMER_PANEL_TOUR_SELECTORS } from "../tour-system-utils/tours";
 
 // Footer del pannello principale.
 // Contiene azioni trasversali sempre disponibili per il cliente corrente.
@@ -19,6 +21,7 @@ type CustomersPanelPrimaryFooterProps = {
     customerCode: string | number;
     userContext: AnyRecord;
     customerLabel?: string;
+    lockBodyInteractions?: boolean;
 };
 
 export const CustomersPanelPrimaryFooter: React.FC<CustomersPanelPrimaryFooterProps> = ({
@@ -29,11 +32,29 @@ export const CustomersPanelPrimaryFooter: React.FC<CustomersPanelPrimaryFooterPr
     onOpenAddresses,
     addressesOpen,
     onCloseAddresses,
+    lockBodyInteractions = false,
     customerCode,
     userContext,
     customerLabel,
-}) => (
-    <>
+}) => {
+    const tourCtx = React.useContext(TourCtx);
+    const isTourOpen = Boolean(tourCtx?.isOpen);
+    const activeStepSelector = tourCtx?.activeStepSelector;
+
+    /**
+     * Safety-net tour:
+     * oltre al lock derivato dalla config, forziamo il blocco dei 3 bottoni
+     * nello step di introduzione scheda cliente.
+     *
+     * Questo copre sia CAD che Buyer in modo esplicito.
+     */
+    const isCustomerPanelIntroStep =
+        isTourOpen && activeStepSelector === CUSTOMER_PANEL_TOUR_SELECTORS.panel;
+
+    const shouldBlockFooterActions = lockBodyInteractions || isCustomerPanelIntroStep;
+
+    return (
+        <>
         <div className="border-t border-neutral-200/60 dark:border-neutral-800/80 px-5 py-4 w-full flex flex-col gap-1">
             <div className="flex items-center justify-between gap-3">
                 <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
@@ -58,7 +79,10 @@ export const CustomersPanelPrimaryFooter: React.FC<CustomersPanelPrimaryFooterPr
                 )} */}
             </div>
 
-            <div className="w-full flex items-center gap-2">
+            <div
+                className={`w-full flex items-center gap-2 ${shouldBlockFooterActions ? "pointer-events-none opacity-60" : ""}`}
+                aria-disabled={shouldBlockFooterActions}
+            >
                 <FDButton
                     size="small"
                     radius="md"
@@ -66,6 +90,7 @@ export const CustomersPanelPrimaryFooter: React.FC<CustomersPanelPrimaryFooterPr
                     color="neutral"
                     rightIcon={GrDocumentPdf({})}
                     onClick={onDocumentiClick}
+                    disabled={shouldBlockFooterActions}
                 >
                     Documenti
                 </FDButton>
@@ -77,6 +102,7 @@ export const CustomersPanelPrimaryFooter: React.FC<CustomersPanelPrimaryFooterPr
                     color="neutral"
                     rightIcon={IoMapSharp({})}
                     onClick={onOpenAddresses}
+                    disabled={shouldBlockFooterActions}
                 >
                     Indirizzi
                 </FDButton>
@@ -88,6 +114,7 @@ export const CustomersPanelPrimaryFooter: React.FC<CustomersPanelPrimaryFooterPr
                     color="neutral"
                     rightIcon={BiNote({})}
                     onClick={onOpenNotes}
+                    disabled={shouldBlockFooterActions}
                 >
                     Note
                 </FDButton>
@@ -103,5 +130,6 @@ export const CustomersPanelPrimaryFooter: React.FC<CustomersPanelPrimaryFooterPr
             customerLabel={customerLabel ?? ""}
         />
     </>
-);
+    );
+};
 

@@ -86,11 +86,12 @@ const DocumentCard: React.FC<Props> = ({ item, addToCart, loadingAddingToCart })
         </div>
 
         <FDIconButton dataTooltipContent='Aggiungi alla quotazione'
-            dataTooltipId='general-quotations-tooltip' 
-            icon={<BsCartPlusIcon />} 
-            onClick={() => addToCart(item)} 
+            data-tour="quotazioni-add-product"
+            dataTooltipId='general-quotations-tooltip'
+            icon={<BsCartPlusIcon />}
+            onClick={() => addToCart(item)}
             loading={loadingAddingToCart}
-            className='absolute top-2 right-2' 
+            className='absolute top-2 right-2'
         />
     </>
     );

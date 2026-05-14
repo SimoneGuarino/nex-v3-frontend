@@ -176,7 +176,7 @@ export const Payments: React.FC<{
     onStatsChange,
 }) => {
         const isSummary = mode === "summary";
-        const base = ensureTrailingSlash(import.meta.env.VITE_API_API_STOCKS);
+        const base = ensureTrailingSlash(import.meta.env.VITE_API_STOCKS);
 
         const [loading, setLoading] = React.useState(false);
         const [tableLoading, setTableLoading] = React.useState(false);
@@ -286,7 +286,7 @@ export const Payments: React.FC<{
 
         if (isSummary) {
             return (
-                <SectionContainer>
+                <SectionContainer dataTour="scheda-cliente-pagamenti">
                     <SectionHeader
                         title="Pagamenti"
                         description={`${formatNumberIt(total)} pagamenti totali`}

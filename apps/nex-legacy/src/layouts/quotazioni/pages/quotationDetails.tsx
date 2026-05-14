@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { deleteQuotationData } from "../fetchdata/destroy/deleteQuotationData";
 
@@ -47,11 +47,27 @@ import placeholder from 'assets/images/placeholder/av5c8336583e291842624.webp';
 import { CheckRole } from "utils/checkRole";
 import { OkLinksSidePanel } from "../components/OkLinksSidePanel";
 import { FDSkeletonLayout, FDSkeletonPresets, FDSkeletonSwitch } from "components/UI/box/FDSkeleton";
+import { useExitTourMockDetails } from "../tour/useExitTourMockDetails";
+import {
+    computeQuotazioniDetailsTourUiFlags,
+    getTourCustomerPanelMockPayload,
+    resetTourBuyerSubstitutionSelection,
+    runTourCadAsPanelSeedSearchRuntime,
+    shouldIgnoreTourFiltersClose,
+    TourContextMenuCloseReason,
+} from "../tour/runtime";
+import { quotazioniCustomerPanelInteractionLockConfig } from "../tour/customerPanelInteractionLockConfig";
+import { useQuotazioniDetailsTourRuntime } from "../tour/useQuotazioniDetailsTourRuntime";
+
+//tour
+import { useTour } from "tour/TourProvider";
+import type { Role } from "tour/types";
 
 const MdDoneIcon = MdDone as React.FC<{ size?: number; className?: string }>;
 const TbAlertTriangleIcon = TbAlertTriangle as React.FC<{ size?: number; className?: string }>;
 const BsCartPlusIcon = BsCartPlus as React.FC<{ size?: number; className?: string }>;
 const IoEyeOutlineIcon = IoEyeOutline as React.FC<{ size?: number; className?: string }>;
+
 
 // ——————————————————————————————————————————————————————————
 // SUB COMPONENTS
@@ -117,6 +133,17 @@ export function QuotationDetails() {
         handleSelectFromSearch,
         // operazioni sulla quotazione
         HandleQuotationState,
+        restoreTourMockBeforeOpenStep,
+        prepareTourMockCommercialCounterproposal,
+        restoreTourMockBeforeCommercialCounterproposalStep,
+        snapshotTourMockBeforeCommercialAcceptanceStep,
+        restoreTourMockBeforeCommercialAcceptanceStep,
+        markTourMockQuotationReadyToCloseStep,
+        prepareTourMockBuyerReadyToCloseStep,
+        completeTourMockBuyerClosureCounterStep,
+        resetTourMockCartForAddProductStep,
+        snapshotTourMockBuyerBeforeSubmitStep,
+        restoreTourMockBuyerBeforeSubmitStep,
         // azioni sul carrello
         addToCart, addTextToCart,
         removeFromCart,
@@ -158,6 +185,184 @@ export function QuotationDetails() {
     } = useDetailsQuotation();
     const { globalData } = useGeneralDataContext();
     const buyerOptions = globalData?.buyers?.map(b => ({ value: b.codici?.buyer ?? "", label: `${b.codici?.buyer} - ${b.nome} ${b.cognome}` })) || []; // opzioni buyer
+
+    /**
+     * Aggancio minimale del comportamento tour-specifico:
+     * se questa pagina sta mostrando la quotazione fake e il tour viene chiuso,
+     * un hook dedicato (collocato in `tour/`) riporta automaticamente l'utente
+     * alla lista quotazioni.
+     *
+     * Nota: lasciamo volutamente la logica nel modulo tour per non appesantire
+     * il codice pagina con condizioni speciali non-business.
+     */
+    useExitTourMockDetails(quotationId);
+
+
+    // ——————————————————————————————————————————————————————————
+    // TOUR SYSTEM QUOTAZIONI (PG DETTAGLIO)
+    // + LockInteraction durante il tour in base ai ruoli
+    // ——————————————————————————————————————————————————————————
+    // In questa pagina leggiamo solo lo stato del tour globale già aperto.
+    // Non registriamo `useSectionTour` nel dettaglio: in questo modo evitiamo che
+    // il restart del tour venga ancorato alla route dettaglio e riparta dallo step 0.
+    const { isOpen, index: tourIndex, activeStepSelector } = useTour();
+    const ruolo = (userState?.details?.ruolo as string) ?? "";
+    const { isCad, isBuyer, lockInteractions, shouldDisableTourSendNoteButton } =
+        computeQuotazioniDetailsTourUiFlags({
+            isTourOpen: isOpen,
+            tourIndex,
+            role: ruolo,
+        });
+
+    // Step specifico del pannello filtri prodotti nel tour dettaglio quotazione.
+    // Usiamo il selector (e non l'indice) per restare robusti a eventuali
+    // inserimenti/rimozioni di step nel flusso in futuro.
+    const isProductsFiltersPanelStep =
+        activeStepSelector === '[data-tour="quotazioni-products-filters-3"]';
+    const shouldDisableCommercialAlternativesView =
+        isOpen && activeStepSelector === '[data-tour="quotazioni-product-alt-comm"]';
+
+    /**
+     * Stato UI tour del blocco prodotto.
+     * Viene guidato direttamente dalle actions per evitare duplicazioni.
+     */
+    const [tourProductPanelLock, setTourProductPanelLock] = useState(false);
+    const [tourProductSheetCloseDisabled, setTourProductSheetCloseDisabled] = useState(false);
+    const [tourProductSheetMode, setTourProductSheetMode] = useState<"keep" | "open" | "close">("close");
+    /**
+     * Stati UI tour per i pannelli secondari del blocco prodotto:
+     * - `tourProductSecondaryPanelMode`: apre/chiude "Dettagli avanzati / storico"
+     * - `tourProductSubstitutionPanelMode`: apre/chiude "Proponi prodotto in sostituzione"
+     *
+     * Li teniamo nel parent per centralizzare la regia in `tour/actions.ts`.
+     */
+    const [tourProductSecondaryPanelMode, setTourProductSecondaryPanelMode] =
+        useState<"keep" | "open" | "close">("close");
+    const [tourProductSubstitutionPanelMode, setTourProductSubstitutionPanelMode] =
+        useState<"keep" | "open" | "close">("close");
+    /**
+     * Lock tour del pulsante "Chiudi ricerca" nel pannello sostituzione:
+     * resta attivo fino allo step esplicito di chiusura.
+     */
+    const [tourSubstitutionCloseDisabled, setTourSubstitutionCloseDisabled] = useState(false);
+    /**
+     * Lock tour aggiuntivi del flusso sostituzione Buyer.
+     */
+    const [tourSubstitutionSearchPanelLock, setTourSubstitutionSearchPanelLock] = useState(false);
+    const [tourSubstitutionProposalsBoxLock, setTourSubstitutionProposalsBoxLock] = useState(false);
+    const [tourSubstitutionProposalPanelLock, setTourSubstitutionProposalPanelLock] = useState(false);
+    /** Stato che ha lo scopo di gestire ClosureWizard */
+    const [openClosure, setOpenClosure] = useState<boolean>(false);
+    /**
+     * Comandi tour-only per aprire/chiudere il wizard.
+     * Li passiamo ad `actions.ts` per mantenere centralizzata la regia.
+     */
+    const openTourClosureWizard = useCallback(() => setOpenClosure(true), []);
+    const closeTourClosureWizard = useCallback(() => setOpenClosure(false), []);
+
+    /**
+     * Da al modulo tour la prima riga prodotto disponibile nel carrello.
+     * Serve per aprire il pannello prodotto senza spostare logica business nel tour.
+     */
+    const getFirstCartProductForTour = useCallback(() => {
+        return (cart ?? []).find((item) => (item.kind ?? "PRODUCT") === "PRODUCT") ?? null;
+    }, [cart]);
+
+    /**
+     * Seed query tour per la sostituzione Buyer:
+     * precompila la barra e mostra subito il prodotto demo.
+     */
+    const runTourSubstitutionSeedSearch = useCallback(() => {
+        searchDebounced("82K2028FIX");
+    }, [searchDebounced]);
+
+    /**
+     * Seed CAD della barra "Ricerca mirata" nello step `quotazioni-AS-panel`.
+     * La logica reale (guard route mock + ruolo) resta nel runtime tour.
+     */
+    const runTourCadAsPanelSeedSearch = useCallback(() => {
+        runTourCadAsPanelSeedSearchRuntime({
+            quotationId,
+            viewerRole: (userState?.details?.ruolo as string) ?? "",
+            searchDebounced,
+        });
+    }, [quotationId, userState?.details?.ruolo, searchDebounced]);
+
+    /**
+     * Reset selezione sostituzione per il tour buyer quando l'utente torna indietro.
+     * La callback è "tour-only" e non impatta i flussi normali.
+     */
+    const runTourSubstitutionResetSelection = useCallback(() => {
+        // La logica resta nel runtime tour: qui facciamo solo wiring dei parametri pagina.
+        resetTourBuyerSubstitutionSelection({
+            openProductQtsSettings,
+            selectSubstitutionProductForCurrent,
+        });
+    }, [openProductQtsSettings, selectSubstitutionProductForCurrent]);
+
+    /**
+     * Durante lo step del pannello filtri non dobbiamo chiudere il ContextMenu per
+     * `clickAway`/`ESC`/`backdrop`: i click "Avanti/Indietro" del tour passano da
+     * overlay esterni e, senza questa guardia, il close automatico può spostare il focus.
+     *
+     * Manteniamo invece la chiusura esplicita (`itemClick` o close programmatico),
+     * come già fatto nei tour della lista quotazioni.
+     */
+    const shouldIgnoreClose = (reason?: TourContextMenuCloseReason) => {
+        // Regola centralizzata nel runtime tour, per tenerla coerente con altri pannelli.
+        return shouldIgnoreTourFiltersClose({
+            isTourOpen: isOpen,
+            isProductsFiltersPanelStep,
+            reason,
+        });
+    };
+
+    /**
+     * Orchestrazione step->UI del dettaglio quotazione:
+     * tutta la regia vive nel hook runtime dentro `tour/`.
+     *
+     * In questo file lasciamo solo wiring dei parametri pagina,
+     * così riduciamo rumore, duplicazioni e dipendenze instabili.
+     */
+    useQuotazioniDetailsTourRuntime({
+        isTourOpen: isOpen,
+        tourIndex,
+        activeStepSelector,
+        role: (userState?.details?.ruolo as Role) ?? "Tester",
+        setOpenFilters,
+        setOpenSearch,
+        setOpenCustomersDetails,
+        setDetailsScope: handleScopeChange,
+        setOpenProductQtsSettings,
+        getFirstCartProductForTour,
+        setTourProductPanelLock,
+        setTourProductSheetCloseDisabled,
+        setTourProductSheetMode,
+        setTourProductSecondaryPanelMode,
+        setTourProductSubstitutionPanelMode,
+        setTourSubstitutionCloseDisabled,
+        runTourSubstitutionSeedSearch,
+        runTourCadAsPanelSeedSearch,
+        runTourSubstitutionResetSelection,
+        setTourSubstitutionSearchPanelLock,
+        setTourSubstitutionProposalsBoxLock,
+        setTourSubstitutionProposalPanelLock,
+        openTourClosureWizard,
+        closeTourClosureWizard,
+        restoreTourMockBeforeOpenStep,
+        runTourPrepareCommercialCounterproposal: prepareTourMockCommercialCounterproposal,
+        restoreTourMockBeforeCommercialCounterproposalStep,
+        snapshotTourMockBeforeCommercialAcceptanceStep,
+        restoreTourMockBeforeCommercialAcceptanceStep,
+        runTourMarkCadQuotationReadyToCloseStep: markTourMockQuotationReadyToCloseStep,
+        runTourPrepareBuyerReadyToCloseStep: prepareTourMockBuyerReadyToCloseStep,
+        runTourCompleteBuyerClosureCounterStep: completeTourMockBuyerClosureCounterStep,
+        // Backward step "Aggiungi prodotto": riporta il carrello fake a vuoto.
+        runTourResetCartForAddProductStep: resetTourMockCartForAddProductStep,
+        runTourSnapshotBuyerBeforeSubmitStep: snapshotTourMockBuyerBeforeSubmitStep,
+        runTourRestoreBuyerBeforeSubmitStep: restoreTourMockBuyerBeforeSubmitStep,
+    });
+    //
 
     // dati
     const [expandedId, setExpandedId] = useState<string | null>(null); // NEW
@@ -245,9 +450,6 @@ export function QuotationDetails() {
         }) as any[];
     }, [searchItems, isBozza, cartProductIds, isTargetedSearchMode, searchPanelMode, removeFromCart, addToCart, loading.cart]);
 
-    /** Stato che ha lo scopo di gestire ClosureWizard */
-    const [openClosure, setOpenClosure] = useState<boolean>(false);
-
     // Cast non-breaking (qts resta quello che arriva dal BE, noi lo “vediamo” esteso lato FE)
     const qtsExt = qts as unknown as QuotazioneDTOExtended;
 
@@ -265,7 +467,6 @@ export function QuotationDetails() {
                                 cp?.stato === "CONTROPROPOSTA_ACCETTATA" || cp?.approvato === true
                         ) ?? null
                         : null;
-
                 const effectiveDetails = acceptedProposal?.dettagli_prodotto ?? p?.dettagli_prodotto;
 
                 const originalLabel =
@@ -296,6 +497,31 @@ export function QuotationDetails() {
     }, [cart]);
 
     const gate = useQuotationClosureGate(qtsExt, areAllProductsDone);
+
+    /**
+     * Payload mock della scheda cliente durante il tour.
+     *
+     * Nota:
+     * - fuori dal tour torna `null` -> CustomersPanel continua a usare API reali;
+     * - nel tour viene usato solo per i ruoli CAD (Commerciale/Admin/Dev),
+     *   così i pannelli guidati restano stabili;
+     * - per Buyer resta `null`, in coerenza con i permessi reali.
+     */
+    const customerPanelTourMockPayload = useMemo(
+        () => {
+            /**
+             * Tour quotazioni:
+             * - mock attivo SOLO quando il tour è aperto;
+             * - CAD (Commerciale/Admin/Dev): usiamo payload mock per mostrare i pannelli guidati;
+             * - Buyer: niente mock, così la scheda resta coerente con i permessi reali
+             *   e non mostra i pannelli interni del tour.
+             */
+            if (!isOpen) return null;
+            if (!isCad) return null;
+            return getTourCustomerPanelMockPayload(quotationId);
+        },
+        [quotationId, isCad, isOpen],
+    );
 
     //Se il commerciale proprietario non ha ancora assegnato un cliente valido al posto di quello placeholder, non potrà aprire la chiusura della quotazione.
     //cosa che potrà fare se inserirà un cliente reale.
@@ -403,14 +629,24 @@ export function QuotationDetails() {
             setOpenFilters(false);
         }
     }, [qts?.stato, scope, handleScopeChange, setOpenSearch, setOpenFilters]);
-
+    
 
     // ——————————————————————————————————————————————————————————
     // RETURN HOOK
     // ——————————————————————————————————————————————————————————
     return (
         <DashboardLayout>
-            <HeaderBar onDeleteQuotation={onDeleteQuotation} refreshAll={refreshAll} qts={qts} loading={(loading.general_data || loading.cart) as boolean} />
+            <div data-tour="quotazioni-details-page">
+                {lockInteractions && (
+                    <div
+                        className="relative"
+                        aria-hidden="true"
+                        style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "auto" }}
+                        onClickCapture={(e) => e.stopPropagation()}
+                    />
+                )}
+                <HeaderBar onDeleteQuotation={onDeleteQuotation} refreshAll={refreshAll} qts={qts} loading={(loading.general_data || loading.cart) as boolean} />
+            </div>
             {qts && qts.stato === "VALIDAZIONE" && <QuotazioneLock className="mt-2" quoteType={qts?.tipologia} status={qts?.stato} onApproveUnlock={HandleQuotationState} onRejectUnlock={(reason) => HandleQuotationState({ isRefused: true, closed_reason: reason })} />}
             {errorMsg && <RenderError error={String(errorMsg)} />}
 
@@ -418,6 +654,7 @@ export function QuotationDetails() {
             {(!isBozza && !isDone) && <ValidityBanner
                 qts={qts}
                 isRequester={isRequester}
+                isBuyer={isBuyer}
                 allProductsDone={areAllProductsDone}
                 onOpenClosure={handleOpenClosure}
             />}
@@ -434,24 +671,46 @@ export function QuotationDetails() {
             {/* LAYOUT: 3 colonne (1-2-9) con header bar sopra e tabella prodotti a destra */}
             {qts && <div className="grid grid-cols-1 md:grid-cols-12 gap-4 py-4">
                 {/* titolo + azioni principali + cards */}
-                <FDBox variant="ghost" className="col-span-12 lg:col-span-3 flex flex-col gap-4 max-h-[80vh] overflow-y-auto pr-2">
-                    <QuotationDetailsCard quotation={qts} isAdmin={CheckAdminDev}
-                        totalAmount={qts?.valore} onUpdateValidityWindow={handleUpdateValidityWindow} prog_num={(qts as any)?.prog_num}
-                        setOpenOkLinksPanel={setOpenOkLinksPanel} fetchQuotationOkLinks={fetchQuotationOkLinks} loading={loading} setLoading={setLoading} isAgent={(userState && userState?.details?.ruolo == CheckRole(3)) ?? false} />
-                    {isBozza && <CartPanel qts={qts} cart={cart} clearCart={clearCart} loadingCart={loading.adding_to_cart as Map<string, boolean>}
-                        updateCartItemQuantity={updateCartItemQuantity} removeFromCart={removeFromCart} openQuotation={HandleQuotationState} />}
-                    <QuoteProgressCard value={getProgressPercentage()} />
-                    <CustomersCard
-                        customer={customer}
-                        setOpenCustomersDetails={setOpenCustomersDetails}
-                        // Abilitiamo il bottone solo nel caso utile lato UX:
-                        // richiedente proprietario + BID_PASSIVO + cliente ancora placeholder.
-                        // Se il cliente è già reale, il bottone sparisce (sostituzione one-shot lato UI).
-                        // La protezione definitiva resta comunque lato BE.
-                        canReplacePlaceholderCustomer={Boolean(isRequester && qts?.tipologia === "BID_PASSIVO" && customer?.isPlaceholder)}
-                        onReplacePlaceholderCustomer={handleReplacePlaceholderCustomer}
-                    />
-                </FDBox>
+                {<FDBox variant="ghost" className="col-span-12 lg:col-span-3 flex flex-col gap-4 max-h-[80vh] overflow-y-auto pr-2">
+                    <div data-tour="quotazioni-details-card" className="relative">
+                        {lockInteractions && (
+                            <div
+                                aria-hidden="true"
+                                style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "auto" }}
+                                onClickCapture={(e) => e.stopPropagation()}
+                            />
+                        )}
+                        <QuotationDetailsCard quotation={qts} isAdmin={CheckAdminDev}
+                            totalAmount={qts?.valore} onUpdateValidityWindow={handleUpdateValidityWindow} prog_num={(qts as any)?.prog_num}
+                            setOpenOkLinksPanel={setOpenOkLinksPanel} fetchQuotationOkLinks={fetchQuotationOkLinks} loading={loading} setLoading={setLoading} isAgent={(userState && userState?.details?.ruolo == CheckRole(3)) ?? false} />
+                    </div>
+                    <div data-tour="quotazioni-cart-card">
+                        {isBozza && <CartPanel qts={qts} cart={cart} clearCart={clearCart} loadingCart={loading.adding_to_cart as Map<string, boolean>}
+                            updateCartItemQuantity={updateCartItemQuantity} removeFromCart={removeFromCart} openQuotation={HandleQuotationState} />}
+                    </div>
+                    <div data-tour="quotazioni-progress">
+                        <QuoteProgressCard value={getProgressPercentage()} />
+                    </div>
+                    <div data-tour="quotazioni-customer" className="relative">
+                        {lockInteractions && (
+                            <div
+                                aria-hidden="true"
+                                style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "auto" }}
+                                onClickCapture={(e) => e.stopPropagation()}
+                            />
+                        )}
+                        <CustomersCard
+                            customer={customer}
+                            setOpenCustomersDetails={setOpenCustomersDetails}
+                            // Abilitiamo il bottone solo nel caso utile lato UX:
+                            // richiedente proprietario + BID_PASSIVO + cliente ancora placeholder.
+                            // Se il cliente è già reale, il bottone sparisce (sostituzione one-shot lato UI).
+                            // La protezione definitiva resta comunque lato BE.
+                            canReplacePlaceholderCustomer={Boolean(isRequester && qts?.tipologia === "BID_PASSIVO" && customer?.isPlaceholder)}
+                            onReplacePlaceholderCustomer={handleReplacePlaceholderCustomer}
+                        />
+                    </div>
+                </FDBox>}
 
                 {/* LISTA PRODOTTI */}
                 <FDBox variant="ghost" className="col-span-12 lg:col-span-9 flex flex-col gap-4">
@@ -533,7 +792,7 @@ export function QuotationDetails() {
                                         <img src={cartEmpty} alt="Carrello vuoto" className="max-h-86 object-contain grayscale opacity-50 avoid-drag" />
                                         <p className="text-sm text-neutral-500">Nessun {scope === "prodotti" ? "prodotto" : "elemento in quotazione"} da mostrare.</p>
                                         {(scope !== "prodotti" && isBozza) ? (
-                                            <FDButton variant="outline" size="small" color="warning" onClick={() => handleScopeChange("prodotti")}>
+                                            <FDButton data-tour="quotazioni-cart-add" variant="outline" size="small" color="warning" onClick={() => handleScopeChange("prodotti")}>
                                                 Aggiungi Prodotti alla Quotazione
                                             </FDButton>
                                         ) : null}
@@ -554,7 +813,7 @@ export function QuotationDetails() {
                 onSelect={(it: any) => {
                     const d = it.payload as ProductDoc;
                     const isInCart = loading.cart ? Boolean(d.inCart) : cartProductIds.has(d._id);
-                    
+
                     if (isBozza) {
                         if (isInCart) {
                             removeFromCart(d._id);
@@ -668,13 +927,29 @@ export function QuotationDetails() {
 
                 /* Closure gate */
                 locked={gate.locked}
+                /** Stato UI blocco prodotto guidato dalle actions del tour. */
+                tourProductPanelLock={tourProductPanelLock}
+                tourProductSheetCloseDisabled={tourProductSheetCloseDisabled}
+                tourProductSheetMode={tourProductSheetMode}
+                tourProductSecondaryPanelMode={tourProductSecondaryPanelMode}
+                tourProductSubstitutionPanelMode={tourProductSubstitutionPanelMode}
+                tourSubstitutionCloseDisabled={tourSubstitutionCloseDisabled}
+                tourSubstitutionSearchPanelLock={tourSubstitutionSearchPanelLock}
+                tourSubstitutionProposalsBoxLock={tourSubstitutionProposalsBoxLock}
+                tourSubstitutionProposalPanelLock={tourSubstitutionProposalPanelLock}
+                tourSendNoteDisabled={shouldDisableTourSendNoteButton}
+                tourCommercialAlternativesViewDisabled={shouldDisableCommercialAlternativesView}
             />
-
             <CustomersPanel
                 cliente={customer?.CodiceCliente?.Focelda ?? ""}
                 // Guard finale: se il cliente e placeholder BID_PASSIVO
                 // non apriamo il pannello anagrafica (non esiste una scheda reale).
                 openFor={Boolean(openCustomersDetails && !customer?.isPlaceholder)}
+                // Durante il tour passiamo un payload mock per evitare fetch reali
+                // che possono risultare "non autorizzati" in base al ruolo.
+                tourMockPayload={customerPanelTourMockPayload}
+                // Lock locale della scheda cliente guidato dal tour corrente.
+                interactionLockConfig={quotazioniCustomerPanelInteractionLockConfig}
                 onClose={() => setOpenCustomersDetails(false)}
             />
 
@@ -686,7 +961,8 @@ export function QuotationDetails() {
                 isRequester={isRequester}
                 productRows={productRows}
                 onConfirm={async (draft: ClosureDraft) => {
-                    if (draft && draft.finalOutcome && (draft.finalOutcome == "OK" || draft.finalOutcome == "KO")) {
+                    console.log("Chiusura quotazione con draft:", draft);
+                    if (draft && draft.finalOutcome && (["OK", "KO"].includes(draft.finalOutcome))) {
                         HandleQuotationState({ nextState: draft.finalOutcome, closureDraft: draft });
                     };
                 }}
@@ -707,7 +983,10 @@ export function QuotationDetails() {
             <ContextMenu
                 openFor={openFilters}
                 pos={contextMenuRef}
-                onClose={() => { setOpenFilters(false); }}
+                onClose={(_e?: any, reason?: TourContextMenuCloseReason) => {
+                    if (shouldIgnoreClose(reason)) return;
+                    setOpenFilters(false);
+                }}
                 panel={
                     <Filters
                         categoryData={categoryData ?? []}

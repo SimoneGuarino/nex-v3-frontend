@@ -7,15 +7,17 @@ import type {
     BackordersDetailsPayload,
     CustomerPurchasesSummaryPayload,
     CustomerQuotesSummaryPayload,
+    CustomerStatementPayload,
     CustomerFullPayload,
     LoadingSection,
     PaymentsDetailsPayload,
     SectionFetchState,
-    ScontiDetailsPayload,
     ScontiPayload,
     TrackingsDetailsPayload,
 } from "../types";
 import { buildQueryString, ensureTrailingSlash } from "../helpers/panelUtils";
+import { asDigitString } from "../../customerNotes/utils";
+import { createEmptyStatementBusinessPayload, errMsg, extractActm, fetchCustomerDeadlinesByBusiness, hasObjectData, normalizeScontiDetailsPayload, throwIfAborted } from "../helpers/fetchUtils";
 
 
 export type SaveProfilazioneResponse = {
@@ -23,87 +25,6 @@ export type SaveProfilazioneResponse = {
     operation: "created" | "updated" | string | null;
     item: AnyRecord | null;
 };
-
-
-// ——————————————————————————————————————————————————————————
-// HELPER FUNCTIONS
-// ——————————————————————————————————————————————————————————
-function errMsg(e: any, fallback: string) {
-    return e?.msg || e?.message || fallback;
-};
-
-function asDigitString(v: any): string | null {
-    const s = String(v ?? "").trim();
-    if (!s) return null;
-    return /^\d+$/.test(s) ? s : null;
-};
-
-function extractActm(creditsProfile: AnyRecord | null): string | null {
-    if (!creditsProfile) return null;
-
-    const candidates = [
-        creditsProfile?.actm,
-        creditsProfile?.Anagrafica?.actm,
-
-        creditsProfile?.CodiceCliente?.IOT,
-        creditsProfile?.Anagrafica?.CodiceCliente?.IOT,
-
-        creditsProfile?.CodiceClienteIOT,
-        creditsProfile?.Anagrafica?.CodiceClienteIOT,
-
-        creditsProfile?.IOT,
-        creditsProfile?.Anagrafica?.IOT,
-    ];
-
-    for (const c of candidates) {
-        const d = asDigitString(c);
-        if (d) return d;
-    }
-    return null;
-};
-
-function createAbortError(): Error {
-    try {
-        return new DOMException("Operation aborted", "AbortError");
-    } catch {
-        const err = new Error("Operation aborted");
-        (err as any).name = "AbortError";
-        return err;
-    }
-}
-
-function throwIfAborted(signal: AbortSignal) {
-    if (signal.aborted) throw createAbortError();
-}
-
-function hasObjectData(value: any): value is AnyRecord {
-    return Boolean(value) && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length > 0;
-}
-
-function normalizeScontiDetailsPayload(response: any): ScontiDetailsPayload {
-    const items = Array.isArray(response)
-        ? response
-        : Array.isArray(response?.items)
-            ? response.items
-            : Array.isArray(response?.data)
-                ? response.data
-                : Array.isArray(response?.data?.items)
-                    ? response.data.items
-                    : [];
-    const total = Number(
-        response?.total ??
-        response?.totale ??
-        response?.count ??
-        response?.data?.total ??
-        0
-    );
-    const normalizedTotal = Number.isFinite(total) ? Math.max(total, items.length) : items.length;
-
-    return {
-        total: normalizedTotal,
-        items,
-    };
-}
 
 
 // ——————————————————————————————————————————————————————————
@@ -152,7 +73,7 @@ export async function getData({
         return false;
     }
 
-    const base = ensureTrailingSlash(import.meta.env.VITE_API_API_CUSTOMERSFIDO);
+    const base = ensureTrailingSlash(import.meta.env.VITE_API_CUSTOMERSFIDO);
 
     const anagraficaUrl = `${base}customers/anagrafica?ofs=0`;
     const anagraficaPayload = {
@@ -182,7 +103,7 @@ export async function getData({
         const cmp = typeof body?.cmp === "number" || typeof body?.cmp === "string" ? body.cmp : undefined;
         const ccom = typeof body?.ccom === "string" ? body.ccom : undefined;
         const profilazioneUrl = `${base}customers/profilazione/${encodeURIComponent(ctm)}${buildQueryString({ cmp, ccom })}`;
-        const trackingUrl = `${ensureTrailingSlash(import.meta.env.VITE_API_API_LOGISTICS)}trackings?ofs=0`;
+        const trackingUrl = `${ensureTrailingSlash(import.meta.env.VITE_API_LOGISTICS)}trackings?ofs=0`;
 
         const anagraficaPromise = (async () => {
             setLoadingState?.("anagrafica", true);
@@ -254,6 +175,47 @@ export async function getData({
                 return null;
             } finally {
                 setLoadingState?.("creditsYears", false);
+            }
+        })();
+
+        const statementPromise = (async () => {
+            setLoadingState?.("statement", true);
+            try {
+                throwIfAborted(abortController.signal);
+                const foceldaDeadlines = await fetchCustomerDeadlinesByBusiness({
+                    customerCode: ctm,
+                    business: "focelda",
+                    abortController,
+                });
+                throwIfAborted(abortController.signal);
+
+                const statement: CustomerStatementPayload = {
+                    activeBusiness: "focelda",
+                    activeView: "statement",
+                    focelda: {
+                        ...createEmptyStatementBusinessPayload(),
+                        deadlines: foceldaDeadlines,
+                    },
+                    iot: createEmptyStatementBusinessPayload(),
+                };
+
+                setData((prev: CustomerFullPayload) => ({
+                    ...prev,
+                    statement,
+                }));
+                setFetchState?.("statement", "success");
+                return statement;
+            } catch (e: any) {
+                if (e?.name === "AbortError") throw e;
+                warnings.push(`statement: ${errMsg(e, "errore nel recupero statement cliente")}`);
+                setData((prev: CustomerFullPayload) => ({
+                    ...prev,
+                    statement: null,
+                }));
+                setFetchState?.("statement", "error");
+                return null;
+            } finally {
+                setLoadingState?.("statement", false);
             }
         })();
 
@@ -365,7 +327,7 @@ export async function getData({
             setLoadingState?.("payments", true);
             try {
                 throwIfAborted(abortController.signal);
-                const paymentsUrl = `${import.meta.env.VITE_API_API_STOCKS}pagamenti`;
+                const paymentsUrl = `${import.meta.env.VITE_API_STOCKS}pagamenti`;
                 const paymentsQuery = buildQueryString({
                     ofs: 0,
                     limit: PAYMENTS_PAGE_SIZE,
@@ -676,6 +638,7 @@ export async function getData({
             anagraficaPromise,
             creditsPromise,
             creditsYearsPromise,
+            statementPromise,
             backordersPromise,
             paymentsPromise,
             quotesPromise,
@@ -728,7 +691,7 @@ export async function saveProfilazione({
         throw new Error(message);
     }
 
-    const base = ensureTrailingSlash(import.meta.env.VITE_API_API_CUSTOMERSFIDO);
+    const base = ensureTrailingSlash(import.meta.env.VITE_API_CUSTOMERSFIDO);
     const cmp = typeof body?.cmp === "number" || typeof body?.cmp === "string" ? body.cmp : undefined;
     const ccom = typeof body?.ccom === "string" ? body.ccom : undefined;
     const profilazioneUrl = `${base}customers/profilazione/${encodeURIComponent(ctm)}${buildQueryString({ cmp, ccom })}`;

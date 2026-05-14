@@ -4,6 +4,7 @@ import { useQuotationClosureGate } from "../../../hook/useQuotationClosureGate";
 import { FiLock, FiClock, FiAlertTriangle } from "react-icons/fi";
 import { FDButton } from "components/UI/buttons/FDButton";
 import { QuotazioneDTOExtended } from "layouts/quotazioni/types/closure";
+import { useTour } from "tour/TourProvider";
 
 const FiLockIcon = FiLock as React.FC<{ size?: number; className?: string }>;
 const FiClockIcon = FiClock as React.FC<{ size?: number; className?: string }>;
@@ -14,6 +15,7 @@ type Props = {
 
     /** L’utente che ha creato la quotazione (agenteId) */
     isRequester: boolean;
+    isBuyer?: boolean;
 
     /**
      * True quando tutti i prodotti della quotazione hanno raggiunto uno stato terminale "done"
@@ -41,7 +43,7 @@ type Props = {
  * - Le azioni operative vanno bloccate altrove usando gate.locked.
  * - CTA apre il wizard governato SOLO da openClosure.
  */
-export const ValidityBanner: React.FC<Props> = ({ qts, isRequester, allProductsDone, onOpenClosure }) => {
+export const ValidityBanner: React.FC<Props> = ({ qts, isRequester, isBuyer = false, allProductsDone, onOpenClosure }) => {
     const gate = useQuotationClosureGate(qts, allProductsDone);
 
     // Esiste finestra validità se almeno uno tra inizio/fine è presente
@@ -84,7 +86,7 @@ export const ValidityBanner: React.FC<Props> = ({ qts, isRequester, allProductsD
             La quotazione è pronta per la chiusura definitiva: finché non viene completata la chiusura,
             tutte le azioni operative su prodotti/quotazione devono rimanere bloccate (per buyer e commerciale).
             {qts?.tipologia === "MEPA" ? (
-                <> Il richiedente dovrà indicare l’esito gara (vinta/persa) e, se vinta, associare OC/FB.</>
+                <> Il richiedente dovrà indicare l’esito gara (vinta (OK) / persa (KO)) e, se vinta, associare OC/FB.</>
             ) : (
                 <> Il richiedente dovrà indicare l’esito finale (OK/KO) e, se OK, associare OC/FB.</>
             )}
@@ -102,10 +104,16 @@ export const ValidityBanner: React.FC<Props> = ({ qts, isRequester, allProductsD
         </>
     );
 
+
+    //LockInteraction tour system
+    const { isOpen, index: tourIndex } = useTour();
+    const lockInteractions = isOpen && tourIndex === 71;
+    //
     return (
         <AnimatePresence>
             {shouldShow && (
                 <motion.div
+                    data-tour="quotazioni-chiudi-quotazione"
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
@@ -165,9 +173,10 @@ export const ValidityBanner: React.FC<Props> = ({ qts, isRequester, allProductsD
 
                         {isLock && (
                             <FDButton
+                                data-tour="quotazioni-product-apri-chiudi"
                                 variant="outline"
                                 onClick={onOpenClosure}
-                                disabled={!isRequester}
+                                disabled={isBuyer || !isRequester || lockInteractions}
                                 radius="xl"
                             >
                                 Apri chiusura

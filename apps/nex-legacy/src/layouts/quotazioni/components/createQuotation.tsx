@@ -15,9 +15,10 @@ import FDDate from "components/UI/input/FDDate";
 import { MdClose } from "react-icons/md";
 import { CiSquareInfo } from "react-icons/ci";
 import { SearchCustomersAPI } from "../fetchdata/get/searchCustomers";
-import { enqueueSnackbar } from "components/MessageBox";
 import { formatISODate, toLocalDateTimeInputValue } from "utils/date/getDate";
 import FDSwitch from "components/UI/input/FDSwitch";
+import { useTour } from "tour/TourProvider";
+
 
 const MdCloseIcon = MdClose as React.FC<{ size?: number; className?: string }>;
 const CiInfoIcon = CiSquareInfo as React.FC<{ size?: number; className?: string }>;
@@ -39,6 +40,7 @@ const formDefaultState: FormStateProps = {
         sedeLegale: "",
     },
 };
+
 
 // ——————————————————————————————————————————————————————————
 // TYPES & INTERFACES
@@ -213,7 +215,11 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
 
     // La select cliente è visibile solo in BID PASSIVO se l'utente vuole collegare un cliente esistente,
     // altrimenti è nascosta e non richiesta in nessun altro caso.
-    const shouldShowCustomerSelect = !isBidPassivoType || hasExistingCustomer;
+    const shouldShowCustomerSelect = (!isBidPassivoType || hasExistingCustomer) && !isMepaType ;
+
+    //LockInteraction modale di creazione
+    const { isOpen, index: tourIndex } = useTour();
+    const lockInteractions = isOpen && tourIndex >= 2 && tourIndex <= 4;
 
     const qTypes = React.useMemo(() =>
         [...quotationTypes, ...(isMEPAUser ? [mepaTypes] : [])]
@@ -349,7 +355,7 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
                     return setLocalErr("Per le quotazioni LICENZE è necessario selezionare End User.");
                 };
 
-                if (!isLicenzeType) {
+                if (!isLicenzeType && !formState.isEndUser) {
                     const validationResult = isValidateFormType(formState);
                     if (!formState.type.value) {
                         return setLocalErr("Per le tipologie BID ATTIVO e MEPA è necessario specificare un valore tra CIG, RDO o Acccordo Quadro o inserire N/D per saltare l'inserimento.");
@@ -402,7 +408,6 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
         });
     };
 
-
     return (
         <AnimatePresence>
             {open && (
@@ -413,7 +418,24 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                    >
+                    >{lockInteractions && (
+                        <div
+                            aria-hidden="true"
+                            style={{
+                                position: "absolute",
+                                inset: 0,
+                                zIndex: 10,
+                                pointerEvents: "auto",
+                            }}
+                            onClickCapture={(e) => e.stopPropagation()}
+                            onKeyDownCapture={(e) => {
+                                if (e.key === "Tab") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }
+                            }}
+                        />
+                    )}
                         <FDBox
                             asMotion
                             radius="2xl"
@@ -424,6 +446,7 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
                             initial={{ y: 24, opacity: 0 }}
                             animate={{ y: 0, opacity: 1, transition: { type: "spring", stiffness: 380, damping: 30 } }}
                             exit={{ y: 24, opacity: 0 }}
+                            data-tour="quotazioni-create-quotation"
                         >
                             <div className="flex flex-col items-center border-b border-gray-200 dark:border-neutral-900 pb-4 w-full p-4">
                                 <h1 className="text-xl font-bold">Crea una nuova quotazione</h1>
@@ -436,7 +459,7 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
                             </div>
 
                             {/* Form Content */}
-                            <div className="flex flex-col space-y-6 overflow-y-auto p-4 w-full">
+                            <div className="flex flex-col space-y-6 overflow-y-auto p-4 w-full" data-tour="quotazioni-create-obb">
                                 {/* Informazioni + Cliente */}
                                 <div className="space-y-2 w-full">
                                     <h3 className="opacity-80 text-sm">Informazioni Relative alla quotazione</h3>
@@ -533,7 +556,7 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
                                                         }}
                                                     />
                                                 </motion.div>
-                                            ) : (
+                                            ) : !isMepaType && (
                                                 <motion.div
                                                     key="no-existing-customer-note"
                                                     initial={{ opacity: 0, y: -4 }}
@@ -558,7 +581,7 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
                                                 variant="outline"
                                                 size="sm"
                                                 radius="md"
-                                                disabled={loading}
+                                                disabled={loading || lockInteractions}
                                                 placeholder="titolo.."
                                                 fullWidth
                                             />
@@ -790,7 +813,7 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
                                         variant="outline"
                                         size="sm"
                                         radius="md"
-                                        disabled={loading}
+                                        disabled={loading || lockInteractions}
                                         placeholder="note.."
                                         fullWidth
                                     />
@@ -816,18 +839,20 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
 
                                 {/* Actions */}
                                 <div className="flex space-x-1 ml-auto">
-                                    <FDButton onClick={onClose} disabled={loading}>
+                                    <FDButton onClick={onClose} disabled={loading || lockInteractions}>
                                         Chiudi
                                     </FDButton>
-                                    <FDButton color="primary" onClick={handleCreate} disabled={loading}>
+                                    <FDButton color="primary" onClick={handleCreate} disabled={loading || lockInteractions} data-tour="quotazioni-create">
                                         {loading ? "Creazione…" : "Crea una nuova quotazione"}
                                     </FDButton>
                                 </div>
                             </div>
 
                             <FDIconButton
+                                data-tour="create-chiudi"
                                 icon={<MdCloseIcon size={18} />}
                                 onClick={onClose}
+                                disabled={lockInteractions}
                                 className="absolute right-5"
                                 variant="text"
                             />

@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { saveProfilazione } from "./fetchdata";
 import { SidePanelShell } from "./components/SidePanelShell";
+
 import { CustomersPanelDetailsContent } from "./components/CustomersPanelDetailsContent";
 import { CustomersPanelPaymentsFooter } from "./components/CustomersPanelPaymentsFooter";
 import { CustomersPanelPrimaryFooter } from "./components/CustomersPanelPrimaryFooter";
@@ -11,7 +12,8 @@ import { CustomersPanelTitle } from "./components/CustomersPanelTitle";
 import { SectionActionButton } from "./components/sectionUi";
 import { useCustomersPanelController } from "./hooks/useCustomersPanelController";
 import { useCustomersPanelPaymentsState } from "./hooks/useCustomersPanelPaymentsState";
-import type { AnyRecord, CustomersPanelProps } from "./types";
+import type { AnyRecord, CustomerStatementPayload, CustomersPanelProps } from "./types";
+import { useCustomersPanelInteractionLock } from "./tour-system-utils/useCustomersPanelInteractionLock";
 
 import { useUserContext } from "context/UserContext";
 
@@ -33,6 +35,15 @@ import { cn } from "./helpers/panelUtils";
  * 4) registrare il case details in `CustomersPanelDetailsContent`
  * 5) definire titolo/scroll del pannello secondario in `helpers/panelSections.ts`
  */
+
+
+// ——————————————————————————————————————————————————————————
+// TYPES & INTERFACES
+// ——————————————————————————————————————————————————————————
+
+// ——————————————————————————————————————————————————————————
+// MAIN COMPONENT
+// ——————————————————————————————————————————————————————————
 export const CustomersPanel: React.FC<CustomersPanelProps> = ({
     cliente,
     openFor,
@@ -40,11 +51,24 @@ export const CustomersPanel: React.FC<CustomersPanelProps> = ({
     sizeClassName = "max-w-xl lg:max-w-2xl",
     closeOnBackdrop = true,
     closeOnEsc = true,
+    tourMockPayload = null,
+    interactionLockConfig,
     className,
     zIndexClassName = "z-20",
 }) => {
     const navigate = useNavigate();
     const open = Boolean(openFor);
+
+    /**
+     * Nota:
+     * il controller gestisce direttamente il ramo `tourMockPayload`
+     * (incluso il fetch-state delle section), quindi la UI resta pulita.
+     */
+    const controller = useCustomersPanelController({
+        open,
+        customerCode: cliente,
+        tourMockPayload,
+    });
 
     const {
         loading,
@@ -61,8 +85,7 @@ export const CustomersPanel: React.FC<CustomersPanelProps> = ({
         creditsProfile,
         creditsYears,
         profilazioneReport,
-    } = useCustomersPanelController({ open, customerCode: cliente });
-
+    } = controller;
     // Stato locale dedicato esclusivamente al dettaglio "payments"
     // (reload manuale, loading tabella, statistiche footer).
     const {
@@ -75,6 +98,21 @@ export const CustomersPanel: React.FC<CustomersPanelProps> = ({
     } = useCustomersPanelPaymentsState({
         activeSection,
         paymentsDetails: data.paymentsDetails,
+    });
+
+    /**
+     * Wiring lock tour delegato a hook utility:
+     * il componente resta focalizzato su rendering/stato locale pannello.
+     */
+    const {
+        lockBodyInteractions,
+        disablePrimaryClose,
+        effectiveCloseOnBackdrop,
+        effectiveCloseOnEsc,
+    } = useCustomersPanelInteractionLock({
+        closeOnBackdrop,
+        closeOnEsc,
+        interactionLockConfig,
     });
 
     const [openAddresses, setOpenAddresses] = React.useState(false);
@@ -109,8 +147,18 @@ export const CustomersPanel: React.FC<CustomersPanelProps> = ({
         [cliente, setPanelData]
     );
 
+    const handleStatementChange = React.useCallback(
+        (updater: (prev: CustomerStatementPayload | null) => CustomerStatementPayload | null) => {
+            setPanelData((prev: any) => ({
+                ...prev,
+                statement: updater((prev?.statement ?? null) as CustomerStatementPayload | null),
+            }));
+        },
+        [setPanelData]
+    );
+
     React.useEffect(() => {
-        if (!open || !closeOnEsc) return;
+        if (!open || !effectiveCloseOnEsc) return;
 
         // ESC chiude prima il pannello secondario, poi (solo se assente)
         // chiude il pannello principale.
@@ -125,10 +173,10 @@ export const CustomersPanel: React.FC<CustomersPanelProps> = ({
 
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [open, closeOnEsc, secondaryOpen, closeSecondary, onClose]);
+    }, [open, closeOnEsc, effectiveCloseOnEsc, secondaryOpen, closeSecondary, onClose]);
 
     const handleBackdropClick = () => {
-        if (!closeOnBackdrop) return;
+        if (!effectiveCloseOnBackdrop) return;
         if (secondaryOpen) {
             closeSecondary();
             return;
@@ -168,7 +216,7 @@ export const CustomersPanel: React.FC<CustomersPanelProps> = ({
                         role="dialog"
                         aria-modal="true"
                     >
-                        <div
+                        <div data-tour="scheda-cliente"
                             className={cn(
                                 "relative h-full w-full ml-auto pointer-events-none",
                                 "transition-[max-width] duration-300 ease-[cubic-bezier(0.22,0.61,0.36,1)]",
@@ -189,6 +237,10 @@ export const CustomersPanel: React.FC<CustomersPanelProps> = ({
                                         />
                                     }
                                     onClose={onClose}
+                                    // Lock della X nel pannello principale in base allo step tour attivo.
+                                    closeDisabled={disablePrimaryClose}
+                                    // Lock delle interazioni nel body principale (cards summary).
+                                    lockBodyInteractions={lockBodyInteractions}
                                     animateVariant={secondaryOpen ? "background" : "visible"}
                                     contentState={secondaryOpen ? "background" : "front"}
                                     footer={
@@ -203,6 +255,8 @@ export const CustomersPanel: React.FC<CustomersPanelProps> = ({
                                             userContext={(userContext ?? {}) as AnyRecord}
                                             customerLabel={String(anagrafica?.RAGIONE_SOCIALE ?? "")}
                                             onOpenNotes={() => openDetails("notes")}
+                                            // I bottoni footer devono rispettare il lock tour attivo.
+                                            lockBodyInteractions={lockBodyInteractions}
                                         />
                                     }
                                 >
@@ -218,6 +272,7 @@ export const CustomersPanel: React.FC<CustomersPanelProps> = ({
                                         creditsYears={creditsYears}
                                         profilazioneReport={profilazioneReport}
                                         onOpenDetails={openDetails}
+                                        onStatementChange={handleStatementChange}
                                     />
                                 </SidePanelShell>
                             </div>
@@ -230,6 +285,12 @@ export const CustomersPanel: React.FC<CustomersPanelProps> = ({
                                             animateVariant="visible"
                                             contentState="front"
                                             onClose={closeSecondary}
+                                            /**
+                                             * Anche il pannello secondario (details) deve rispettare lo stesso lock
+                                             * per evitare bypass interattivi durante gli step bloccati.
+                                             */
+                                            closeDisabled={disablePrimaryClose}
+                                            lockBodyInteractions={lockBodyInteractions}
                                             headerActions={secondaryHeaderActions}
                                             footer={
                                                 activeSection === "payments" && currentFooterStats ? (
@@ -251,11 +312,13 @@ export const CustomersPanel: React.FC<CustomersPanelProps> = ({
                                                 backordersDetails={data.backordersDetails}
                                                 paymentsDetails={data.paymentsDetails}
                                                 sconti={data.sconti}
+                                                statement={data.statement}
                                                 paymentsReloadToken={paymentsReloadToken}
                                                 onPaymentsLoadingChange={(value) => setPaymentsDetailsLoading(value)}
                                                 onPaymentsStatsChange={(stats) => setPaymentsFooterStats(stats)}
                                                 onSaveProfilazione={handleSaveProfilazione}
                                                 userContext={(userContext ?? {}) as AnyRecord}
+                                                onStatementChange={handleStatementChange}
                                             />
                                         </SidePanelShell>
                                     </div>

@@ -5,6 +5,8 @@ import { BuyerProgressCell, GlobalProgressCell } from "./BuyerProgressCell";
 import { MdMoreVert } from "react-icons/md";
 import { UserAvatar } from "examples/Navbars/components/userInfo";
 import { useGeneralDataContext } from "context/GeneralDataContext";
+import { useTour } from "tour/TourProvider";
+import { useUserContext } from "context/UserContext";
 
 
 // ——————————————————————————————————————————————————————————
@@ -236,6 +238,22 @@ function getExpiryMeta(row: any) {
 // ——————————————————————————————————————————————————————————
 const TableSubObj: React.FC<TableSubObjProps> = ({ data, loading, isBuyer, contextMenuRef, inpagination, onLoadMore,
     handleOpenSettings, isSelected, onSelect, setData }) => {
+
+    //Lock interazioni tabella quotazioni durante il tour (differenziato per ruolo) [qui isBuyer è già definito sopra]
+    const [userContext] = useUserContext() as any;
+    const ruolo = userContext.details.ruolo as string;
+    //Lock interazioni menu filtri durante il tour (differenziato per ruolo)
+    const { isOpen, index: tourIndex } = useTour();
+
+    const isCad = ruolo === "Commerciale" || ruolo === "Admin" || ruolo === "Dev";
+
+    const lockInteractions =
+        isOpen && (
+            (isCad && tourIndex === 13) ||
+            (isBuyer && tourIndex === 8)
+        );
+    //
+
     // Normalizzazione semplice del campo cliente per la tabella:
     // - BID_PASSIVO: testo business leggibile
     // - altre tipologie: codice cliente reale
@@ -291,7 +309,7 @@ const TableSubObj: React.FC<TableSubObjProps> = ({ data, loading, isBuyer, conte
         {
             key: [], fieldToTake: [
                 {
-                    key: 'Settings', type: 'button', title: 'Impostazioni Riga', ariaLabel: 'impostazioni', icon: <MdMoreVertIcon />, funcAction: (i: any, data: any, e: any) => {
+                    key: 'Settings', type: 'button', title: 'Impostazioni Riga', ariaLabel: 'impostazioni', icon: <MdMoreVertIcon />, dataTour: "quotazione-details", funcAction: (i: any, data: any, e: any) => {
                         contextMenuRef.current = e.currentTarget;
                         handleOpenSettings({ indexRow: i, allData: data });
                     }
@@ -347,7 +365,14 @@ const TableSubObj: React.FC<TableSubObjProps> = ({ data, loading, isBuyer, conte
     return (
         !loading.general_data ? normalizedData && <div className="w-full h-full min-h-0 flex flex-col gap-4">
             {/* Pannello filtri */}
-            <div className="w-full flex-1 min-h-0 rounded-xl overflow-hidden border border-gray-200 dark:border-neutral-800">
+            <div className="w-full flex-1 min-h-0 rounded-xl overflow-hidden border border-gray-200 dark:border-neutral-800" data-tour="quotazioni-table">
+                {lockInteractions && (
+                    <div
+                        aria-hidden="true"
+                        style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "auto" }}
+                        onClickCapture={(e) => e.stopPropagation()}
+                    />
+                )}
                 <TableVirtualized
                     className='h-full'
                     height='100%'

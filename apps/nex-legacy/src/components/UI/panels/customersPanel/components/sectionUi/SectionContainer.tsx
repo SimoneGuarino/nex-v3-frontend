@@ -10,6 +10,7 @@ type SectionContainerProps = {
     onActivate?: () => void;
     className?: string;
     clickableClassName?: string;
+    dataTour?: string;
 };
 
 export const SectionContainer: React.FC<SectionContainerProps> = ({
@@ -17,6 +18,7 @@ export const SectionContainer: React.FC<SectionContainerProps> = ({
     clickable = false,
     onActivate,
     className,
+    dataTour,
     clickableClassName = "cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900/80 transition",
 }) => {
     const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -28,6 +30,7 @@ export const SectionContainer: React.FC<SectionContainerProps> = ({
 
     return (
         <div
+            data-tour={dataTour}
             className={cn(baseClassName, clickable ? clickableClassName : "", className)}
             onClick={() => clickable && onActivate?.()}
             role={clickable ? "button" : undefined}

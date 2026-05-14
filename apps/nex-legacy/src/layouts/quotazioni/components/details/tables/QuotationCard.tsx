@@ -15,6 +15,7 @@ import {
 } from "layouts/quotazioni/types/quotations";
 import { CartProductDTO, ContropropostaDTO } from "layouts/quotazioni/types/qts_product";
 import { CapitalizeFirstLetter } from "utils/string/capitalize";
+import { useTour } from "tour/TourProvider";
 
 const FiChevronDownIcon = FiChevronDown as React.FC<{ size?: number; className?: string }>;
 const FiAlertCircleIcon = FiAlertCircle as React.FC<{ size?: number; className?: string }>;
@@ -41,6 +42,7 @@ const Pill = memo(function Pill({
     truncateTo = 24,
     variant = "filled",
     className,
+    dataTour,
 }: {
     title: string;
     children: React.ReactNode;
@@ -48,6 +50,8 @@ const Pill = memo(function Pill({
     truncateTo?: number;
     variant?: PillVariant;
     className?: string;
+    /** Selector opzionale usato dagli step tour per agganciare la pill corretta. */
+    dataTour?: string;
 }) {
     // NOTE: dynamic Tailwind classes require safelist in build config; kept consistent with existing codebase.
     const base =
@@ -63,6 +67,7 @@ const Pill = memo(function Pill({
     return (
         <span
             className={clsx(base, "rounded-md text-[10px] px-3 w-fit h-fit", className)}
+            data-tour={dataTour}
             data-tooltip-id="general-quotations-tooltip"
             data-tooltip-content={title}
         >
@@ -199,6 +204,24 @@ const QuotationCard: React.FC<Props> = ({
     onToggle,
     onViewProductDetails,
 }) => {
+    /**
+     * La virtual list crea una riga "ghost" invisibile per misurare l'altezza.
+     * Su quella riga non dobbiamo mettere i data-tour, altrimenti il tour aggancia il nodo sbagliato.
+     */
+    const isGhostMeasurementRow = Boolean((item as any)?.__forceCollapsed);
+    const tourRowAttr = isGhostMeasurementRow ? undefined : "quotazioni-product-row";
+    const tourDetailsAttr = isGhostMeasurementRow ? undefined : "quotazioni-product-row-details";
+    const { isOpen: isTourOpen, activeStepSelector } = useTour();
+
+    /**
+     * Lock interazioni card SOLO nello step panoramica riga.
+     * Usiamo il selector (non index) per evitare rotture quando cambiano gli step.
+     */
+    const lockInteractions =
+        !isGhostMeasurementRow &&
+        isTourOpen &&
+        activeStepSelector === '[data-tour="quotazioni-product-row"]';
+
     const derived = useMemo(() => {
         const stato = item?.quotazione?.stato as RigaStato | undefined;
         const cps = ((item?.controproposte ?? []) as ContropropostaDTO[]).filter(p => p.stato !== "CONTROPROPOSTA_RIFIUTATA") ?? [];
@@ -274,7 +297,7 @@ const QuotationCard: React.FC<Props> = ({
     return (
         <motion.div layout className="relative w-full">
             {/* Collapsed row */}
-            <div className="flex gap-4 items-center w-full min-h-[64px] py-3">
+            <div className="flex gap-4 items-center w-full min-h-[64px] py-3" data-tour={tourRowAttr}>
                 <ProductThumb src={details?.anteprima} alt={effectiveDesc} />
 
                 {/* Price */}
@@ -357,6 +380,12 @@ const QuotationCard: React.FC<Props> = ({
                                     color={stateProductOptionsPalette[derived.stato]}
                                     truncateTo={25}
                                     variant="filled"
+                                    /**
+                                     * Anchor del tour CAD:
+                                     * dopo la mutation fake a "CONTROPROPOSTA_INVIATA"
+                                     * lo step si aggancia direttamente a questa pill.
+                                     */
+                                    dataTour="quotazioni-product-label"
                                 >
                                     {derived.statoLabel}
                                 </Pill>
@@ -380,6 +409,12 @@ const QuotationCard: React.FC<Props> = ({
                                 <button
                                     type="button"
                                     onClick={onOpenSettings/*onToggle*/}
+                                    /**
+                                     * Anchor tour per il badge "1 controproposta":
+                                     * nel flusso CAD l'utente clicca qui per aprire
+                                     * direttamente il pannello "Quotazione prodotto".
+                                     */
+                                    data-tour="quotazioni-product-counterproposal"
                                     aria-expanded={expanded}
                                     data-tooltip-id="general-quotations-tooltip"
                                     data-tooltip-content="Questo prodotto ha una o più controproposte. Il buyer ti ha proposto una sostituzione."
@@ -418,11 +453,13 @@ const QuotationCard: React.FC<Props> = ({
 
                             <div className="ml-2 relative" ref={menuRef}>
                                 <FDIconButton
+                                    data-tour={tourDetailsAttr}
                                     variant="text"
                                     ariaLabel="Apri dettagli quotazione prodotto"
                                     dataTooltipContent="Apri dettagli quotazione prodotto"
                                     dataTooltipId="general-quotations-tooltip"
                                     onClick={onOpenSettings}
+                                    disabled={lockInteractions}
                                     icon={<IoEllipsisVerticalIcon className="text-neutral-500 dark:text-neutral-400" />}
                                     initial={false}
                                 />

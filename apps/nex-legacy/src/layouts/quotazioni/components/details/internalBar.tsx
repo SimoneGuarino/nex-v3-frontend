@@ -9,6 +9,8 @@ import FDIconButton from "components/UI/buttons/FDIconButton";
 //icons
 import { MdSearch, MdFilterList, MdUpload } from 'react-icons/md';
 import { VscTarget } from "react-icons/vsc";
+import { useTour } from "tour/TourProvider";
+import { useUserContext } from "context/UserContext";
 const MdSearchIcon = MdSearch as React.FC<{ size?: number; className?: string }>;
 const MdFilterListIcon = MdFilterList as React.FC<{ size?: number; className?: string }>;
 const MdUploadIcon = MdUpload as React.FC<{ size?: number; className?: string }>;
@@ -28,6 +30,7 @@ interface FiltersProps {
     onImportFromFile: () => void; onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
+
 const HeaderBar: React.FC<FiltersProps> = ({
     menuRef,
     chips,
@@ -38,15 +41,35 @@ const HeaderBar: React.FC<FiltersProps> = ({
     setOpenFilters,
     onImportFromFile,
 }) => {
+
+    // ——————————————————————————————————————————————————————————
+    // LOCK INTERACTION 
+    // ——————————————————————————————————————————————————————————
+    const { isOpen, index: tourIndex } = useTour();
+    const [userContext] = useUserContext() as any;
+    const ruolo = userContext.details.ruolo as string;
+    const isCad = ruolo === "Commerciale" || ruolo === "Admin" || ruolo === "Dev";
+    const isBuyer = ruolo === "Buyer";
+
+    const lockInteractions =
+        isOpen && ((isCad && (tourIndex === 35)) || (isBuyer && (tourIndex === 18)));
     return (
-        <FDBox variant="gradient" border={true} radius="md" pad="sm" className="flex flex-wrap gap-4 items-center space-x-2">
+        <FDBox variant="gradient" border={true} radius="md" pad="sm" className="flex flex-wrap gap-4 items-center space-x-2" data-tour="quotazioni-topbar-dett">
+            {lockInteractions && (
+                <div
+                    className="relative"
+                    aria-hidden="true"
+                    style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "auto" }}
+                    onClickCapture={(e) => e.stopPropagation()}
+                />
+            )}
             <div className="flex">
-                <FDButton variant={scope === "quotazioni" ? "underline" : "ghost"}
+                <FDButton data-tour="quotazioni-product" variant={scope === "quotazioni" ? "underline" : "ghost"}
                     color={scope === 'quotazioni' ? 'primary' : 'neutral'} radius="none" onClick={() => { handleScopeChange('quotazioni'); }}>
                     Quotazione Prodotti
                 </FDButton>
                 {isBozza && <>
-                    <FDButton variant={scope === "prodotti" ? "underline" : "ghost"}
+                    <FDButton data-tour="quotazioni-list-products" variant={scope === "prodotti" ? "underline" : "ghost"}
                         color={scope === 'prodotti' ? 'primary' : 'neutral'}
                         radius="none" onClick={() => { handleScopeChange('prodotti'); }}>
                         Lista Prodotti
@@ -55,6 +78,7 @@ const HeaderBar: React.FC<FiltersProps> = ({
                         disabled={hasProducts}
                         data-tooltip-content={hasProducts ? "Non puoi descrivere una necessità se hai già aggiunto prodotti alla quotazione" : "Descrivi la necessità per ricevere proposte personalizzate"}
                         data-tooltip-id="general-quotations-tooltip"
+                        data-tour="quotazioni-necessita"
                         color={scope === 'descrivi_necessita' ? 'primary' : 'neutral'}
                         radius="none"
                         onClick={() => { handleScopeChange('descrivi_necessita'); }}>
@@ -64,6 +88,7 @@ const HeaderBar: React.FC<FiltersProps> = ({
             </div>
             {scope !== "descrivi_necessita" && <div className="flex gap-2 ml-auto">
                 <FDIconButton variant='text' rounded='md'
+                    data-tour="quotazioni-products-filters-1"
                     dataTooltipContent="Ricerca mirata globale prodotti"
                     dataTooltipId='general-quotations-tooltip'
                     size='small' className='border border-neutral-200 dark:border-neutral-800'
@@ -77,7 +102,7 @@ const HeaderBar: React.FC<FiltersProps> = ({
                 <div className="relative" onClick={(e: any) => menuRef.current = e.currentTarget}
                     data-tooltip-id='general-quotations-tooltip'
                     data-tooltip-content="Filtri Avanzati che verranno applicati in base al pannello corrente e nella ricerca mirata">
-                    <FDButton icon={<MdFilterListIcon />} variant="outline" color='neutral' size="small" onClick={() => setOpenFilters(true)}>
+                    <FDButton data-tour="quotazioni-products-filters-2" icon={<MdFilterListIcon />} variant="outline" color='neutral' size="small" onClick={() => setOpenFilters(true)}>
                         Filtri {chips.length > 0 && (
                             <span
                                 data-tooltip-id='general-quotations-tooltip'
@@ -90,6 +115,7 @@ const HeaderBar: React.FC<FiltersProps> = ({
                 {isBozza && (
                     <>
                         <FDButton
+                            data-tour="quotazioni-products-import"
                             icon={<MdUploadIcon />}
                             variant="outline" color='neutral' size="small"
                             data-tooltip-id='general-quotations-tooltip'

@@ -264,6 +264,7 @@ export const Profilazione: React.FC<{
 
     return (
         <SectionContainer
+            dataTour="scheda-cliente-profilazione"
             clickable={false}
             onActivate={onOpenDetails}
             className={

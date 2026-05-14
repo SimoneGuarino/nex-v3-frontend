@@ -54,6 +54,15 @@ export type ProductSubstitutionSearchProps<T = CartProductDTO> = {
     onOpenProductDetails?: (item: CartProductDTO) => void;
     /** Lista degli id selezionati */
     selectedIds: string[];
+    /**
+     * Se true il pulsante "Chiudi ricerca" resta disabilitato.
+     * Utile durante alcuni step tour per guidare il flusso.
+     */
+    closeDisabled?: boolean;
+    /**
+     * Se true blocca tutta l'interazione del pannello ricerca.
+     */
+    lockInteractions?: boolean;
 };
 
 function useIsMobile(breakpoint = 768) {
@@ -99,6 +108,8 @@ export function ProductSubstitutionSearch<T>({
     selectedIds,
     onSelectProduct,
     onOpenProductDetails,
+    closeDisabled = false,
+    lockInteractions = false,
 }: ProductSubstitutionSearchProps<T>) {
     const isMobile = useIsMobile();
 
@@ -132,19 +143,32 @@ export function ProductSubstitutionSearch<T>({
                     aria-label={panelTitle}
                 >
                     <FDBox
+                        data-tour="quotazioni-product-sost-2"
                         radius={isMobile ? "lg" : "2xl"}
                         pad="lg"
                         shadow="xl"
                         variant="gradient"
                         border
                         className="
-                            flex h-full flex-col
+                            relative flex h-full flex-col
                             bg-white/90 dark:bg-neutral-900/95
                             border border-neutral-200/70 dark:border-neutral-700/80
                             shadow-[0_18px_40px_rgba(15,23,42,0.18)]
                             backdrop-blur-xl
                         "
                     >
+                        {lockInteractions && (
+                            /**
+                             * Overlay lock tour:
+                             * in alcuni step il popover deve solo "mostrare"
+                             * il pannello senza permettere click sugli elementi.
+                             */
+                            <div
+                                aria-hidden="true"
+                                style={{ position: "absolute", inset: 0, zIndex: 25, pointerEvents: "auto" }}
+                                onClickCapture={(e) => e.stopPropagation()}
+                            />
+                        )}
                         {/* HEADER */}
                         <div className="flex items-start justify-between gap-3 pb-3 border-b border-neutral-100/70 dark:border-neutral-800/70">
                             <div className="min-w-0">
@@ -162,8 +186,18 @@ export function ProductSubstitutionSearch<T>({
                             </div>
 
                             <button
+                                data-tour="quotazioni-product-sost-close"
                                 type="button"
-                                onClick={onClose}
+                                onClick={() => {
+                                    /**
+                                     * Guard tour:
+                                     * durante gli step guidati evitiamo la chiusura anticipata
+                                     * del pannello ricerca.
+                                     */
+                                    if (closeDisabled) return;
+                                    onClose();
+                                }}
+                                disabled={closeDisabled}
                                 className="
                                     inline-flex items-center gap-1
                                     rounded-full px-3 py-1.5
@@ -198,7 +232,11 @@ export function ProductSubstitutionSearch<T>({
                                 </span>
                                 <input
                                     type="text"
-                                    // value=""
+                                    /**
+                                     * Input controllato:
+                                     * nel tour vogliamo mostrare subito la query precompilata.
+                                     */
+                                    value={query ?? ""}
                                     onChange={handleChange}
                                     placeholder="Cerca tra i prodotti disponibili…"
                                     className="
@@ -234,6 +272,16 @@ export function ProductSubstitutionSearch<T>({
                                         return (
                                             <div
                                                 key={view.id}
+                                                data-tour={
+                                                    /**
+                                                     * Ancora dedicata al prodotto fake:
+                                                     * serve al tour per guidare il click su
+                                                     * un solo risultato controllato.
+                                                     */
+                                                    view.id === "__tour_substitution_product__"
+                                                        ? "quotazioni-product-sost-fixed-item"
+                                                        : undefined
+                                                }
                                                 onClick={() => {
                                                     !_loading && onSelectProduct(item)
                                                 }}

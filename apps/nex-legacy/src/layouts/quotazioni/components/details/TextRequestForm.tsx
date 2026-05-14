@@ -4,6 +4,8 @@ import { useState } from "react";
 import FDSelect from "components/UI/input/FDSelect";
 import FDButton from "components/UI/buttons/FDButton";
 import { WiStars } from "react-icons/wi";
+import { useUserContext } from "context/UserContext";
+import { useTour } from "tour/TourProvider";
 
 const FiEdit3Icon = FiEdit3 as React.FC<{ size?: number; className?: string }>;
 const FiPlusIcon = FiPlus as React.FC<{ size?: number; className?: string }>;
@@ -108,6 +110,10 @@ export const TextRequestForm: React.FC<Props> = ({
         }
     };
 
+    const { isOpen, index: tourIndex } = useTour();
+    const [userContext] = useUserContext() as any;
+    const lockInteractions = isOpen && tourIndex >= 37 && tourIndex <= 40;
+
     return (
         <motion.div
             className="flex flex-col gap-4 rounded-2xl border border-gray-200/70 bg-white/70 p-4 shadow-sm
@@ -123,7 +129,7 @@ export const TextRequestForm: React.FC<Props> = ({
             </div>
 
             {blocks.map((block, idx) => (
-                <div key={block.id} className="rounded-xl border border-gray-200/80 p-3 dark:border-neutral-700">
+                <div key={block.id} className="rounded-xl border border-gray-200/80 p-3 dark:border-neutral-700" data-tour="quotazioni-necessita-panel">
                     <div className="mb-2 flex items-center justify-between">
                         <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
                             Necessità {idx + 1}
@@ -163,12 +169,14 @@ export const TextRequestForm: React.FC<Props> = ({
                     {/* Il buyer è obbligatorio: questa informazione decide chi vedrà e gestirà la riga lato buyer. */}
                     <div className="mt-2">
                         <FDSelect
+                            dataTour="quotazioni-necessita-ass"
                             size="xs"
                             placeholder="Seleziona buyer…"
                             options={buyersOptions}
                             value={block.codice_buyer}
                             onChange={(value) => updateBlock(block.id, { codice_buyer: String(value ?? "") })}
                             virtualized={false}
+                            disabled={lockInteractions}
                             className="min-w-60"
                         />
                     </div>
@@ -181,10 +189,11 @@ export const TextRequestForm: React.FC<Props> = ({
                 {/* Pulsante "Aggiungi altra necessità". */}
                 {/* Aggiunge un nuovo blocco vuoto lasciando invariati i blocchi già compilati. */}
                 <FDButton
+                    data-tour="quotazioni-necessita-add"
                     variant="outline"
                     color="primary"
                     onClick={addBlock}
-                    disabled={submitting}
+                    disabled={submitting || lockInteractions}
                     icon={<FiPlusIcon className="h-4 w-4" />}
                     className="w-fit"
 
@@ -192,6 +201,7 @@ export const TextRequestForm: React.FC<Props> = ({
                 </FDButton>
 
                 <FDButton
+                    data-tour="quotazioni-necessita-quot"
                     color="primary"
                     onClick={handleSubmit}
                     disabled={!canSubmit}

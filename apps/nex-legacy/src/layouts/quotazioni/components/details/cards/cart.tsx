@@ -268,6 +268,7 @@ export default function CartPanel({
                                 />
 
                                 <FDButton
+                                    data-tour="quotazioni-open"
                                     disabled={!hasOpenableRows || (hasProducts && productsWithoutBuyer.length > 0) || existValidDate}
                                     color="primary"
                                     dataTooltipId="general-quotations-tooltip"

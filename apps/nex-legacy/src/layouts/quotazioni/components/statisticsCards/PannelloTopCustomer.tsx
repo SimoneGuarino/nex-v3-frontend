@@ -66,7 +66,7 @@ export function PannelloTopCustomer({
     const trend = (customer?.trendPct ?? null) as number | null;
 
     const isUp = typeof trend === "number" ? trend >= 0 : true;
-    const trendText = trend === null ? "—" : fmtPct(Math.abs(trend));
+    const trendText = trend === null ? "100" : fmtPct(Math.abs(trend));
 
     const quotations = Number(customer?.quotations ?? 0);
     const okQuotations = Number(customer?.okQuotations ?? 0);

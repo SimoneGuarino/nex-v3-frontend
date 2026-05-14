@@ -399,6 +399,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
                         title={step.title}
                         description={step.description}
                         hint={step.hint}
+                        important={step.important}
                         index={index}
                         total={total}
                         onPrev={prev}

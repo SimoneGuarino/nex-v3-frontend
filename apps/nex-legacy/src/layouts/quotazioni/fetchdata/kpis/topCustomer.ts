@@ -124,7 +124,7 @@ export async function getKpiTopCustomer({
             const backendMsg =
                 typeof e?.message === "string"
                     ? e.message
-                    : e?.message?.msg || "Errore durante il recupero KPI cliente chiave.";
+                    : e?.message?.msg || "Errore durante il recupero KPI cliente più quotato.";
             console.error("[getKpiTopCustomer] error:", err);
             HandleError(backendMsg);
         }

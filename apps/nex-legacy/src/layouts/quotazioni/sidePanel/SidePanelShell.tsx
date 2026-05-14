@@ -61,6 +61,10 @@ export interface SidePanelShellProps extends Omit<FDBoxProps, "title"> {
     title?: React.ReactNode;
     footer?: React.ReactNode;
     onClose?: () => void;
+    /** data-tour opzionale per il bottone di chiusura (X). */
+    closeButtonDataTour?: string;
+    /** Se true disabilita la X del pannello. */
+    closeDisabled?: boolean;
     /** Slot opzionale per azioni/info a destra nell'header (prima del pulsante close). */
     headerRight?: React.ReactNode;
     /** "visible" → pannello in primo piano, "background" → pannello rimpicciolito */
@@ -73,6 +77,8 @@ export interface SidePanelShellProps extends Omit<FDBoxProps, "title"> {
 export const SidePanelShell: React.FC<SidePanelShellProps> = ({
     title,
     onClose,
+    closeButtonDataTour,
+    closeDisabled = false,
     headerRight,
     animateVariant = "visible",
     contentState = "front",
@@ -123,7 +129,14 @@ export const SidePanelShell: React.FC<SidePanelShellProps> = ({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/5 bg-white/70 text-neutral-600 shadow-sm transition hover:bg-white hover:text-neutral-900 dark:border-white/10 dark:bg-neutral-900/70 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                            disabled={closeDisabled}
+                            data-tour={closeButtonDataTour}
+                            className={[
+                                "inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/5 bg-white/70 text-neutral-600 shadow-sm transition dark:border-white/10 dark:bg-neutral-900/70 dark:text-neutral-300",
+                                closeDisabled
+                                    ? "cursor-not-allowed opacity-50"
+                                    : "hover:bg-white hover:text-neutral-900 dark:hover:bg-neutral-900",
+                            ].join(" ")}
                             aria-label="Chiudi pannello"
                         >
                             <FiXIcon className="h-4 w-4" />

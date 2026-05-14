@@ -6,12 +6,14 @@ import { Fido } from "../sections/Fido";
 import { Payments, type PaymentsFooterStats } from "../sections/Payments";
 import { Profilazione } from "../sections/Profilazione";
 import { Sconti } from "../sections/Sconti";
+import { Statement } from "../sections/Statement";
 import { CustomerNotesPanelContent } from "../../customerNotes/components/CustomerNotesPanelContent";
 import { CustomersPanelSectionSkeleton } from "./CustomersPanelSectionSkeleton";
 import type {
     AnyRecord,
     BackordersDetailsPayload,
     BackordersSummaryPayload,
+    CustomerStatementPayload,
     DetailsSection,
     LoadingStates,
     PaymentsDetailsPayload,
@@ -30,11 +32,15 @@ export type CustomersPanelDetailsContentProps = {
     backordersDetails: BackordersDetailsPayload | null;
     paymentsDetails: PaymentsDetailsPayload | null;
     sconti: ScontiPayload | null;
+    statement: CustomerStatementPayload | null;
     paymentsReloadToken: number;
     onPaymentsLoadingChange?: (loading: boolean) => void;
     onPaymentsStatsChange?: (stats: PaymentsFooterStats) => void;
     onSaveProfilazione?: (payload: AnyRecord) => Promise<any> | any;
     userContext?: AnyRecord | null;
+    onStatementChange?: (
+        updater: (prev: CustomerStatementPayload | null) => CustomerStatementPayload | null
+    ) => void;
 };
 
 // Fallback uniforme per section abilitate ma senza dati utili.
@@ -61,11 +67,13 @@ export const CustomersPanelDetailsContent: React.FC<CustomersPanelDetailsContent
     backordersDetails,
     paymentsDetails,
     sconti,
+    statement,
     paymentsReloadToken,
     onPaymentsLoadingChange,
     onPaymentsStatsChange,
     onSaveProfilazione,
     userContext,
+    onStatementChange,
 }) => {
     /**
      * Router del contenuto details.
@@ -85,6 +93,17 @@ export const CustomersPanelDetailsContent: React.FC<CustomersPanelDetailsContent
         case "credit":
             if (loadingStates.creditsYears) return <CustomersPanelSectionSkeleton />;
             return <Credit mode="details" creditsYears={creditsYears} />;
+        case "statement":
+            if (loadingStates.statement) return <CustomersPanelSectionSkeleton />;
+            if (!statement) return <SectionUnavailableCard />;
+            return (
+                <Statement
+                    mode="details"
+                    customerCode={customerCode}
+                    statement={statement}
+                    onStatementChange={onStatementChange}
+                />
+            );
         case "backorders":
             if (loadingStates.backorders) return <CustomersPanelSectionSkeleton />;
             return (

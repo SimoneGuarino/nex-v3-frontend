@@ -4,6 +4,7 @@ import FDDate from "components/UI/input/FDDate";
 import { filterStateOptions, filterTypeOptions } from "layouts/quotazioni/types/quotations";
 import FDInput from "components/UI/input/FDInput";
 import { useUserContext } from "context/UserContext";
+import { useTour } from "tour/TourProvider";
 
 
 const stateOptions: FDSelectOption<string>[] = [
@@ -45,9 +46,28 @@ const Filters: React.FC<{
 }) => {
         const [userContext] = useUserContext() as any;
         const ruolo = userContext.details.ruolo as string;
+        //Lock interazioni menu filtri durante il tour (differenziato per ruolo)
+        const { isOpen, index: tourIndex } = useTour();
+
+        const isCad = ruolo === "Commerciale" || ruolo === "Admin" || ruolo === "Dev";
+        const isBuyer = ruolo === "Buyer";
+
+        const lockInteractions =
+            isOpen && (
+                (isCad && tourIndex === 7) ||   // step "quotazioni-filter-2" per Comm/Admin/Dev
+                (isBuyer && tourIndex === 2)    // step "quotazioni-filter-2" per Buyer
+            );
+
 
         return (
-            <div className="w-[360px] max-w-full space-y-4">
+            <div className="relative w-[360px] max-w-full space-y-4" data-tour="quotazioni-filter-2">
+                {lockInteractions && (
+                    <div
+                        aria-hidden="true"
+                        style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "auto" }}
+                        onClickCapture={(e) => e.stopPropagation()}
+                    />
+                )}
                 {/* Header */}
                 <div className="text-sm font-medium">Filter</div>
 
@@ -210,6 +230,7 @@ const Filters: React.FC<{
                 <div className="flex items-center justify-between pt-1">
                     <button
                         className="px-3 py-2 text-sm rounded-md border border-[#2a2a2a] hover:bg-[#2a2a2a]"
+                        disabled={lockInteractions}
                         onClick={() => {
                             setDateFrom("");
                             setDateTo("");

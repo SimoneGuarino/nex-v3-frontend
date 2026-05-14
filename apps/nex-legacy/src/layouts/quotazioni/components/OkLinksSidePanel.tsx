@@ -10,6 +10,8 @@ import { FaLink, FaFileInvoice, FaShoppingCart } from "react-icons/fa";
 import { HiOutlineSparkles } from "react-icons/hi2";
 import { FiRefreshCw } from "react-icons/fi";
 import { FDBackdrop } from "components/UI/box/FDBackdrop";
+import { useTour } from "tour/TourProvider";
+import { useUserContext } from "context/UserContext";
 
 
 // ——————————————————————————————————————————————————————————
@@ -150,6 +152,18 @@ export const OkLinksSidePanel: React.FC<OkLinksSidePanelProps> = ({
         />
     );
 
+    // ——————————————————————————————————————————————————————————
+    // LOCK INTERACTION 
+    // ——————————————————————————————————————————————————————————
+    const { isOpen, index: tourIndex } = useTour();
+    const [userContext] = useUserContext() as any;
+    const ruolo = userContext.details.ruolo as string;
+    const isCad = ruolo === "Commerciale" || ruolo === "Admin" || ruolo === "Dev";
+    const isBuyer = ruolo === "Buyer";
+
+    const lockInteractions =
+        isOpen && ((isCad && (tourIndex === 82)) || (isBuyer && (tourIndex === 50)));
+
     return (
         <AnimatePresence>
             {open && (<>
@@ -170,8 +184,20 @@ export const OkLinksSidePanel: React.FC<OkLinksSidePanelProps> = ({
                         <div
                             className={clsx("absolute inset-y-0 right-0 w-full z-20 pointer-events-auto")}
                             onClick={(event) => event.stopPropagation()}
-                        >
+                        >{lockInteractions && (
+                            <div
+                                aria-hidden="true"
+                                style={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    zIndex: 10,
+                                    pointerEvents: "auto",
+                                }}
+                                onClickCapture={(e) => e.stopPropagation()}
+                            />
+                        )}
                             <SidePanelShell
+                                data-tour="quotazioni-ok-links-panel"
                                 title={
                                     <div className="flex items-center gap-3">
                                         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-500/10 border border-sky-400/20">
@@ -273,9 +299,9 @@ export const OkLinksSidePanel: React.FC<OkLinksSidePanelProps> = ({
                                                                                 (e.currentTarget as HTMLImageElement).style.display = "none";
                                                                             }}
                                                                         /> :
-                                                                        <span className="text-[14px] text-neutral-400">
-                                                                            IMG
-                                                                        </span>}
+                                                                            <span className="text-[14px] text-neutral-400">
+                                                                                IMG
+                                                                            </span>}
                                                                     </div>
                                                                 </div>
 

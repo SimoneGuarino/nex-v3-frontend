@@ -32,7 +32,7 @@ export const Credit: React.FC<{
     const lastYear = yearKeys.length ? yearKeys[yearKeys.length - 1] : null;
 
     return (
-        <SectionContainer clickable={false} onActivate={onOpenDetails}>
+        <SectionContainer clickable={false} onActivate={onOpenDetails} dataTour="scheda-cliente-dati-creditizi">
             <SectionHeader
                 title="Dati Creditizi"
                 description={isSummary ? "Sintesi per anni e insoluti" : "Dettaglio valori per anno (focelda e iot)"}

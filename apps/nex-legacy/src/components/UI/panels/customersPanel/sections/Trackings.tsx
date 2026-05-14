@@ -158,7 +158,7 @@ export const Trackings: React.FC<{
     if (!isSummary) return null;
 
     return (
-        <SectionContainer>
+        <SectionContainer dataTour="scheda-cliente-trakings">
             <SectionHeader
                 title="Trackings"
                 description={`${formatNumberIt(total)} tracking totali`}

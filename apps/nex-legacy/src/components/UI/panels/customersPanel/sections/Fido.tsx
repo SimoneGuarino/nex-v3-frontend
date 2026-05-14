@@ -52,7 +52,7 @@ export const Fido: React.FC<{
     const focResiduo = foc?.fidoResiduo ?? null;
 
     return (
-        <SectionContainer clickable={false} onActivate={onOpenDetails}>
+        <SectionContainer clickable={false} onActivate={onOpenDetails} dataTour="scheda-cliente-fido">
             <SectionHeader
                 title="Fido"
                 description={isSummary ? "Sintesi esposizione e rating" : "Dettaglio esposizione, tipi fido e assicurazione"}

@@ -13,8 +13,6 @@ export type MepaLostReasonCode =
     | "ALTRO";
 
 /** Esito gara MEPA */
-export type MepaOutcome = "VINTA" | "PERSA";
-
 /** Esito finale quotazione (vale per tutte le tipologie) */
 export type FinalOutcome = "OK" | "KO";
 
@@ -36,19 +34,11 @@ export type QuotazioneDTOExtended = QuotazioneDTO & {
     gara_valid_from?: string; // ISO
     gara_valid_to?: string;   // ISO
 
-    // Chiusura gara MEPA (step 1)
-    mepa_closure?: {
-        outcome?: MepaOutcome;
-        lost_reason_code?: MepaLostReasonCode;
-        note?: string;
-        closed_at?: string; // ISO
-        closed_by?: string; // userId/username
-    };
-
     // Chiusura finale quotazione (step 2, per tutte le tipologie)
     final_outcome?: {
         outcome?: FinalOutcome;
         note?: string;
+        lost_reason_code?: MepaLostReasonCode; // opzionale anche qui, per uniformità (es. può essere utile anche fuori MEPA)
         closed_at?: string; // ISO
         closed_by?: string;
     };
@@ -65,9 +55,7 @@ export type QuotazioneDTOExtended = QuotazioneDTO & {
  */
 export type ClosureDraft = {
     // MEPA
-    mepaOutcome?: MepaOutcome;
-    mepaLostReasonCode?: string;
-    mepaNote?: string;
+    lost_reason_code?: string;
 
     // NON MEPA
     finalOutcome?: FinalOutcome;

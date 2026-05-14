@@ -35,6 +35,8 @@ export interface KpiQuotazioniResponse {
         statuses: Record<Stato, number>;
         negative: number;
         positive: number;
+        waitingForBuyer?: number;
+        waitingForAgent?: number;
         // Nuove metriche di chiusura finale (workflow attuale: OK/KO).
         // Questi campi sono opzionali per compatibilità con ambienti/risposte BE
         // che non li espongono ancora.
@@ -45,6 +47,7 @@ export interface KpiQuotazioniResponse {
         legacyClosedOutcomes?: number;
         previousLegacyClosedOutcomes?: number;
         seriesDaily: Array<{ date: string; count: number }>;
+        seriesDailyPrevious?: Array<{ date: string; count: number }>;
     };
 }
 

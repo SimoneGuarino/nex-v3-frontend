@@ -26,9 +26,24 @@ import TableSubObj from "../components/main/TableSubObj";
 import { enqueueSnackbar } from "components/MessageBox";
 import { deleteQuotationData } from "../fetchdata/destroy/deleteQuotationData";
 import { createQuotationData } from "../fetchdata/create/createQuotationData";
-import CreateQuotationModal, { FormStateProps } from "../components/createQuotation";
+import CreateQuotationModal from "../components/createQuotation";
 import StatsPanel from "../components/StatsPanel";
 import { OkLinksSidePanel } from "../components/OkLinksSidePanel";
+import {
+    buildQuotazioniTourActions,
+    isTourMockQuotation,
+} from "../tour/actions";
+import { buildTourMockOkLinksForViewer } from "../tour/mockQuotation";
+import { useQuotazioniListTourRuntime } from "../tour/useQuotazioniListTourRuntime";
+import { useQuotazioniListTourLifecycle } from "../tour/useQuotazioniListTourLifecycle";
+import type { TourContextMenuCloseReason } from "../tour/runtime";
+
+//tour
+import { useSectionTour } from 'tour/useSectionTour';
+import { Role } from 'tour/types';
+import { useUserContext } from "context/UserContext";
+import { CAPS } from "authz/caps";
+import { useAuthz } from "authz/useAuthz";
 
 
 // ——————————————————————————————————————————————————————————
@@ -157,12 +172,12 @@ export function Quotazioni() {
     const navigate = useNavigate();
 
     const userDetails = userState?.details ?? null;
-    const isAgent = CheckAdminPermissions({
-        userRole: userState?.details?.ruolo ?? "N/A",
-        permissions: userState?.details?.permissions,
-        rolesToCheck: [0, 1, 3], // Admin, Developer, Commerciale
-        panelToCheck: 'dettagli_quotazione',
-    });
+
+    const { hasCap } = useAuthz();
+    const isAgentMode = hasCap(CAPS.QUOTAZIONI_AGENT_MODE);
+    const isBuyerMode = hasCap(CAPS.QUOTAZIONI_BUYER_MODE);
+    const isAdminMode = hasCap(CAPS.QUOTAZIONI_ADMIN_MODE);
+
     const buyerLabelByCode = useMemo(() => {
         const out = new Map<string, string>();
         for (const buyer of globalData?.buyers ?? []) {
@@ -213,6 +228,22 @@ export function Quotazioni() {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [creating, setCreating] = useState<boolean>(false);
     const [createOpen, setCreateOpen] = useState<boolean>(false);
+
+    const [userContext] = useUserContext() as any;
+    /**
+     * Actions tour quotazioni centralizzate in file separato.
+     * Questo evita di appesantire la index con logiche dedicate al tour.
+     */
+    const quotationTourActions = useMemo(() => buildQuotazioniTourActions({
+        role: ((userContext?.details?.ruolo as Role) ?? 'Tester'),
+        setRaw,
+        setCreateOpen,
+        setOpenFilters,
+        setOpenSearch,
+        // Callback centralizzata usata dalle actions tour cross-page
+        // per rientrare in modo controllato alla lista quotazioni.
+        navigateToList: () => navigate("/commerciale/quotazioni"),
+    }), [userContext?.details?.ruolo, setRaw, setCreateOpen, setOpenFilters, setOpenSearch, navigate]);
 
     // chips per i filtri attivi
     // derivati dai filtri controllati
@@ -428,6 +459,42 @@ export function Quotazioni() {
     }, [userState?.token, userDetails, filterState, filterType, filterId, dateFrom, dateTo, priceFrom, priceTo, filterBuyerCode, filterAgenteId]);
 
 
+    // ——————————————————————————————————————————————————————————
+    // TOUR SYSTEM - QUOTAZIONI
+    // ——————————————————————————————————————————————————————————
+    const tour = useSectionTour({
+        id: 'nex_v2_quotazioni',
+        version: '2.0.0',
+        user: {
+            id: userContext?.details?._id ?? '',
+            role: (userContext?.details?.ruolo as Role) ?? 'Tester',
+        },
+        keys: 'quotazioni',
+        actions: quotationTourActions.actions
+    });
+    // Runtime tour lista quotazioni centralizzato in `tour/`.
+    useQuotazioniListTourRuntime({
+        setOpenOkLinksPanel,
+        setOkLinks,
+        viewerRole: userContext?.details?.ruolo,
+        viewerBuyerCode: userContext?.details?.buyerCode ?? userContext?.details?.codici?.buyer,
+        ensureTourMockRowActionsMenuOpen: () => {
+            if (openTableRowSettings) return;
+            const trigger = document.querySelector('[data-tour="quotazione-details"]') as HTMLElement | null;
+            trigger?.click();
+        },
+    });
+    const { shouldIgnoreListContextMenuClose } = useQuotazioniListTourLifecycle({
+        isTourOpen: tour.isOpen,
+        items,
+        injectMockQuotation: quotationTourActions.injectMockQuotation,
+        removeMockQuotation: quotationTourActions.removeMockQuotation,
+    });
+
+
+    // ——————————————————————————————————————————————————————————
+    // RENDER
+    // ——————————————————————————————————————————————————————————
     return (
         <DashboardLayout>
             <main className="flex flex-col flex-1 min-h-full w-full overflow-hidden">
@@ -452,7 +519,7 @@ export function Quotazioni() {
                     onOpenQuotationDetails={(quotationId: string) => {
                         navigate(`/quotazioni/${quotationId}`);
                     }}
-                    chips={chips} scope={scope} setScope={setScope} isAgents={isAgent} />
+                    chips={chips} scope={scope} setScope={setScope} isAgents={isAgentMode} isAdmin={isAdminMode}/>
                 <StatsPanel userDetails={userDetails} />
 
                 {!loading.general_data ?
@@ -464,7 +531,7 @@ export function Quotazioni() {
                         <EmptyState text="Nessuna quotazione trovata. Prova a cambiare i filtri." />
                     ) : ((!loading.general_data && items.length !== 0) &&
                         <div className="flex-1 min-h-0 w-full min-w-0">
-                            <TableSubObj data={items} loading={loading} isBuyer={!isAgent}
+                            <TableSubObj data={items} loading={loading} isBuyer={isBuyerMode}
                                 contextMenuRef={contextMenuRef}
                                 handleOpenSettings={({ indexRow, allData }) => setOpenTableRowSettings({ indexRow, allData })}
                                 setData={setRaw}
@@ -478,7 +545,7 @@ export function Quotazioni() {
                     : <LoadingState />}
             </main>
 
-            {isAgent && <CreateQuotationModal
+            {(isAgentMode || isAdminMode) && <CreateQuotationModal
                 open={createOpen}
                 loading={creating}
                 onClose={() => !creating && setCreateOpen(false)}
@@ -490,12 +557,17 @@ export function Quotazioni() {
             <ContextMenu
                 openFor={openFilters || Boolean(openTableRowSettings)}
                 pos={contextMenuRef}
-                onClose={() => { setOpenFilters(false); setOpenTableRowSettings(null); }}
+                onClose={(_e?: any, reason?: TourContextMenuCloseReason) => {
+                    if (shouldIgnoreListContextMenuClose(reason)) return; // non chiudere per clickAway/ESC durante lo step lockato
+                    setOpenFilters(false);
+                    setOpenTableRowSettings(null);
+                }}
                 menuButtons={[
                     {
                         title: 'Apri Dettagli',
                         icon: <IoEyeOutlineIcon size={20} />,
                         onClick: viewItem,
+                        "data-tour": "quotazione-details-2",
                     },
                     ...((openTableRowSettings?.allData[openTableRowSettings.indexRow]?.final_outcome &&
                         openTableRowSettings?.allData[openTableRowSettings.indexRow]?.final_outcome.ok_links_stats &&
@@ -503,8 +575,22 @@ export function Quotazioni() {
                         ? [{
                             title: 'Visualizza FB & OC collegati',
                             icon: <PiInvoiceLightIcon size={20} />,
+                            "data-tour": "quotazione-ok-links-open",
                             onClick: () => {
                                 const item: any = openTableRowSettings.allData[openTableRowSettings.indexRow];
+                                if (isTourMockQuotation(item)) {
+                                    /**
+                                     * Tour-only:
+                                     * la quotazione fake non esiste a backend, quindi qui
+                                     * usiamo i risultati mock OC/FB preparati nella cartella tour.
+                                     */
+                                    setOkLinks(buildTourMockOkLinksForViewer(
+                                        userContext?.details?.ruolo,
+                                        userContext?.details?.buyerCode ?? userContext?.details?.codici?.buyer,
+                                    ));
+                                    setOpenOkLinksPanel(true);
+                                    return;
+                                }
                                 fetchQuotationOkLinks(item._id);
                                 setOpenOkLinksPanel(true);
                             },
@@ -540,6 +626,13 @@ export function Quotazioni() {
                 onRefresh={() => {
                     if (!openTableRowSettings) return;
                     const item: any = openTableRowSettings.allData[openTableRowSettings.indexRow];
+                    if (isTourMockQuotation(item)) {
+                        setOkLinks(buildTourMockOkLinksForViewer(
+                            userContext?.details?.ruolo,
+                            userContext?.details?.buyerCode ?? userContext?.details?.codici?.buyer,
+                        ));
+                        return;
+                    }
                     fetchQuotationOkLinks(item._id);
                 }}
                 loading={Boolean(loading.get_quotation_ok_links)}

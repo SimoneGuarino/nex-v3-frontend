@@ -97,7 +97,8 @@ export function StatsPanel({ userDetails }: StatsPanelProps) {
 
     // 1) KPI quotazioni
     useEffect(() => {
-        if (!userDetails || !userKey) return;
+        // Guard minimale: per i fetch KPI ci basta la presenza dell'id utente.
+        if (!userKey) return;
 
         try {
             abortQuotazioniRef.current?.abort();
@@ -123,11 +124,12 @@ export function StatsPanel({ userDetails }: StatsPanelProps) {
                 ac.abort();
             } catch { }
         };
-    }, [userKey, monthParam, userDetails]);
+    }, [userKey, monthParam]);
 
     // 2) KPI domanda
     useEffect(() => {
-        if (!userDetails || !userKey) return;
+        // Guard minimale: per i fetch KPI ci basta la presenza dell'id utente.
+        if (!userKey) return;
 
         try {
             abortDomandaRef.current?.abort();
@@ -153,11 +155,12 @@ export function StatsPanel({ userDetails }: StatsPanelProps) {
                 ac.abort();
             } catch { }
         };
-    }, [userKey, monthParam, userDetails]);
+    }, [userKey, monthParam]);
 
     // 3) KPI top operator
     useEffect(() => {
-        if (!userDetails || !userKey) return;
+        // Guard minimale: per i fetch KPI ci basta la presenza dell'id utente.
+        if (!userKey) return;
 
         try {
             abortTopOperatorRef.current?.abort();
@@ -183,11 +186,12 @@ export function StatsPanel({ userDetails }: StatsPanelProps) {
                 ac.abort();
             } catch { }
         };
-    }, [userKey, monthParam, resolvedTopOperatorView, userDetails]);
+    }, [userKey, monthParam, resolvedTopOperatorView]);
 
     // 4) KPI top customer
     useEffect(() => {
-        if (!userDetails || !userKey) return;
+        // Guard minimale: per i fetch KPI ci basta la presenza dell'id utente.
+        if (!userKey) return;
 
         try {
             abortTopCustomerRef.current?.abort();
@@ -213,11 +217,11 @@ export function StatsPanel({ userDetails }: StatsPanelProps) {
                 ac.abort();
             } catch { }
         };
-    }, [userKey, userDetails]);
+    }, [userKey]);
 
     return (
         <>
-            <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
+            <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-2" data-tour="quotazioni-statistiche">
                 <PannelloQuotazioni
                     mese={mese}
                     isClienteHidden={isClienteHidden}

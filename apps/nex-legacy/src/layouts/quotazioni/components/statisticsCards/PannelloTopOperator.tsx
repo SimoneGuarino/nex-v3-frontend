@@ -67,7 +67,7 @@ export function PannelloTopOperator({
     const trend = (kpi?.trendPct ?? null) as number | null;
 
     const isUp = typeof trend === "number" ? trend >= 0 : true;
-    const trendText = trend === null ? "—" : fmtPct(Math.abs(trend));
+    const trendText = trend === null ? "100" : fmtPct(Math.abs(trend));
 
     const topByQ = kpi?.topByQuotations ?? null;
     const topByC = kpi?.topByCompleted ?? null;

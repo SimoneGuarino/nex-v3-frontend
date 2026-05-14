@@ -52,7 +52,7 @@ export function MostRequestedProduct({ mese, isClienteHidden, showChart, onShowC
     const avg = kpi?.avgProductsPerQuotation ?? null;
 
     const isUp = typeof trendPct === "number" ? trendPct >= 0 : true;
-    const trendText = trendPct === null ? "—" : fmtPct(Math.abs(trendPct));
+    const trendText = trendPct === null ? "100" : fmtPct(Math.abs(trendPct));
 
     const shareText = sharePct === null ? "—" : fmtPct(sharePct);
 
@@ -138,7 +138,7 @@ export function MostRequestedProduct({ mese, isClienteHidden, showChart, onShowC
                         <div className={`text-xs mt-auto`}>
                             <ul>
                                 <li>% sul totale richieste: <span className="font-bold">{loading ? "…" : shareText}</span></li>
-                                <li>Media prodotti/quotazione: <span className="font-bold">{loading ? "…" : (avg === null ? "—" : NumberToEuro({convert: avg}))}</span></li>
+                                <li>Media prodotti/quotazione: <span className="font-bold">{loading ? "…" : (avg === null ? "—" : NumberToEuro({ convert: avg }))}</span></li>
                             </ul>
                         </div>
                     </div>

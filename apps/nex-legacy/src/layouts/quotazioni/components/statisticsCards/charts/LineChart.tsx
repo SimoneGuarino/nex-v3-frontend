@@ -65,6 +65,7 @@ export function LineChart({
     ]);
 
     const previousSeries = pickSeries(kpi, [
+        "seriesDailyPrevious",
         "prevSeriesDaily",
         "previousSeriesDaily",
         "seriesDailyPrev",

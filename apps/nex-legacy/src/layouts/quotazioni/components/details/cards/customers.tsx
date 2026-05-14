@@ -301,6 +301,7 @@ export default function CustomersCard({
 
                                 <div className="flex flex-wrap items-center gap-2 pb-2">
                                     <FDButton
+                                        data-tour="quotazioni-customer-details"
                                         variant="outline"
                                         size="small"
                                         disabled={isPlaceholderCustomer}

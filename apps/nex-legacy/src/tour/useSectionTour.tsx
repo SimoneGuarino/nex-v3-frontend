@@ -21,6 +21,7 @@ export function useSectionTour({
         title: s.title,
         description: s.description,
         hint: s.hint,
+        important: s.important,
         side: s.side,
         advanceOn: s.advanceOn,
         afterAdvanceWaitFor: s.afterAdvanceWaitFor,

@@ -43,6 +43,8 @@ import { UserState } from "types/UserContext";
 import { formatISODate, toLocalDateTimeInputValue } from "utils/date/getDate";
 import { CapitalizeFirstLetter } from "utils/string/capitalize";
 import { CategoryIndex, normalizeKey } from "../hook/useDetailsQuotation";
+import { applyTourProductPanelsOrchestration } from "../tour/actions";
+
 
 const MdDoneIcon = MdDone as React.FC<{ className?: string }>;
 const MdCloseIcon = MdClose as React.FC<{ className?: string; size?: number }>;
@@ -147,6 +149,31 @@ type ProductsDetailsProps = {
     locked?: boolean;
     userState?: UserState | null;
     CheckAdminDev: boolean;
+    /** Lock pannello principale guidato dal tour. */
+    tourProductPanelLock?: boolean;
+    /** Se true, la X della scheda prodotto resta disabilitata fino allo step di chiusura. */
+    tourProductSheetCloseDisabled?: boolean;
+    /** Comando tour-driven per apertura/chiusura scheda prodotto. */
+    tourProductSheetMode?: "keep" | "open" | "close";
+    /** Comando tour-driven per apertura/chiusura pannello secondario avanzato. */
+    tourProductSecondaryPanelMode?: "keep" | "open" | "close";
+    /** Comando tour-driven per apertura/chiusura pannello sostituzione buyer. */
+    tourProductSubstitutionPanelMode?: "keep" | "open" | "close";
+    /** Se true il bottone "Chiudi ricerca" resta bloccato durante il tour. */
+    tourSubstitutionCloseDisabled?: boolean;
+    /** Se true blocca tutta l'interazione del pannello ricerca sostituzione. */
+    tourSubstitutionSearchPanelLock?: boolean;
+    /** Se true blocca il box "Prodotti inseriti nella proposta". */
+    tourSubstitutionProposalsBoxLock?: boolean;
+    /** Se true blocca il pannello "Proposta di sostituzione". */
+    tourSubstitutionProposalPanelLock?: boolean;
+    /**
+     * Lock tour-only del pulsante "Invia la nota".
+     * Non impatta i flussi normali: viene pilotato solo dal parent durante specifici step tour.
+     */
+    tourSendNoteDisabled?: boolean;
+    /** Disabilita il pulsante "Visualizza" nello step descrittivo Alternative commerciali. */
+    tourCommercialAlternativesViewDisabled?: boolean;
 };
 
 type CounterProposalSectionProps = {
@@ -171,6 +198,8 @@ type CounterProposalSectionProps = {
     /** Indica se la quotazione è in stato COMPLETATO (lato commerciale) */
     isCompletedState: boolean;
     currentState?: RigaStato;
+    /** Lock tour del pannello "Proposta di sostituzione". */
+    lockInteractions?: boolean;
 };
 
 
@@ -277,6 +306,7 @@ const ProductSummaryHeader: React.FC<{
     // Opzioni assegnazione buyer (solo lato commerciale in BOZZA)
     canShowBuyerSelect?: boolean;
     canChangeBuyer?: boolean;
+    canChangeValue: (value: string | null) => boolean;
     buyerOptions?: {
         value: string;
         label: string;
@@ -293,7 +323,7 @@ const ProductSummaryHeader: React.FC<{
     isTextRequest?: boolean;
     isRefusedState: boolean;
     isCompletedState: boolean;
-}> = ({ isPassiveBid, document, proposals, fetchProductDetails, canShowBuyerSelect, canChangeBuyer, buyerOptions,
+}> = ({ isPassiveBid, document, proposals, fetchProductDetails, canShowBuyerSelect, canChangeBuyer, canChangeValue, buyerOptions,
     categoryIndex, assigningBuyer, onAssignBuyer, onAssignCategories, isTextRequest, isRefusedState, isCompletedState }) => {
         const [editingBuyer, setEditingBuyer] = useState(false);
         const [extendedDescription, setExtendedDescription] = React.useState(false)
@@ -396,29 +426,8 @@ const ProductSummaryHeader: React.FC<{
         // COMPONENT RENDER
         // ─────────────────────────────────────────────────────────────
         const renderBuyerSection = () => {
-            if (!buyerOptions || !onAssignBuyer) {
-                // modalità "pill" semplice
-                return (
-                    <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 dark:bg-neutral-900 text-[11px] text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 px-2.5 py-[3px]">
-                            {document.codice_buyer ? (
-                                <>
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                    <span className="font-medium">{document.codice_buyer}</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                                    <span className="font-medium">Non assegnato</span>
-                                </>
-                            )}
-                        </span>
-                    </div>
-                );
-            };
-
             const canUseSelect =
-                (canShowBuyerSelect || (canChangeBuyer && editingBuyer)) && buyerOptions.length > 0;
+                (canShowBuyerSelect || (canChangeBuyer && editingBuyer));
 
             if (canUseSelect) {
                 return (
@@ -429,11 +438,11 @@ const ProductSummaryHeader: React.FC<{
                         <FDSelect
                             size="xs" radius="md"
                             placeholder="Seleziona il buyer…"
-                            options={buyerOptions}
+                            options={buyerOptions ?? []}
                             value={document.codice_buyer ?? undefined}
                             onChange={(value) => {
                                 if (typeof value === "string") {
-                                    onAssignBuyer(value);
+                                    onAssignBuyer?.(value);
                                     if (canChangeBuyer) {
                                         setEditingBuyer(false);
                                     }
@@ -442,6 +451,8 @@ const ProductSummaryHeader: React.FC<{
                             disabled={assigningBuyer}
                             virtualized={false}
                             className="min-w-60"
+                            searchable
+                            loading={!buyerOptions || (buyerOptions && buyerOptions.length === 0)}
                         />
                         {canChangeBuyer && (
                             <button
@@ -457,7 +468,28 @@ const ProductSummaryHeader: React.FC<{
                         )}
                     </div>
                 );
-            };
+            } else {
+                {
+                    // modalità "pill" semplice
+                    return (
+                        <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 dark:bg-neutral-900 text-[11px] text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 px-2.5 py-[3px]">
+                                {document.codice_buyer ? (
+                                    <>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                        <span className="font-medium">{document.codice_buyer}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                        <span className="font-medium">Non assegnato</span>
+                                    </>
+                                )}
+                            </span>
+                        </div>
+                    );
+                };
+            }
 
             // pill + "cambia buyer"
             return (
@@ -595,12 +627,13 @@ const ProductSummaryHeader: React.FC<{
         const renderCategorySection = () => {
             if (!isPassiveBid) return null;
             return dataSelects.map((elements, index) => {
+                const value = (document as CartProductDTO).dettagli_prodotto[elements.label.toLocaleLowerCase() as keyof CartProductDTO['dettagli_prodotto']] ?? null;
+                const canChangeValue_ = canChangeValue(value);
                 return <div key={elements.label + ":__" + index} className="flex flex-col gap-1">
                     <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-500 dark:text-neutral-400">
                         {elements.label}
                     </span>
-                    {buyerOptions && onAssignBuyer &&
-                        (canShowBuyerSelect || (canChangeBuyer && editingBuyer)) ? (
+                    {((!value) || (canChangeValue_ && editingBuyer)) ? (
                         // Modalità SELECT (prima assegnazione o cambio)
                         <div
                             onClick={(e) => {
@@ -609,7 +642,6 @@ const ProductSummaryHeader: React.FC<{
                             }}
                             className="flex items-center gap-2"
                         >
-
                             <FDSelect
                                 options={elements?.dataArray}
                                 value={(document as CartProductDTO).dettagli_prodotto[elements.label.toLocaleLowerCase() as keyof CartProductDTO['dettagli_prodotto']] ?? null}
@@ -622,7 +654,7 @@ const ProductSummaryHeader: React.FC<{
                                 className="min-w-60"
                             />
 
-                            {canChangeBuyer && (
+                            {canChangeValue_ && (
                                 <button
                                     type="button"
                                     onClick={(ev) => {
@@ -639,7 +671,7 @@ const ProductSummaryHeader: React.FC<{
                         // Modalità "pill" (read-only o con pulsante Cambia)
                         <div className="flex items-center gap-2">
                             <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 dark:bg-neutral-900 text-[11px] text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 px-2.5 py-[3px]">
-                                {product?.dettagli_prodotto?.linea ? (
+                                {product.dettagli_prodotto[elements.label.toLocaleLowerCase() as keyof typeof product.dettagli_prodotto] ? (
                                     <>
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                         <span className="font-medium">
@@ -656,7 +688,7 @@ const ProductSummaryHeader: React.FC<{
                                 )}
                             </span>
 
-                            {canChangeBuyer && (
+                            {canChangeValue_ && (
                                 <button
                                     type="button"
                                     onClick={(ev) => {
@@ -670,13 +702,11 @@ const ProductSummaryHeader: React.FC<{
                             )}
                         </div>
                     )}
-
-
                 </div>
             })
         };
 
-        
+
         // ─────────────────────────────────────────────────────────────
         // KIND = PRODUCT
         // ─────────────────────────────────────────────────────────────
@@ -703,6 +733,7 @@ const ProductSummaryHeader: React.FC<{
                     "border-neutral-200/80 dark:border-neutral-700/80",
                     canOpenProductDetails ? "cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800" : "",
                 ].join(" ")}
+                data-tour="quotazioni-product-panel-open-sheet"
                 data-tooltip-id="general-quotations-tooltip" data-tooltip-content="Visualizza dettagli prodotto"
                 onClick={() => canOpenProductDetails && fetchProductDetails(product.product_id)}
             >
@@ -761,7 +792,7 @@ const ProductSummaryHeader: React.FC<{
                                     Gestita dal buyer
                                 </span>
 
-                                {buyerOptions && onAssignBuyer &&
+                                {onAssignBuyer &&
                                     (canShowBuyerSelect || (canChangeBuyer && editingBuyer)) ? (
                                     // Modalità SELECT (prima assegnazione o cambio)
                                     <div
@@ -774,7 +805,7 @@ const ProductSummaryHeader: React.FC<{
                                         <FDSelect
                                             size="xs" radius="md"
                                             placeholder="Seleziona il buyer…"
-                                            options={buyerOptions}
+                                            options={buyerOptions ?? []}
                                             value={product.codice_buyer ?? null}
                                             onChange={(value) => {
                                                 if (typeof value === "string") {
@@ -788,6 +819,8 @@ const ProductSummaryHeader: React.FC<{
                                             disabled={assigningBuyer}
                                             virtualized={false}
                                             className="min-w-60"
+                                            searchable
+                                            loading={!buyerOptions || (buyerOptions && buyerOptions.length === 0)}
                                         />
                                         {canChangeBuyer && (
                                             <button
@@ -900,6 +933,7 @@ const CounterProposalSection: React.FC<CounterProposalSectionProps> = ({
     isRefusedState,
     isCompletedState,
     currentState,
+    lockInteractions = false,
 }) => {
     if (!proposals.length) return null;
 
@@ -918,13 +952,21 @@ const CounterProposalSection: React.FC<CounterProposalSectionProps> = ({
 
     return (
         <FDBox
+            data-tour="quotazioni-product-sost-proposal"
             variant="soft"
             color="neutral"
             radius="lg"
             pad="md"
             shadow="sm"
-            className="space-y-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700"
+            className="relative space-y-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700"
         >
+            {lockInteractions && (
+                <div
+                    aria-hidden="true"
+                    style={{ position: "absolute", inset: 0, zIndex: 20, pointerEvents: "auto" }}
+                    onClickCapture={(e) => e.stopPropagation()}
+                />
+            )}
             {/* Box Header */}
             <div className="flex items-center justify-between gap-3">
                 <div>
@@ -973,6 +1015,11 @@ const CounterProposalSection: React.FC<CounterProposalSectionProps> = ({
                     return (
                         <motion.div
                             key={proposal._id ?? `${codiceProduttore}:${index}`}
+                            /**
+                             * Anchor tour CAD:
+                             * nello step guidato facciamo cliccare la prima proposta selezionabile.
+                             */
+                            data-tour={isSelectable && index === 0 ? "quotazioni-product-agent-select-item" : undefined}
                             whileHover={(isSelectable && !proposalExpired) ? { scale: 1.01 } : {}}
                             whileTap={(isSelectable && !proposalExpired) ? { scale: 0.995 } : {}}
                             className={[
@@ -1117,6 +1164,7 @@ const CounterProposalSection: React.FC<CounterProposalSectionProps> = ({
 
 
                     <button
+                        data-tour="quotazioni-product-sost-submit"
                         type="button"
                         onClick={onSubmitProposal}
                         disabled={sendDisabled}
@@ -1192,6 +1240,7 @@ const BuyerActions: React.FC<{
 
         return (
             <FDBox
+                data-tour="quotazioni-product-buyer-ac"
                 variant="soft"
                 color="neutral"
                 radius="lg"
@@ -1351,6 +1400,7 @@ const BuyerActions: React.FC<{
                 {!isReassignMode && (
                     <div className="flex flex-wrap gap-2 w-full">
                         <button
+                            data-tour="quotazioni-product-sost"
                             type="button"
                             onClick={onOpenSubstitutionSearch}
                             className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-[11px] text-sky-700 dark:text-sky-200 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition"
@@ -1411,7 +1461,10 @@ const AgentActions: React.FC<{
         const { expired, countdownLabel } = useExpiryCountdown(expiredValue);
 
         return (
-            <FDBox className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-sm p-4 space-y-4">
+            <FDBox
+                data-tour="quotazioni-product-agent-ac"
+                className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-sm p-4 space-y-4"
+            >
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-sky-50 dark:bg-sky-950/50 text-sky-500 dark:text-sky-300 text-[11px]">
@@ -1473,7 +1526,7 @@ const AgentActions: React.FC<{
                 <div className="flex flex-wrap gap-2">
                     {!isRefusedState && (
                         <>
-                            <FDButton color="success" icon={<MdDoneIcon />} disabled={!canAccept || expired} onClick={() => {
+                            <FDButton data-tour="quotazioni-product-accetta" color="success" icon={<MdDoneIcon />} disabled={!canAccept || expired} onClick={() => {
                                 if (!canAccept || expired) return;
                                 onAccept();
                             }}>
@@ -1506,6 +1559,7 @@ const AdvancedPanel: React.FC<{
     onSelectProduct: (item: any) => void;
     onChangeProposalExpiry: (value: string, _id: string) => void;
     CommercialAlternativesSection: any;
+    lockProposalsBox?: boolean;
 }> = ({
     document,
     proposals,
@@ -1517,7 +1571,8 @@ const AdvancedPanel: React.FC<{
     getFilteredEventsForCurrentProduct,
     onSelectProduct,
     onChangeProposalExpiry,
-    CommercialAlternativesSection
+    CommercialAlternativesSection,
+    lockProposalsBox = false,
 }) => {
         const product = document as CartProductDTO;
         const { quotazione, dettagli_prodotto } = product as CartProductDTO;
@@ -1668,7 +1723,14 @@ const AdvancedPanel: React.FC<{
                 {!isTextRequest && CommercialAlternativesSection()}
 
                 {/* blocco prodotti inseriti nella proposta */}
-                {showBuyerActions && <FDBox border={true} radius="md" className="border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-sm p-4 space-y-3 mb-12">
+                {showBuyerActions && <FDBox data-tour="quotazioni-product-sost-proposals" border={true} radius="md" className="relative border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-sm p-4 space-y-3 mb-12">
+                    {lockProposalsBox && (
+                        <div
+                            aria-hidden="true"
+                            style={{ position: "absolute", inset: 0, zIndex: 15, pointerEvents: "auto" }}
+                            onClickCapture={(e) => e.stopPropagation()}
+                        />
+                    )}
                     <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500 dark:text-neutral-400">
                         Prodotti inseriti nella proposta ({proposals.length})
                     </p>
@@ -2014,16 +2076,36 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     locked,
     userState,
     CheckAdminDev,
-    categoryIndex
+    categoryIndex,
+    tourProductPanelLock = false,
+    tourProductSheetCloseDisabled = false,
+    tourProductSheetMode = "keep",
+    tourProductSecondaryPanelMode = "keep",
+    tourProductSubstitutionPanelMode = "keep",
+    tourSubstitutionCloseDisabled = false,
+    tourSubstitutionSearchPanelLock = false,
+    tourSubstitutionProposalsBoxLock = false,
+    tourSubstitutionProposalPanelLock = false,
+    tourSendNoteDisabled = false,
+    tourCommercialAlternativesViewDisabled = false,
 }) => {
     const [selectedIdProduct, setSelectedIdProduct] = useState<string | null>(null); // prodotto selezionato per i dettagli
     const [isProductDetailsOpen, setIsProductDetailsOpen] = useState(false); // pannello dedicato ai dettagli prodotto
+    // Apertura pannello "Dettagli avanzati / storico".
     const [secondaryOpen, setSecondaryOpen] = useState(false);
+    // Apertura colonna "Proponi prodotto in sostituzione".
     const [substitutionOpen, setSubstitutionOpen] = useState(false);
     const isSubstitutionMode = secondaryOpen && substitutionOpen;
     const isWideLayout = isSubstitutionMode || isProductDetailsOpen; // layout più ampio se sono aperti i pannelli secondari
+    /** Verifica se il prodotto è di tipo TEXT_REQUEST */
+    const isTextRequest = product?.kind === "TEXT_REQUEST";
 
     const productDetailsAbortController = React.useRef<AbortController | null>(null); //abort Controller per il fetch dei dettagli prodotto, così da poter annullare la richiesta se l'utente chiude il pannello prima che arrivi la risposta
+    /**
+     * Lock guidati dal parent (calcolati nel modulo tour).
+     * Qui li applichiamo soltanto alla UI.
+     */
+    const lockMainPanelInteractions = !!tourProductPanelLock;
 
 
     // ——————————————————————————————————————————————————————————
@@ -2065,6 +2147,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     useEffect(() => {
         if (!open) {
             setSecondaryOpen(false);
+            setSubstitutionOpen(false);
         };
         productDetailsAbortController.current && productDetailsAbortController.current.abort(); // annulla eventuale richiesta in corso dei dettagli prodotto quando si chiude il pannello
         productDetailsAbortController.current = null; // resetta il ref dell'abort controller
@@ -2077,6 +2160,56 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
         };
     }, [autoOpenProductDetailsId, product?.kind]);
 
+    /**
+     * La regia "apri/chiudi scheda prodotto" arriva dal modulo tour:
+     * qui applichiamo solo il comando ricevuto.
+     */
+    useEffect(() => {
+        if (isTextRequest) return;
+
+        if (tourProductSheetMode === "open") {
+            /**
+             * Type guard esplicito:
+             * ci serve per dire a TypeScript quando `product` è davvero una riga prodotto
+             * (e quindi ha `product_id`) e quando invece è una richiesta testuale.
+             */
+            const isProductRow = (row: CartProductDTO | TextRequestCartDTO): row is CartProductDTO =>
+                (row?.kind ?? "PRODUCT") === "PRODUCT";
+
+            const fallbackProductId =
+                selectedIdProduct ||
+                autoOpenProductDetailsId ||
+                (isProductRow(product) ? product.product_id : null);
+
+            if (!fallbackProductId) return;
+            setSelectedIdProduct(fallbackProductId);
+            setIsProductDetailsOpen(true);
+            return;
+        }
+
+        if (tourProductSheetMode === "close") {
+            setIsProductDetailsOpen(false);
+        }
+    }, [
+        isTextRequest,
+        tourProductSheetMode,
+        selectedIdProduct,
+        autoOpenProductDetailsId,
+        product,
+    ]);
+
+    /**
+     * Regia tour dei pannelli secondari centralizzata nel modulo `tour/actions.ts`.
+     * Qui manteniamo un solo effetto che delega la logica.
+     */
+    useEffect(() => {
+        applyTourProductPanelsOrchestration({
+            secondaryMode: tourProductSecondaryPanelMode,
+            substitutionMode: tourProductSubstitutionPanelMode,
+            setSecondaryOpen,
+            setSubstitutionOpen,
+        });
+    }, [tourProductSecondaryPanelMode, tourProductSubstitutionPanelMode]);
     // ESC → prima pannello avanzato, poi principale
     useEffect(() => {
         if (!open) return;
@@ -2093,9 +2226,6 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     // ——————————————————————————————————————————————————————————
     // HELPERS
     // ——————————————————————————————————————————————————————————
-    /** Verifica se il prodotto è di tipo TEXT_REQUEST */
-    const isTextRequest = product?.kind === "TEXT_REQUEST";
-
     /** true se il prodotto ha almeno un evento CAMBIO_BUYER con prevBuyerCode null
     → la riga è nata senza buyer e il buyer è stato assegnato "a mano" in BOZZA */
     const hasBuyerAssignmentFromNull =
@@ -2106,6 +2236,25 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                     typeof ev.meta?.prevBuyerCode === "undefined"),
         );
 
+    const hasValueAssignmentFromNull = (field: string | null) => !!product?.eventi?.some(
+        (ev) =>
+            ev.type === "CAMBIO_DETTAGLI_PRODOTTO" &&
+            ev.meta?.new === field &&
+            (ev.meta?.prev === null || typeof ev.meta?.prev === "undefined"),
+    );
+
+    /** permette di CAMBIARE il buyer quando:
+    - commerciale
+    - quotazione in BOZZA
+    - la riga ha un buyer
+    - ed è stato assegnato partendo da null (non da catalogo) */
+    const canChangeValue = (value: string | null) =>
+        !!product &&
+        (isAgent || CheckAdminDev) &&
+        (isDraftQuotation ?? false) &&
+        hasValueAssignmentFromNull(value) &&
+        !locked;
+
     /** mostra il select quando:
     - commerciale
     - quotazione in BOZZA
@@ -2115,10 +2264,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
         (isAgent || CheckAdminDev) &&
         (isDraftQuotation ?? false) &&
         !product.codice_buyer &&
-        !!buyerOptions &&
-        buyerOptions.length > 0 &&
-        !locked &&
-        typeof onAssignBuyer === "function";
+        !locked;
 
     /** permette di CAMBIARE il buyer quando:
     - commerciale
@@ -2131,10 +2277,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
         (isDraftQuotation ?? false) &&
         !!product.codice_buyer &&
         hasBuyerAssignmentFromNull &&
-        !!buyerOptions &&
-        buyerOptions.length > 0 &&
-        !locked &&
-        typeof onAssignBuyer === "function";
+        !locked;
 
     const controproposte = (product?.controproposte ?
         product?.controproposte.filter((cp: ContropropostaDTO) => cp.stato !== "CONTROPROPOSTA_RIFIUTATA") : []) ?? [];
@@ -2200,7 +2343,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
 
     /** Storico eventi prodotto, Note e Controproposte */
     const RenderNoteHistory = () => (
-        <FDBox border={true} radius="md" className="mt-auto border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4 space-y-4">
+        <FDBox data-tour="quotazioni-product-stori" border={true} radius="md" className="mt-auto border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4 space-y-4">
             <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500 dark:text-neutral-400">
                     Storico note
@@ -2362,7 +2505,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
      * @returns 
      */
     const RenderResumeCommercialAlternativesSection = () => (
-        <FDBox border={true} radius="xl" pad="lg" variant="gradient" shadow="sm" className="flex items-center gap-2">
+        <FDBox border={true} radius="xl" pad="lg" variant="gradient" shadow="sm" className="flex items-center gap-2" data-tour="quotazioni-product-alt-comm">
             <GoInfoIcon className="text-sky-400" size={25} />
             <div className="flex items-start justify-between gap-3 w-full">
                 <div>
@@ -2376,7 +2519,10 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                     </p>
                 </div>
                 <FDButton variant="outlined" radius="full" size="md" textSize="xs"
+                    data-tour="quotazioni-product-alt-comm-view"
+                    disabled={tourCommercialAlternativesViewDisabled}
                     onClick={() => {
+                        if (tourCommercialAlternativesViewDisabled) return;
                         onOpenSubstitutionSearch();
                         setSecondaryOpen(true);
                         setSubstitutionOpen(true);
@@ -2414,7 +2560,20 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                 }`}
                         >
                             {/* PANNELLO PRINCIPALE */}
-                            <div className="absolute inset-y-0 right-0 w-full z-20 pointer-events-auto">
+                            <div className="absolute inset-y-0 right-0 w-full z-20 pointer-events-auto"
+                                data-tour="quotazioni-product-panel"
+                            >
+                                {lockMainPanelInteractions && (
+                                    /**
+                                     * Lock tour del pannello principale:
+                                     * blocca click e hover durante gli step di sola lettura.
+                                     */
+                                    <div
+                                        aria-hidden="true"
+                                        style={{ position: "absolute", inset: 0, zIndex: 25, pointerEvents: "auto" }}
+                                        onClickCapture={(e) => e.stopPropagation()}
+                                    />
+                                )}
                                 <SidePanelShell
                                     title={isTextRequest ? "Gestione richiesta descrittiva" : "Quotazione prodotto"}
                                     animateVariant={secondaryOpen ? "background" : "visible"}
@@ -2484,6 +2643,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                             isTextRequest={isTextRequest}
                                             canShowBuyerSelect={canShowBuyerSelect}
                                             canChangeBuyer={canChangeBuyer}
+                                            canChangeValue={canChangeValue}
                                             buyerOptions={buyerOptions}
                                             assigningBuyer={assigningBuyer}
                                             onAssignBuyer={onAssignBuyer}
@@ -2493,7 +2653,14 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                             categoryIndex={categoryIndex}
                                         />
 
-                                        {!isTextRequest && <RenderResumeCommercialAlternativesSection />}
+                                        {/**
+                                          * Non usare <RenderResumeCommercialAlternativesSection /> qui:
+                                          * essendo definito dentro ProductsDetails, a ogni render React lo tratterebbe
+                                          * come un nuovo component type, smontando/rimontando il nodo data-tour.
+                                          * Nel tour quotazioni questo faceva saltare focus/popover dello step
+                                          * "Alternative commerciali". Invocarlo come render helper mantiene stabile il DOM.
+                                          */}
+                                        {!isTextRequest && RenderResumeCommercialAlternativesSection()}
 
                                         {/* NOTE ACTION-PHASE */}
                                         {((![
@@ -2503,6 +2670,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                             "VALUTAZIONE_RIFIUTATA"
                                         ].includes(stato)) && !isRefusedState) && (
                                                 <FDBox
+                                                    data-tour="quotazioni-product-notes"
                                                     variant="soft"
                                                     color="neutral"
                                                     radius="lg"
@@ -2527,7 +2695,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                                         La nota verrà salvata insieme alla controproposta quando invii la
                                                         proposta al commerciale.
                                                     </p>
-                                                    <FDButton icon={<LuSendIcon />} variant="outline" size="sm" className="mt-2 float-right" onClick={sendProductNote} disabled={loading.add_product_note as boolean} loading={loading.add_product_note as boolean}
+                                                    <FDButton icon={<LuSendIcon />} variant="outline" size="sm" className="mt-2 float-right" onClick={sendProductNote} disabled={(loading.add_product_note as boolean) || tourSendNoteDisabled} loading={loading.add_product_note as boolean}
                                                         dataTooltipId="general-quotations-tooltip" dataTooltipContent="Invia solo la nota (le note verranno inviate, se compilate, anche nel momento in cui si compie l'azione)">
                                                         Invia la nota
                                                     </FDButton>
@@ -2553,6 +2721,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                             isRefusedState={isRefusedState}
                                             isCompletedState={isCompletedState}
                                             currentState={stato}
+                                            lockInteractions={tourSubstitutionProposalPanelLock}
                                         />}
 
                                         {/* AZIONI BUYER */}
@@ -2605,7 +2774,11 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                             )}
 
                                         {/* Storico eventi + Footer */}
-                                        <RenderNoteHistory />
+                                        {/**
+                                          * Stesso pattern dei render helper locali: invocazione diretta per evitare
+                                          * remount non necessari dei sottoalberi definiti dentro ProductsDetails.
+                                          */}
+                                        {RenderNoteHistory()}
                                     </div>
                                 </SidePanelShell>
                             </div>
@@ -2647,6 +2820,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                                         onSelectProduct={selectSubstitutionProductForCurrent}
                                                         onChangeProposalExpiry={onChangeProposalExpiry}
                                                         CommercialAlternativesSection={CommercialAlternativesSection}
+                                                        lockProposalsBox={tourSubstitutionProposalsBoxLock}
                                                     />
                                                 </div>
 
@@ -2656,6 +2830,8 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                                         <ProductSubstitutionSearch
                                                             open={substitutionOpen}
                                                             onClose={() => setSubstitutionOpen(false)}
+                                                            closeDisabled={tourSubstitutionCloseDisabled}
+                                                            lockInteractions={tourSubstitutionSearchPanelLock}
                                                             baseProductTitle={product.kind == "PRODUCT" ? ((product as CartProductDTO)?.dettagli_prodotto?.descrizione ??
                                                                 (product as CartProductDTO)?.dettagli_prodotto?.codiceProduttore ?? "Prodotto") : "Richiesta Descrittiva"}
                                                             baseProductMeta={product.kind == "PRODUCT" ? `${(product as CartProductDTO).dettagli_prodotto.marca ?? ""} · 
@@ -2726,6 +2902,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                             <AnimatePresence>
                                 {(isProductDetailsOpen && !isTextRequest) && (
                                     <div
+                                        data-tour="quotazioni-product-sheet"
                                         className={`absolute inset-y-0 right-0 z-30 pointer-events-auto transition-[width] duration-300 ease-[cubic-bezier(0.22,0.61,0.36,1)] 
                                             ${isWideLayout ? "w-[96%]" : "w-[92%]"}`}
                                     >
@@ -2735,6 +2912,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                         <ProductDetailsReporting
                                             onClose={handleCloseProductDetails}
                                             productId={selectedIdProduct}
+                                            closeDisabled={tourProductSheetCloseDisabled}
                                             onReportProductAnomaly={onReportProductAnomaly}
                                             reportingAnomaly={reportingAnomaly}
                                             abortController={productDetailsAbortController}

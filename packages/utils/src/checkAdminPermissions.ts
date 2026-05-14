@@ -10,7 +10,7 @@ interface NumberToEuroProp {
 function CheckRoleAdmin({ role, rolesToCheck }: { role: string; rolesToCheck: any }) {
     const rolesToCheck_ = rolesToCheck;
 
-    const convertRoleNumberToString = JSON.parse((process.env.REACT_APP_ROLES as string));
+    const convertRoleNumberToString = JSON.parse((import.meta.env.VITE_ROLES as string));
 
     for (let i = 0; i < rolesToCheck_.length; i++) {
         const roleFromArr_ = rolesToCheck_[i];

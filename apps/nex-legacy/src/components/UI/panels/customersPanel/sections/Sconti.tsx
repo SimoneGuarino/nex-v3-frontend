@@ -233,7 +233,7 @@ export const Sconti: React.FC<{
         const clickable = typeof onOpenDetails === "function" && absoluteTotal > 0;
 
         return (
-            <SectionContainer clickable={false} onActivate={onOpenDetails}>
+            <SectionContainer clickable={false} onActivate={onOpenDetails} dataTour="scheda-cliente-sconti">
                 <SectionHeader
                     title="Sconti"
                     description="Sconti commerciali cliente e categoria"

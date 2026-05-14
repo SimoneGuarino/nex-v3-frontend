@@ -54,7 +54,7 @@ export const Backorders: React.FC<{
     onOpenDetails?: () => void;
 }> = ({ mode, customerCode, summary, details, onOpenDetails }) => {
     const isSummary = mode === "summary";
-    const base = ensureTrailingSlash(import.meta.env.VITE_API_API_CUSTOMERSFIDO);
+    const base = ensureTrailingSlash(import.meta.env.VITE_API_CUSTOMERSFIDO);
 
     const totalRows = summary?.totalRows ?? details?.total ?? 0;
     const agg = summary?.agg ?? null;
@@ -132,7 +132,7 @@ export const Backorders: React.FC<{
         const clickable = typeof onOpenDetails === "function";
 
         return (
-            <SectionContainer clickable={false} onActivate={onOpenDetails}>
+            <SectionContainer clickable={false} onActivate={onOpenDetails} dataTour="scheda-cliente-backorders">
                 <SectionHeader
                     title="Backorders"
                     description="Righe ordine aperte e residui (oc + fb)"

@@ -57,7 +57,7 @@ export const CustomerQuotesSummary: React.FC<{
     }, [navigate, normalizedCustomerCode]);
 
     return (
-        <SectionContainer>
+        <SectionContainer dataTour="scheda-cliente-preventivi">
             <SectionHeader
                 title="Preventivi"
                 description={`${formatNumberIt(total, "0")} preventivi totali`}

@@ -134,7 +134,8 @@ export async function createQuotationData({
         // - BID_PASSIVO: cliente opzionale (fallback gestito dal backend)
         // - altre tipologie: cliente obbligatorio
         const isBidPassivo = body.tipologia === "BID_PASSIVO";
-        if (!isBidPassivo && !clienteCode) {
+        const isMEPA = body.tipologia === "MEPA";
+        if (!isBidPassivo && !isMEPA && !clienteCode) {
             HandleError('parametro "cliente" è obbligatorio.');
             return;
         };

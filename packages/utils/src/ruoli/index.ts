@@ -6,7 +6,7 @@ export type RoleOption = { id: number; ruolo: string };
  * @returns 
  */
 function parseRolesEnv(): Record<string, string> | null {
-    const raw = process.env.REACT_APP_ROLES;
+    const raw = import.meta.env.VITE_ROLES;
     if (!raw) return null;
     const s = raw.trim();
     const tries = [s, s.replace(/^'|'$/g, "").replace(/'/g, '"')];

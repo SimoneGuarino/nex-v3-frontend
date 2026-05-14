@@ -54,6 +54,8 @@ export const CAPS = {
      */
     QUOTAZIONI_VIEW: "ui.panel.quotazioni.view",
     QUOTAZIONI_AGENT_MODE: "legacy.quotazioni.agent_mode",
+    QUOTAZIONI_BUYER_MODE: "legacy.quotazioni.buyer_mode",
+    QUOTAZIONI_ADMIN_MODE: "legacy.quotazioni.admin_mode",
     QUOTAZIONI_DETAILS_MANAGE: "legacy.quotazioni.details.manage",
     QUOTAZIONI_PRICES_VIEW: "legacy.quotazioni.prices.view",
     QUOTAZIONI_LOOK_MODERATE: "legacy.quotazioni.look.moderate",

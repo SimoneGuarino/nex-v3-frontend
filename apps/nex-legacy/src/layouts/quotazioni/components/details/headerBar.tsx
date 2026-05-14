@@ -35,6 +35,7 @@ const HeaderBar: React.FC<FiltersProps> = ({
         <FDBox variant="gradient" border={true} radius="md" pad="sm" className="flex gap-2 px-6 items-center">
             <FDIconButton variant='text' rounded='md'
                 dataTooltipContent='Torna indietro' dataTooltipId='general-quotations-tooltip'
+                data-tour="quotazioni-details-back"
                 size='small' className='border border-neutral-200 dark:border-neutral-800'
                 onClick={goBack} icon={<IoReturnUpBackSharpIcon size={18} />} />
             <FDIconButton variant='text' rounded='md' disabled={loading}

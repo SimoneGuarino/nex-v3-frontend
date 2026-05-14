@@ -59,6 +59,16 @@ export interface SidePanelShellProps extends Omit<FDBoxProps, "title"> {
     headerActions?: React.ReactNode;
     footer?: React.ReactNode;
     onClose?: () => void;
+    /**
+     * Disabilita il pulsante di chiusura (X) in base alle regole del tour.
+     */
+    closeDisabled?: boolean;
+    /**
+     * Overlay locale sul body del pannello: blocca le interazioni interne
+     * senza impattare la topbar o il resto della pagina.
+     */
+    lockBodyInteractions?: boolean;
+    /** "visible" → pannello in primo piano, "background" → pannello rimpicciolito */
     animateVariant?: "visible" | "background";
     contentState?: "front" | "background";
     bodyScrollable?: boolean;
@@ -74,6 +84,8 @@ export const SidePanelShell: React.FC<SidePanelShellProps> = ({
     title,
     headerActions,
     onClose,
+    closeDisabled = false,
+    lockBodyInteractions = false,
     animateVariant = "visible",
     contentState = "front",
     footer,
@@ -122,20 +134,30 @@ export const SidePanelShell: React.FC<SidePanelShellProps> = ({
                     {headerActions}
                     {onClose && (
                         <FDIconButton
+                            dataTour="scheda-cliente-close"
                             icon={FiX({})}
                             onClick={onClose}
-                            disabled={!onClose}
+                            disabled={!onClose || closeDisabled}
                         />
                     )}
                 </div>
             </header>
 
-            <div className={clsx("flex-1 px-5 py-4", bodyScrollable ? "overflow-y-auto" : "overflow-hidden", bodyClassName)}>
+            <div className={clsx("relative flex-1 px-5 py-4", bodyScrollable ? "overflow-y-auto" : "overflow-hidden", bodyClassName)} >
                 <motion.div
                     initial={false}
                     animate={contentState}
                     variants={contentVariants}
-                    className="h-full"
+                    className={clsx(
+                        "h-full",
+                        /**
+                         * Lock "soft" del contenuto:
+                         * - blocca click/tap sui controlli interni della scheda cliente;
+                         * - non mette un overlay assoluto sopra il body, quindi lo scroll
+                         *   verticale resta disponibile anche con viewport più piccoli.
+                         */
+                        lockBodyInteractions && "pointer-events-none",
+                    )}
                 >
                     {children}
                 </motion.div>

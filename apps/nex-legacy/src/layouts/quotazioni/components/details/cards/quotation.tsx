@@ -6,7 +6,7 @@ import { FDDate } from "components/UI/input/FDDate";
 import { QuotazioneDTO, STATE_COLOR_STYLES } from "layouts/quotazioni/types/quotations";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { CopyToClipboard } from "utils";
+import { ConvertToReadableString, CopyToClipboard } from "utils";
 
 // Icons
 import { BsBoxSeam } from "react-icons/bs";
@@ -17,7 +17,6 @@ import { PiInvoiceLight } from "react-icons/pi";
 import { MdEuro } from "react-icons/md";
 import { UserAvatar } from "examples/Navbars/components/userInfo";
 import { toLocalDateTimeInputValue } from "utils/date/getDate";
-import { ConvertToReadableString } from "utils/string/convert";
 
 const BsBoxSeamIcon = BsBoxSeam as React.FC<{ size?: number; className?: string }>;
 const IoCopyOutlineIcon = IoCopyOutline as React.FC<{ size?: number; className?: string }>;
@@ -262,7 +261,15 @@ export default function QuotationDetailsCard({
                             {quotation.tipologia}
                         </span>
 
+                        {/*
+                          Tour quotazioni:
+                          - durante il flusso normale puntiamo lo step "Stato quotazione" al badge stato;
+                          - quando la fake quotazione arriva a `OK`, lo stesso badge diventa il target
+                            dello step finale "Quotazione chiusa".
+                          Così `quotazioni-end` ha sempre un nodo reale nel DOM anche dopo backward/remount.
+                        */}
                         <span
+                            data-tour={quotation.stato === "OK" ? "quotazioni-end" : "quotazioni-details-status"}
                             className={[
                                 "px-3 py-0.5 rounded-md text-[11px] font-medium",
                                 statoColor ? `${statoColor.bg} ${statoColor.text}` : "bg-slate-500 text-white",
@@ -404,7 +411,7 @@ export default function QuotationDetailsCard({
                                             </div>
                                         </div>
 
-                                        {isMepa && (!rawValidFrom || !rawValidTo) && (
+                                        {(isMepa && !rawValidTo) && (
                                             <span
                                                 className={[
                                                     "shrink-0 inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold shadow-sm",
@@ -514,11 +521,11 @@ export default function QuotationDetailsCard({
 
                             {(((quotation.extra && (
                                 Object.keys(quotation.extra.details || {}).length > 0) 
-                                || (quotation.extra.type?.CIG || quotation.extra.type?.RDO || quotation.extra.type?.ACCORDO_QUADRO)
+                                || (quotation.extra?.type && (quotation.extra.type?.CIG || quotation.extra.type?.RDO || quotation.extra.type?.ACCORDO_QUADRO))
                             ))) && <div className="mt-6 flex gap-1 flex-col">
                                 <span className="text-[11px] uppercase tracking-[0.16em] text-neutral-400">Dettagli extra:</span>
                                 
-                                {(quotation.extra.type?.CIG || quotation.extra.type?.RDO || quotation.extra.type?.ACCORDO_QUADRO) && <div>
+                                {(quotation.extra?.type && (quotation.extra.type?.CIG || quotation.extra.type?.RDO || quotation.extra.type?.ACCORDO_QUADRO)) && <div>
                                     {quotation.extra.type?.CIG && <InfoRow label="CIG:">{quotation.extra.type?.CIG || "N/A"}</InfoRow>}
                                     {quotation.extra.type?.RDO && <InfoRow label="RDO:">{quotation.extra.type?.RDO || "N/A"}</InfoRow>}
                                     {quotation.extra.type?.ACCORDO_QUADRO && <InfoRow label="Accordo Quadro:">{quotation.extra.type?.ACCORDO_QUADRO || "N/A"}</InfoRow>}

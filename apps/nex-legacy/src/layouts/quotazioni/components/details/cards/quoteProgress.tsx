@@ -19,7 +19,7 @@ type QuoteProgressCardProps = {
 export default function QuoteProgressCard({
     value,
     title = "Progresso quotazione",
-    note = "Calcolato in base allo stato di quotazione di tutti i prodotti (attesa, approvazione, completata).",
+    note = "Calcolato in base allo stato di quotazione di tutti i prodotti (attesa, in quotazione, esito finale).",
     linkText = "Vedi l'anteprima del documento",
     onLinkClick,
     className,
@@ -51,6 +51,7 @@ export default function QuoteProgressCard({
             transition={{ duration: 0.2, ease: [0.22, 0.61, 0.36, 1] }}
         >
             <FDBox
+                data-tour="quotazioni-close-counter"
                 variant="soft"
                 color="light"
                 radius="md"

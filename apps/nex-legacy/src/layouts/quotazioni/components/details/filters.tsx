@@ -3,6 +3,7 @@ import FDSelect from "components/UI/input/FDSelect";
 import { FiltersType } from "layouts/quotazioni/types/qts_product";
 import FDButton from "components/UI/buttons/FDButton";
 import { MdSearch } from 'react-icons/md';
+import { useTour } from "tour/TourProvider";
 
 const MdSearchIcon = MdSearch as React.FC<{ size?: number; className?: string }>;
 
@@ -18,6 +19,14 @@ const Filters: React.FC<{
     scope,
     runSearch, resetFilters,
 }) => {
+        const { isOpen, activeStepSelector } = useTour();
+        // Durante lo step "pannello filtri prodotti" del tour blocchiamo
+        // le interazioni interne al menu:
+        // - il tour deve guidare il focus in modo deterministico;
+        // - click casuali su select/pulsanti potrebbero alterare stato/focus.
+        const lockInteractions =
+            isOpen && activeStepSelector === '[data-tour="quotazioni-products-filters-3"]';
+
         //dati che permetto la creazione dei select a filtraggio.
         const dataSelects = [
             {
@@ -88,13 +97,20 @@ const Filters: React.FC<{
         };
 
         return (
-            <div className="w-[360px] max-w-full space-y-4">
+            <div className="relative w-[360px] max-w-full space-y-4" data-tour="quotazioni-products-filters-3">
+                {lockInteractions && (
+                    <div
+                        aria-hidden="true"
+                        style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "auto" }}
+                        onClickCapture={(e) => e.stopPropagation()}
+                    />
+                )}
                 {/* Header */}
                 <div className="text-sm font-medium">Filter</div>
 
                 {/* Disclaimer: se l'utente seleziona un filtro, i prodotti ricercati saranno tra quelli che attualmente Focelda possiede nel proprio Database, e non farà riferimento ai prodotti registrati nel database degli altri fornitori */}
                 <div className="text-xs text-yellow-500 border border-dashed border-yellow-700 p-2 rounded">
-                    Selezionando uno o più filtri, i prodotti ricercati saranno tra quelli che attualmente Focelda 
+                    Selezionando uno o più filtri, i prodotti ricercati saranno tra quelli che attualmente Focelda
                     possiede nel proprio Database, e non farà riferimento ai prodotti registrati nel database degli altri fornitori.
                 </div>
 
@@ -116,17 +132,17 @@ const Filters: React.FC<{
                 })}
 
                 <div className="text-xs text-blue-500 border border-dashed border-blue-700 p-2 rounded">
-                    Cliccando su applica filtri, i filtri selezionati verranno applicati alla ricerca, 
-                    e i risultati mostreranno solo i prodotti che corrispondono ai criteri di filtraggio scelti 
+                    Cliccando su applica filtri, i filtri selezionati verranno applicati alla ricerca,
+                    e i risultati mostreranno solo i prodotti che corrispondono ai criteri di filtraggio scelti
                     <strong>Nel attuale TAB in visualizzazione ( "{scope?.replace("_", " ") ?? "N/A"}" )</strong>.
                 </div>
 
                 {/* Footer actions */}
                 <div className="flex items-center justify-between pt-1">
-                    <FDButton size="small" variant="outline" color="dark" onClick={resetFilters}>
+                    <FDButton size="small" variant="outline" color="dark" onClick={resetFilters} disabled={lockInteractions}>
                         Reset
                     </FDButton>
-                    <FDButton size="small" variant="outline" color="dark" onClick={() => runSearch("", false)} icon={<MdSearchIcon />}>
+                    <FDButton size="small" variant="outline" color="dark" onClick={() => runSearch("", false)} icon={<MdSearchIcon />} disabled={lockInteractions}>
                         Applica Filtri
                     </FDButton>
                 </div>

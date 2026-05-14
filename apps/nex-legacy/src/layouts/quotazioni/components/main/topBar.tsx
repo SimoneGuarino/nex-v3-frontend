@@ -20,6 +20,7 @@ interface FiltersProps {
     chips: FilterChip[];
     scope: Scope;
     isAgents: boolean;
+    isAdmin: boolean;
     setScope: (s: Scope) => void;
     setCreateOpen: (o: boolean) => void;
     runFetch: () => void;
@@ -43,6 +44,7 @@ const Filters: React.FC<FiltersProps> = ({
     chips,
     scope,
     isAgents,
+    isAdmin,
     setScope,
     setCreateOpen,
     runFetch,
@@ -128,7 +130,7 @@ const Filters: React.FC<FiltersProps> = ({
                 {/* Filters */}
                 <div className="flex items-center gap-1">
                     <div className="relative flex items-center" onClick={(e: any) => menuRef.current = e.currentTarget}>
-                        <FDButton variant="outline" color='neutral' size="small" onClick={() => setOpenFilters(true)}>
+                        <FDButton variant="outline" color='neutral' size="small" onClick={() => setOpenFilters(true)} data-tour="quotazioni-filter">
                             <MdFilterListIcon className="mr-1.5" /> Filtri {chips.length > 0 && (
                                 <span
                                     data-tooltip-id='general-quotations-tooltip'
@@ -141,6 +143,7 @@ const Filters: React.FC<FiltersProps> = ({
                     <FDIconButton
                         variant="outline"
                         rounded='md'
+                        data-tour="quotazioni-ricerca-mirata"
                         dataTooltipContent="Ricerca Mirata"
                         // dataTooltipContent='[IN SVILUPPO] Ricerca Mirata - sarà possibile ricercare quotazioni in maniera smart, ricercando prodotti, buyer e altri criteri avanzati'
                         dataTooltipId='general-quotations-tooltip'
@@ -148,7 +151,8 @@ const Filters: React.FC<FiltersProps> = ({
                         onClick={() => setOpenSearch(true)} icon={<MdSearchIcon size={18} />} />
                 </div>
 
-                {isAgents && <FDButton
+                {(isAgents || isAdmin) && <FDButton
+                    data-tour="quotazioni-topbar-new"
                     color="primary"
                     size="small"
                     dataTooltipContent="Crea una nuova quotazione"

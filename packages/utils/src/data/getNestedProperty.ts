@@ -24,7 +24,7 @@ export function getNestedProperty(obj: any, path: any) {
 
 export function parseRolesEnv(): Record<string, string> {
     try {
-        const raw = process.env.REACT_APP_ROLES ?? "{}";
+        const raw = import.meta.env.VITE_ROLES ?? "{}";
         return JSON.parse(raw);
     } catch { return {}; }
 }

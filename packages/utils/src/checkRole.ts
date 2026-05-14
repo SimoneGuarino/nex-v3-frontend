@@ -1,6 +1,6 @@
 /**
  * Converte un id numerico di ruolo nella sua etichetta (stringa) utilizzando
- * la mappa definita in `process.env.REACT_APP_ROLES`.
+ * la mappa definita in `import.meta.env.VITE_ROLES`.
  *
  *
  * @param roleId - id numerico del ruolo (es. 1)
@@ -26,7 +26,7 @@
  */
 export function CheckRole(roleId: number): string | null {
     try {
-        const map = JSON.parse(process.env.REACT_APP_ROLES as string) as Record<string, string>;
+        const map = JSON.parse(import.meta.env.VITE_ROLES as string) as Record<string, string>;
         return map[String(roleId)] ?? null;
     } catch (e) {
         console.error('REACT_APP_ROLES non è un JSON valido o non è definito:', e);

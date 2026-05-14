@@ -5,18 +5,26 @@
  */
 import React from "react";
 import { getData } from "../fetchdata";
-import type { AnyRecord } from "../types";
+import type { AnyRecord, CustomerFullPayload } from "../types";
 import { useCustomersPanelState } from "./useCustomersPanelState";
 import { useUserContext } from "context/UserContext";
+import { applyCustomersPanelTourMockPayload } from "../tour-system-utils/applyTourMockPayload";
 
 type UseCustomersPanelControllerArgs = {
     open: boolean;
     customerCode: string | number;
+    /**
+     * Payload opzionale usato nel tour quotazioni:
+     * - evita fetch reali backend durante il tour;
+     * - consente di mostrare una scheda cliente deterministica.
+     */
+    tourMockPayload?: CustomerFullPayload | null;
 };
 
 export function useCustomersPanelController({
     open,
     customerCode,
+    tourMockPayload = null,
 }: UseCustomersPanelControllerArgs) {
     /** Contesto autenticazione utente usato dalle fetch del panel. */
     const [userContext] = useUserContext();
@@ -52,6 +60,27 @@ export function useCustomersPanelController({
     React.useEffect(() => {
         if (!open) return;
         if (!customerCode) return;
+
+        /**
+         * Branch tour mock:
+         * quando il parent passa un payload mock non facciamo nessuna chiamata API.
+         *
+         * Obiettivo:
+         * - rendere il tour stabile anche con middleware/permessi restrittivi;
+         * - mostrare i pannelli previsti dal tour senza dipendere dal backend live.
+         */
+        if (tourMockPayload) {
+            applyCustomersPanelTourMockPayload({
+                payload: tourMockPayload,
+                setLoading,
+                setHasErr,
+                resetDataState,
+                setPanelData,
+                setSectionFetchState,
+            });
+
+            return;
+        }
 
         // Ogni apertura cliente crea una "sessione fetch" isolata.
         // I callback di stato applicano update solo se la sessione e ancora corrente.
@@ -104,6 +133,7 @@ export function useCustomersPanelController({
         setSectionLoading,
         setSectionFetchState,
         userContext,
+        tourMockPayload,
     ]);
 
     return {

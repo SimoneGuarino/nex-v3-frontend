@@ -65,7 +65,7 @@ export const Anagrafica: React.FC<{
         statoSoc && statoSoc !== "-" && /attiv/i.test(statoSoc) ? "ok" : statoSoc && statoSoc !== "-" ? "warn" : "neutral";
 
     return (
-        <SectionContainer clickable={false} onActivate={onOpenDetails}>
+        <SectionContainer clickable={false} onActivate={onOpenDetails} dataTour="scheda-cliente-anagrafica">
             <SectionHeader
                 title="Anagrafica"
                 description={

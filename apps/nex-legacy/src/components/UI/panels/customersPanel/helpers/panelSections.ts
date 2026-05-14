@@ -28,6 +28,8 @@ export function getDetailsPanelMeta(
             return { title: "dettagli fido", bodyScrollable: true };
         case "credit":
             return { title: "dettagli dati creditizi", bodyScrollable: true };
+        case "statement":
+            return { title: "dettagli statement", bodyScrollable: true };
         case "backorders":
             return { title: "dettagli backorders", bodyScrollable: true };
         case "payments":

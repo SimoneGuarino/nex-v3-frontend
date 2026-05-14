@@ -54,7 +54,7 @@ export const CustomerPurchasesSummary: React.FC<{
     }, [customerName, navigate, normalizedCustomerCode]);
 
     return (
-        <SectionContainer>
+        <SectionContainer dataTour="scheda-cliente-acquisti">
             <SectionHeader
                 title="Acquisti cliente"
                 description={`${formatNumberIt(total, "0")} acquisti totali`}

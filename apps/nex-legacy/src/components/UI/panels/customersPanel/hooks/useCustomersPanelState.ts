@@ -15,11 +15,12 @@ import type {
 
 // Stato loading per singola section.
 // Le chiavi devono restare allineate con `LoadingSection` in `types.ts`.
-function createEmptyLoadingStates(): LoadingStates {
+export function createEmptyLoadingStates(): LoadingStates {
     return {
         anagrafica: false,
         credits: false,
         creditsYears: false,
+        statement: false,
         backorders: false,
         payments: false,
         // loading dedicato al mini-box preventivi nel pannello cliente
@@ -49,6 +50,7 @@ function createEmptyData(): CustomerFullPayload {
         profilazioneReport: null,
         trackingDetails: null,
         sconti: null,
+        statement: null,
         // warnings: [], @deprecated
     };
 }
@@ -60,6 +62,7 @@ function createEmptySectionFetchStates(): SectionFetchStates {
         anagrafica: "idle",
         credits: "idle",
         creditsYears: "idle",
+        statement: "idle",
         backorders: "idle",
         payments: "idle",
         quotes: "idle",

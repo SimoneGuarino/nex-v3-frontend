@@ -6,12 +6,14 @@ import { Fido } from "../sections/Fido";
 import { Payments } from "../sections/Payments";
 import { Profilazione } from "../sections/Profilazione";
 import { Sconti } from "../sections/Sconti";
+import { Statement } from "../sections/Statement";
 import { Trackings } from "../sections/Trackings";
 import { CustomerPurchasesSummary } from "../sections/CustomerPurchasesSummary";
 import { CustomerQuotesSummary } from "../sections/CustomerQuotesSummary";
 import { CustomersPanelSectionSkeleton } from "./CustomersPanelSectionSkeleton";
 import type {
     AnyRecord,
+    CustomerStatementPayload,
     CustomerFullPayload,
     DetailsSection,
     LoadingStates,
@@ -38,6 +40,9 @@ export type CustomersPanelSummaryContentProps = {
     creditsYears: AnyRecord | null;
     profilazioneReport: AnyRecord | null;
     onOpenDetails: (section: DetailsSection) => void;
+    onStatementChange?: (
+        updater: (prev: CustomerStatementPayload | null) => CustomerStatementPayload | null
+    ) => void;
 };
 
 export const CustomersPanelSummaryContent: React.FC<CustomersPanelSummaryContentProps> = ({
@@ -52,6 +57,7 @@ export const CustomersPanelSummaryContent: React.FC<CustomersPanelSummaryContent
     creditsYears,
     profilazioneReport,
     onOpenDetails,
+    onStatementChange,
 }) => {
     const emptyScontiPayload = React.useMemo(
         () => ({
@@ -122,6 +128,19 @@ export const CustomersPanelSummaryContent: React.FC<CustomersPanelSummaryContent
                     mode="summary"
                     creditsYears={creditsYears}
                     onOpenDetails={() => onOpenDetails("credit")}
+                />
+            ) : null,
+        },
+        {   //statement
+            key: "statement",
+            loading: loadingStates.statement,
+            content: canShowSection("statement") && data.statement ? (
+                <Statement
+                    mode="summary"
+                    customerCode={customerCode}
+                    statement={data.statement}
+                    onOpenDetails={() => onOpenDetails("statement")}
+                    onStatementChange={onStatementChange}
                 />
             ) : null,
         },

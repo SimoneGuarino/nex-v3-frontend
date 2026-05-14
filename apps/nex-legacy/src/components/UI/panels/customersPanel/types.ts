@@ -1,4 +1,5 @@
 import type { PaymentRow } from "layouts/stocks/payments/fetchData/data";
+import type { CustomersPanelInteractionLockConfig } from "./tour-system-utils/types";
 
 export type AnyRecord = Record<string, any>;
 
@@ -13,6 +14,7 @@ export type DetailsSection =
     | "anagrafica"
     | "fido"
     | "credit"
+    | "statement"
     | "backorders"
     | "payments"
     | "profilazione"
@@ -24,7 +26,7 @@ export type DetailsSection =
 // Note:
 // - le chiavi possono differire da `DetailsSection` (es. "credits" -> details "fido")
 // - mantenere allineamento con `createEmptyLoadingStates` e `createEmptySectionFetchStates`
-export type LoadingSection = "anagrafica" | "credits" | "creditsYears" | "backorders" | "payments" | "profilazione" | "trackings" | "quotes" | "purchases" | "notes" | "sconti";
+export type LoadingSection = "anagrafica" | "credits" | "creditsYears" | "statement" | "backorders" | "payments" | "profilazione" | "trackings" | "quotes" | "purchases" | "notes" | "sconti";
 
 export type LoadingStates = Record<LoadingSection, boolean>;
 
@@ -76,6 +78,55 @@ export type ScontiPayload = {
     categoria: ScontiDetailsPayload;
 };
 
+export type CustomerStatementBusiness = "focelda" | "iot";
+export type CustomerStatementView = "statement" | "deadlines" | "provisions";
+
+export type CustomerStatementRow = {
+    Descrizione?: string | null;
+    Numero_Riferimento?: string | number | null;
+    Anno_Riferimento?: string | number | null;
+    Data_Doc?: string | null;
+    Numero_Documento?: string | number | null;
+    Importo?: string | number | null;
+    Data_Scadenza?: string | null;
+    [key: string]: any;
+};
+
+export type CustomerStatementSummary = {
+    saldoPartita: number;
+    saldoComplessivo: number;
+    scadenzaUltimoRecord: string | null;
+    annoUltimoRecord: string | null;
+    descrizioneUltimoRecord: string | null;
+};
+
+export type CustomerStatementDatasetPayload = {
+    loaded: boolean;
+    total: number;
+    items: CustomerStatementRow[];
+    nextOfs: number;
+    pageSize: number;
+    paginated: boolean;
+    summary: CustomerStatementSummary | null;
+};
+
+export type CustomerStatementDeadlinesPayload = CustomerStatementDatasetPayload & {
+    summary: CustomerStatementSummary | null;
+};
+
+export type CustomerStatementBusinessPayload = {
+    deadlines: CustomerStatementDeadlinesPayload;
+    statement: CustomerStatementDatasetPayload;
+    provisions: CustomerStatementDatasetPayload;
+};
+
+export type CustomerStatementPayload = {
+    activeBusiness: CustomerStatementBusiness;
+    activeView: CustomerStatementView;
+    focelda: CustomerStatementBusinessPayload;
+    iot: CustomerStatementBusinessPayload;
+};
+
 /**
  * Preview minima dei preventivi usata nel CustomersPanel.
  * Non rappresenta la vista completa Preventivi: serve solo a mostrare
@@ -109,6 +160,7 @@ export type CustomerFullPayload = {
     profilazioneReport: AnyRecord | null;
     trackingDetails: TrackingsDetailsPayload | null;
     sconti: ScontiPayload | null;
+    statement: CustomerStatementPayload | null;
     // warnings: string[]; @deprecated
 };
 
@@ -123,4 +175,21 @@ export type CustomersPanelProps = {
     closeOnEsc?: boolean; //se false impedisce la chiusura con esc
     className?: string; //classi aggiuntive
     zIndexClassName?: string; //personalizza z-index
+    //     /**
+    //      * Payload opzionale iniettato dal runtime tour quotazioni.
+    //      *
+    //      * Se presente, il pannello usa questi dati locali e NON invoca il fetch API:
+    //      * in questo modo il tour resta stabile anche quando il ruolo non è autorizzato
+    //      * a leggere la scheda cliente reale backend.
+    //      */
+    tourMockPayload?: CustomerFullPayload | null;
+    //     /**
+    //      * Configurazione lock interazioni per i tour.
+    //      *
+    //      * Obiettivo:
+    //      * - rendere il lock della scheda cliente riusabile su più tour;
+    //      * - evitare hardcode di indici nella UI;
+    //      * - agganciare il lock al selector step attivo del tour.
+    //      */
+    interactionLockConfig?: CustomersPanelInteractionLockConfig;
 };
