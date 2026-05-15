@@ -20,7 +20,7 @@ openErrorSB: (icon: string, message: string) => void; SuccessOperation: () => vo
         bodyToSend.ots = objectToSend;
     }
 
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}pds/crt_ord`, 'POST', bodyToSend, 
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}pds/crt_ord`, 'POST', bodyToSend, 
     abortController).then(async _ => {
         SuccessOperation();
     }).catch((error: any) => {

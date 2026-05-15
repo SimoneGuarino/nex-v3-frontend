@@ -56,7 +56,7 @@ export async function fetchPromoSearch({
     limit,
     offset,
 }: FetchPromoSearchParams): Promise<PromoSearchResponse> {
-    const base = import.meta.env.VITE_API_SEARCH_ENDPOINT ?? "";
+    const base = import.meta.env.VITE_API_PRODUCTS ?? "";
 
     const searchParams = new URLSearchParams();
     searchParams.set("promoCode", promoCode);

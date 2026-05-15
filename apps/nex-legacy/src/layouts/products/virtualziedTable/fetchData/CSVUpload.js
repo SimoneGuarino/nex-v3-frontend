@@ -14,7 +14,7 @@ export async function CSVUploadRequest(userContext, abortController,
     };
 
     const handleDownloadCsv = (path, fileName) => {
-        const fileUrl = import.meta.env.VITE_API_SEARCH_ENDPOINT + path.slice(1);
+        const fileUrl = import.meta.env.VITE_API_PRODUCTS + path.slice(1);
 
         fetch(fileUrl)
             .then(response => response.blob()) // Importante: ottieni la risposta come oggetto Blob
@@ -37,7 +37,7 @@ export async function CSVUploadRequest(userContext, abortController,
         
     };
 
-    FetchFileData(import.meta.env.VITE_API_SEARCH_ENDPOINT + 'csv-upload', 'POST', formData, abortController).then(res => {
+    FetchFileData(import.meta.env.VITE_API_PRODUCTS + 'csv-upload', 'POST', formData, abortController).then(res => {
         setProgressUpload(() => 60);
         if(res.csv){
             handleDownloadCsv(res.csv, res.csv.split("/")[2]);

@@ -160,7 +160,7 @@ function SearchHere({
         const delayDebounceFn = setTimeout(() => {
             if (searchBoxFocus) {
                 setLoadBool(false);
-                FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}pds/search`, "POST", {
+                FetchData(`${import.meta.env.VITE_API_PRODUCTS}pds/search`, "POST", {
                     sstr: handleSearchText,
                 }, abortController)
                     .then((data) => {

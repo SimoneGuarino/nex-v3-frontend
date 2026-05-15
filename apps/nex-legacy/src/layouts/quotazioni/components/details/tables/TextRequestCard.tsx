@@ -179,7 +179,7 @@ const TextRequestCard: React.FC<Props> = ({
                     {isBuyer && (
                         <p className="mt-1 text-[10px] text-neutral-500 dark:text-neutral-400">
                             Dal pannello di dettaglio potrai proporre uno o più prodotti in sostituzione,
-                            che verranno quotati al momento della selezione.
+                            che potrai poi quotare al momento della selezione.
                         </p>
                     )}
                 </div>

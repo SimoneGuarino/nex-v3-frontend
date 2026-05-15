@@ -12,7 +12,7 @@ interface UserContext {
 export function ReqBOIMP_API(userContext: UserContext, abortController: AbortController, dataToElab: Array<Object>,
 ChangeBOIMPPanleVisibility: () => void): void {
     if (userContext.details === undefined) { return; }
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}contribution/gt-xls`, 'POST', {
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}contribution/gt-xls`, 'POST', {
         tk: userContext.token,
         data: dataToElab,
     }, abortController).then(async (res: any) => {

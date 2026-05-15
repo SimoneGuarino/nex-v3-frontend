@@ -111,7 +111,7 @@ export async function DownloadConfrontatoreFileAPI({
     const days = normalizeDaysWindow(rangeDays);
 
     try {
-        const base = import.meta.env.VITE_API_SEARCH_ENDPOINT!;
+        const base = import.meta.env.VITE_API_PRODUCTS!;
         const createJobUrl = `${base}confrontatore/export/${ext}`;
 
         // 1) crea job -> 202 { jobId }  (includo comunque gli header della finestra: tollerati dal backend)

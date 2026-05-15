@@ -74,7 +74,7 @@ export async function fetchPromoDetails({
     listino,
     productCode,
 }: FetchPromoDetailsParams): Promise<PromoDetailsResponse> {
-    const base = import.meta.env.VITE_API_SEARCH_ENDPOINT ?? "";
+    const base = import.meta.env.VITE_API_PRODUCTS ?? "";
 
     const params = new URLSearchParams();
     params.set("period", period);

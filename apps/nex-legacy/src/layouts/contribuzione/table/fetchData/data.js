@@ -12,7 +12,7 @@ export function DataRetrive(setSearchDataContext, userContext, handleMainLoadCha
         bodyToSend.__dist = RetriveSupplierFromCookies(cookieNameColumns);
     }
 
-    FetchData(import.meta.env.VITE_API_SEARCH_ENDPOINT + 'contribution/gt?disp=1&', 'POST', bodyToSend, 
+    FetchData(import.meta.env.VITE_API_PRODUCTS + 'contribution/gt?disp=1&', 'POST', bodyToSend, 
     abortController).then(res => {
         const response = res.data;
         setSearchDataContext(response)

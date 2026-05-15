@@ -47,7 +47,7 @@ export async function CategoriesData({
     if (userContext?.details === undefined) return;
 
     try {
-        const res = await FetchData<CategoriesResponse>(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}tablecategories`, "POST",
+        const res = await FetchData<CategoriesResponse>(`${import.meta.env.VITE_API_PRODUCTS}tablecategories`, "POST",
             {
                 username: (userContext?.details as { username?: string } | undefined)?.username,
                 byid: buyerTarget,

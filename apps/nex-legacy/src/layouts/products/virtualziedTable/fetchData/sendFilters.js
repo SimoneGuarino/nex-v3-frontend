@@ -6,7 +6,7 @@ export function SendFilters(setSearchDataContext, userContext, query,
     if(userContext.details === undefined){return;}
     const __dist = CookieCompareV3('stored_settings_prodotti');
 
-    FetchData(import.meta.env.VITE_API_SEARCH_ENDPOINT + 'pds/products?' + query, 'POST', {
+    FetchData(import.meta.env.VITE_API_PRODUCTS + 'pds/products?' + query, 'POST', {
         username: userContext?.details?.username,
         tk: userContext.token,
         of: offset.current || 0,

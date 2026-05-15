@@ -26,7 +26,7 @@ export async function LastUpdatesAPI({
     // Usa env dedicata se presente, altrimenti fallback al SEARCH_ENDPOINT + /distributors/last-update
     const url =
         import.meta.env.VITE_API_IMPORTS_STATUS_ENDPOINT ||
-        `${import.meta.env.VITE_API_SEARCH_ENDPOINT}distributors/last-update`;
+        `${import.meta.env.VITE_API_PRODUCTS}distributors/last-update`;
 
     // normalizzatore robusto → sempre epoch ms o null
     const toMs = (raw: unknown): number | null => {

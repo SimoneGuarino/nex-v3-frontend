@@ -15,7 +15,7 @@ export async function ProductDetailsAPI({
     try {
         ChangeLoadStatus({ from: "req_customersList", bool: true });
 
-        const base = import.meta.env.VITE_API_SEARCH_ENDPOINT ?? "";
+        const base = import.meta.env.VITE_API_PRODUCTS ?? "";
         const url = new URL(`${base}v1/products/${id_product}`);
 
         const res = await FetchData(

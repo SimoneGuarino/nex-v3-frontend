@@ -51,8 +51,8 @@ export async function WarehouseData({
 
     const link =
         query == null
-            ? `${import.meta.env.VITE_API_SEARCH_ENDPOINT}tabletotal`
-            : `${import.meta.env.VITE_API_SEARCH_ENDPOINT}tabletotal?${query}`;
+            ? `${import.meta.env.VITE_API_PRODUCTS}tabletotal`
+            : `${import.meta.env.VITE_API_PRODUCTS}tabletotal?${query}`;
 
     try {
         const res = await FetchData<WarehouseResponse>(link, "POST",

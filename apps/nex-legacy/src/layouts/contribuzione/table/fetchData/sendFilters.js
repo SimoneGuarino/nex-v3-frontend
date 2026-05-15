@@ -7,7 +7,7 @@ export function SendFilters(setSortedData, userContext, query,
     buyerTarget, ResetMarginFilters, visibleColumns, setDataOrigin_, cookieNameColumns) {
     if(userContext.details === undefined){return;}
 
-    FetchData(import.meta.env.VITE_API_SEARCH_ENDPOINT + 'contribution/gt?disp=1&' + query, 'POST', {
+    FetchData(import.meta.env.VITE_API_PRODUCTS + 'contribution/gt?disp=1&' + query, 'POST', {
         usr: userContext?.details?.username,
         byid: buyerTarget?._id,
         __dist: RetriveSupplierFromCookies(cookieNameColumns)

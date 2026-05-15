@@ -2,8 +2,8 @@ import { FetchData } from "examples/Fetch";
 import type { MutableRefObject } from "react";
 import type { UserState } from "types/UserContext";
 import type { CartProductDTO, ContropropostaDTO } from "../../types/qts_product";
-import { RigaStato } from "layouts/quotazioni/types/quotations";
 import { CreateTextRequestPayload, UpdateQtsProductBodyFE } from "../../hook/useDetailsQuotation";
+import { Cap, CAPS } from "authz/caps";
 
 // ——————————————————————————————————————————————————————————
 // TYPES
@@ -12,10 +12,14 @@ type AbortLike = MutableRefObject<AbortController | null> | AbortController;
 
 export interface AddProductsProps {
     abortController: AbortLike;
-    user?: UserState | null;
     quotationId: string;
     product_id?: string;
     item?: CartProductDTO; // verrà inviato come array puro nel body
+    /**
+     * Capability resolver provided by useAuthz().
+     * Keep this fetch helper hook-free and let the caller inject the current AuthZ runtime.
+     */
+    hasCap: (cap: Cap | string) => boolean;
     HandleComplete: (payload: AddProductsResponse) => void;
     HandleError: (errorMessage: string) => void;
     ChangeLoadStatus?: (args: { from: string; bool: boolean }) => void;
@@ -67,7 +71,6 @@ type CreateTextRequestAPIParams = {
     payload: CreateTextRequestPayload;
 };
 
-
 export type UpsertCommercialAlternativeSuggestionPayload = {
     product_id: string;
     quantita: number;
@@ -112,28 +115,16 @@ type DeleteCommercialAlternativeSuggestionAPIParams = {
 // ——————————————————————————————————————————————————————————
 // UTILS
 // ——————————————————————————————————————————————————————————
-const norm = (s?: string) =>
-    String(s ?? "")
-        .normalize("NFD")
-        // @ts-ignore unicode property escapes
-        .replace(/\p{Diacritic}/gu, "")
-        .trim()
-        .toLowerCase();
-
-const AGENT_ROLE_NAMES = new Set(["commerciale", "agente", "agent"].map(norm));
-
-const isAgent = (user?: UserState | null): boolean => {
-    const details: any = user?.details ?? {};
-    if (AGENT_ROLE_NAMES.has(norm(details?.ruolo))) return true;
-
-    const mr = details?.multiRuolo;
-    if (Array.isArray(mr)) {
-        for (const entry of mr) {
-            if (typeof entry === "string" && AGENT_ROLE_NAMES.has(norm(entry))) return true;
-            if (entry && typeof entry === "object" && AGENT_ROLE_NAMES.has(norm(entry.ruolo))) return true;
-        }
-    }
-    return false;
+const canDoOperation = (hasCap: AddProductsProps["hasCap"]): boolean => {
+    /**
+     * Creation is a commercial/agent action.
+     * Admin mode is intentionally accepted for operational back-office creation flows.
+     * Buyer mode alone must not pass this client-side guard.
+     */
+    return (
+        hasCap(CAPS.QUOTAZIONI_AGENT_MODE) ||
+        hasCap(CAPS.QUOTAZIONI_ADMIN_MODE)
+    );
 };
 
 const isObjectId = (v: unknown): v is string =>
@@ -149,7 +140,6 @@ const isPositiveInteger = (n: unknown): n is number =>
 /**
  * Aggiunge prodotti al carrello di una quotazione o modifica quelli esistenti in caso di QuoteProductKind "TEXT_REQUEST"
  * @param abortController Controller per abortire la richiesta
- * @param user Stato utente corrente
  * @param quotationId Id della quotazione
  * @param item Dati del prodotto da aggiungere
  * @param HandleComplete Callback eseguita al completamento con successo
@@ -159,12 +149,12 @@ const isPositiveInteger = (n: unknown): n is number =>
  */
 export async function AddProductsToCartAPI({
     abortController,
-    user,
     quotationId,
     item,
     HandleComplete,
     HandleError,
     ChangeLoadStatus,
+    hasCap,
 }: AddProductsProps): Promise<void> {
     const FROM = "addProductsData";
 
@@ -172,9 +162,10 @@ export async function AddProductsToCartAPI({
         ChangeLoadStatus?.({ from: FROM, bool: true });
         const errors: string[] = [];
 
-        // ruolo
-        if (!isAgent(user)) {
-            HandleError("permesso negato: l’utente non ha il ruolo agente (Commerciale).");
+        // Capability guard: role/multiRuolo are deprecated.
+        // The backend still remains the source of truth; this prevents invalid UI submissions early.
+        if (!canDoOperation(hasCap)) {
+            HandleError("permesso negato: l’utente non ha la capability per creare quotazioni.");
             return;
         };
 
@@ -230,7 +221,6 @@ export async function AddProductsToCartAPI({
 /**
  * Elimina un prodotto dal carrello di una quotazione
  * @param abortController Controller per abortire la richiesta
- * @param user Stato utente corrente
  * @param quotationId Id della quotazione
  * @param product_id Id del prodotto da eliminare
  * @param HandleComplete Callback eseguita al completamento con successo
@@ -240,9 +230,9 @@ export async function AddProductsToCartAPI({
  */
 export async function DeleteProductsToCartAPI({
     abortController,
-    user,
     quotationId,
     product_id,
+    hasCap,
     HandleComplete,
     HandleError,
     ChangeLoadStatus,
@@ -253,11 +243,13 @@ export async function DeleteProductsToCartAPI({
         ChangeLoadStatus?.({ from: FROM, bool: true });
         const errors: string[] = [];
 
-        // ruolo
-        if (!isAgent(user)) {
-            HandleError("permesso negato: l’utente non ha il ruolo agente (Commerciale).");
+        // Capability guard: role/multiRuolo are deprecated.
+        // The backend still remains the source of truth; this prevents invalid UI submissions early.
+        if (!canDoOperation(hasCap)) {
+            HandleError("permesso negato: l’utente non ha la capability per creare quotazioni.");
             return;
         };
+
 
         // id quotazione
         if (!isObjectId(quotationId)) {
@@ -305,7 +297,6 @@ export async function DeleteProductsToCartAPI({
 /**
  * Aggiorna lo stato di quotazione di un prodotto nel carrello
  * @param abortController Controller per abortire la richiesta
- * @param user Stato utente corrente
  * @param quotationId Id della quotazione
  * @param productId Id del prodotto da modificare
  * @param body Corpo della richiesta contenente il nuovo stato e opzionali dati di quotazione o controproposta
@@ -315,7 +306,6 @@ export async function DeleteProductsToCartAPI({
  */
 export const ReassignQtsProductBuyerAPI = async ({
     abortController,
-    user,
     quotationId,
     idDoc,
     newBuyerCode,

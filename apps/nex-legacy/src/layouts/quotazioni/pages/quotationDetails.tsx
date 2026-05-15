@@ -87,7 +87,10 @@ const RenderError = ({ error }: { error: string }) => (
 export function QuotationDetails() {
     const navigate = useNavigate();
     const {
-        CheckAdminDev,
+        hasCap,
+        isAdminMode,
+        isAgentMode,
+        isBuyerMode,
 
         quotationId, // id della quotazione
         userState, // dati utente
@@ -283,10 +286,10 @@ export function QuotationDetails() {
     const runTourCadAsPanelSeedSearch = useCallback(() => {
         runTourCadAsPanelSeedSearchRuntime({
             quotationId,
-            viewerRole: (userState?.details?.ruolo as string) ?? "",
+            hasCap,
             searchDebounced,
         });
-    }, [quotationId, userState?.details?.ruolo, searchDebounced]);
+    }, [quotationId, hasCap, searchDebounced]);
 
     /**
      * Reset selezione sostituzione per il tour buyer quando l'utente torna indietro.
@@ -680,9 +683,9 @@ export function QuotationDetails() {
                                 onClickCapture={(e) => e.stopPropagation()}
                             />
                         )}
-                        <QuotationDetailsCard quotation={qts} isAdmin={CheckAdminDev}
+                        <QuotationDetailsCard quotation={qts} isAdmin={isAdminMode}
                             totalAmount={qts?.valore} onUpdateValidityWindow={handleUpdateValidityWindow} prog_num={(qts as any)?.prog_num}
-                            setOpenOkLinksPanel={setOpenOkLinksPanel} fetchQuotationOkLinks={fetchQuotationOkLinks} loading={loading} setLoading={setLoading} isAgent={(userState && userState?.details?.ruolo == CheckRole(3)) ?? false} />
+                            setOpenOkLinksPanel={setOpenOkLinksPanel} fetchQuotationOkLinks={fetchQuotationOkLinks} loading={loading} setLoading={setLoading} isAgent={isAgentMode} />
                     </div>
                     <div data-tour="quotazioni-cart-card">
                         {isBozza && <CartPanel qts={qts} cart={cart} clearCart={clearCart} loadingCart={loading.adding_to_cart as Map<string, boolean>}
@@ -764,7 +767,7 @@ export function QuotationDetails() {
                                             <TextRequestCard
                                                 item={it as TextRequestCartDTO}
                                                 isQBozza={isBozza}
-                                                isBuyer={CheckAdminDev}
+                                                isBuyer={isBuyerMode || isAdminMode}
                                                 menuRef={contextMenuRef}
                                                 handleOpenQtsSettings={handleOpenQtsSettings}
                                             />
@@ -844,9 +847,10 @@ export function QuotationDetails() {
                 onClose={() => setOpenProductQtsSettings(null)}
                 product={openProductQtsSettings as CartProductDTO | TextRequestCartDTO}
                 qtsState={qts?.stato ?? null}
-                isBuyer={(userState && userState?.details?.ruolo == CheckRole(2)) ?? false}
-                isAgent={(userState && userState?.details?.ruolo == CheckRole(3)) ?? false}
-                CheckAdminDev={CheckAdminDev}
+                isBuyer={isBuyerMode}
+                isAgent={isAgentMode}
+                isAdmin={isAdminMode}
+
                 /* Stato dell'utente */
                 userState={userState}
 

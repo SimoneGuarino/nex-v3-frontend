@@ -22,7 +22,7 @@ export function BuyersAPI({userContext, abortController, setData} : BuyersAPIPro
         bodyToSend.tk = userContext.token;
     }
 
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}contribution/gt-buy`, 'POST', bodyToSend, 
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}contribution/gt-buy`, 'POST', bodyToSend, 
     abortController).then(async (res: any) => {
         setData(res);
     }).catch((error: any) => {

@@ -36,7 +36,7 @@ export function ExportGlossarioAPI({
     setErr,
 }: ExportGlossarioProps): Promise<boolean> {
     const from = "export_glossario";
-    const url = `${import.meta.env.VITE_API_SEARCH_ENDPOINT}noPromo/exportGlossario?format=${format}`;
+    const url = `${import.meta.env.VITE_API_PRODUCTS}noPromo/exportGlossario?format=${format}`;
 
     ChangeLoadStatus?.({ from, bool: true });
 

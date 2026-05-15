@@ -6,7 +6,7 @@ import {
 
 const AUTH_API_ENDPOINT = import.meta.env.VITE_AUTH_API_ENDPOINT
     ?? import.meta.env.VITE_API_AUTH
-    ?? import.meta.env.VITE_API_ENDPOINT
+    ?? import.meta.env.VITE_API_AUTH
     ?? "";
 
 export default function useAppBootstrap({

@@ -29,7 +29,7 @@ export async function CSVDataRequest(
 
     try {
         const res = await FetchData<CSVResponse>(
-            `${import.meta.env.VITE_API_SEARCH_ENDPOINT}tablecsv?skip=0&${query}`,
+            `${import.meta.env.VITE_API_PRODUCTS}tablecsv?skip=0&${query}`,
             "POST",
             {
                 username: (userContext?.details as { username?: string } | undefined)?.username,

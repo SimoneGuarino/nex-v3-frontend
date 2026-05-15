@@ -73,7 +73,7 @@ export function GetNoPromoMysqlFiltersAPI({ abortController, setData, ChangeLoad
     ChangeLoadStatus: ({ from, bool }: { from: string, bool: boolean }) => void;
 }): void {
 
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}noPromo/filtri`, "GET", null, abortController)
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}noPromo/filtri`, "GET", null, abortController)
         .then((res: any) => {
             if (res && res.success && res.data) {
                 setData({

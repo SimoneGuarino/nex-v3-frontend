@@ -32,7 +32,7 @@ export type FetchPromoExportCsvParams = {
 export async function fetchPromoExportCsv(
     params: FetchPromoExportCsvParams
 ): Promise<FetchFileResult> {
-    const base = import.meta.env.VITE_API_SEARCH_ENDPOINT ?? "";
+    const base = import.meta.env.VITE_API_PRODUCTS ?? "";
 
     const searchParams = new URLSearchParams();
     searchParams.set("period", params.period);

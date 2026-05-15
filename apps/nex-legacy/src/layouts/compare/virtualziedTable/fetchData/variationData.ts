@@ -24,7 +24,7 @@ export async function VariationDataAPI({ userContext, abortController, _distribu
         });
     };
 
-    return await FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}variation/history?dist=${_distributor}&idp=${id_prodotto}`, 'GET', null, abortController).then((res: any) => {
+    return await FetchData(`${import.meta.env.VITE_API_PRODUCTS}variation/history?dist=${_distributor}&idp=${id_prodotto}`, 'GET', null, abortController).then((res: any) => {
         if (res && Array.isArray(res) && res.length > 0) {
             setData(res);
         };

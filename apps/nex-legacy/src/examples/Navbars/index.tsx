@@ -466,8 +466,6 @@ const DashboardNavbar: FC<DashboardNavbarProps> = ({
     ];
 
 
-    useEffect(() => console.log("canUseBuyerAssistant", canUseBuyerAssistant), [canUseBuyerAssistant]);
-
     return (
         <Fragment>
             <header

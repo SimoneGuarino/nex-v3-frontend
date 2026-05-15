@@ -4,7 +4,7 @@ import { enqueueSnackbar } from 'components/MessageBox';
 
 export function CategoriesData(setExtraData, userContext, setMainLoad, abortController, cookieNameColumns) {
     if(userContext.details === undefined){return;}
-    FetchData(import.meta.env.VITE_API_SEARCH_ENDPOINT + 'tablecategories', 'POST', {
+    FetchData(import.meta.env.VITE_API_PRODUCTS + 'tablecategories', 'POST', {
         frm: 0,
         tk: userContext.token,
         __dist: RetriveSupplierFromCookies(cookieNameColumns)

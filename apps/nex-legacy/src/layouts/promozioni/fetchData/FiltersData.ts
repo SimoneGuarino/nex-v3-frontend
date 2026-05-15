@@ -18,7 +18,7 @@ export function FiltersDataAPI({userContext, abortController, setFiltersData, se
         bodyToSend.tk = userContext.token;
     }
 
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}sales/filters`, 'POST', bodyToSend, 
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}sales/filters`, 'POST', bodyToSend, 
     abortController).then(async (res: any) => {
         if(res){
             setFiltersData(res);

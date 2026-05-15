@@ -31,7 +31,7 @@ export async function ProductVariationHistoryAPI(
     if (to) query.set("to", to);
     if (typeof limit === "number") query.set("limit", String(limit));
 
-    const base = import.meta.env.VITE_API_SEARCH_ENDPOINT ?? "";
+    const base = import.meta.env.VITE_API_PRODUCTS ?? "";
     const url =
         `${base}v1/products/${productId}/variance-history` +
         (query.toString() ? `?${query.toString()}` : "");

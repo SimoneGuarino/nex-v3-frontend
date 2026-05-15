@@ -19,7 +19,7 @@ interface DataAPIProps {
 
 export async function ChangeGroupContextAPI({ groupId, abortController, HandleComplete, HandleError }: DataAPIProps) {
     return await FetchData(
-        `${import.meta.env.VITE_API_ENDPOINT}mn8hngld92ffdekxsl6r/actAsGroup`,
+        `${import.meta.env.VITE_API_AUTH}mn8hngld92ffdekxsl6r/actAsGroup`,
         "POST",
         { groupId },
         abortController,

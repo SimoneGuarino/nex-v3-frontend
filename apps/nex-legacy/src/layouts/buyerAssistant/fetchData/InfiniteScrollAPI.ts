@@ -28,7 +28,7 @@ export function InfiniteScrollAPI({
 }: InfiniteScrollAPIProps): Promise<any> {
     return new Promise((resolve, reject) => {
         FetchData(
-            `${import.meta.env.VITE_API_SEARCH_ENDPOINT}noPromo/lista?ofs=${offset}`,
+            `${import.meta.env.VITE_API_PRODUCTS}noPromo/lista?ofs=${offset}`,
             'POST',
             filters,
             abortController

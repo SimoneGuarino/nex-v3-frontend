@@ -4,7 +4,7 @@ export function CategoriesData(setSearchDataContext, userContext, setMainLoad, a
     setTransitionLoad, 
 ) {
     if(userContext.details === undefined){return;}
-    FetchData(import.meta.env.VITE_API_SEARCH_ENDPOINT + 'pds/cat', 'POST', {
+    FetchData(import.meta.env.VITE_API_PRODUCTS + 'pds/cat', 'POST', {
         tk: userContext.token,
         __dist: queryColumns
     }, abortController).then(res => {

@@ -4,7 +4,7 @@ export function CSVDataRequest(userContext, abortController, query) {
     if(userContext.details === undefined){return;}
 
     const handleDownloadCsv = (path, fileName) => {
-        const fileUrl = import.meta.env.VITE_API_SEARCH_ENDPOINT + path;
+        const fileUrl = import.meta.env.VITE_API_PRODUCTS + path;
 
         fetch(fileUrl)
             .then(response => response.blob()) // Importante: ottieni la risposta come oggetto Blob
@@ -24,7 +24,7 @@ export function CSVDataRequest(userContext, abortController, query) {
             });
     };
 
-    FetchData(import.meta.env.VITE_API_SEARCH_ENDPOINT + 'tablecsv?skip=0&' + query, 'POST', {
+    FetchData(import.meta.env.VITE_API_PRODUCTS + 'tablecsv?skip=0&' + query, 'POST', {
         username: userContext?.details?.username,
         token: userContext.token,
         csv: 1,

@@ -36,19 +36,40 @@ export type AuthzPayload = {
     meta?: Record<string, unknown>;
 };
 
+export interface UserCodes {
+    /** Codice buyer di default assegnato al suo account */
+    buyer?: string | null;
+    /** Codice agente di default assegnato al suo account */
+    agente?: string | null;
+    /** Lista dei codici Agenti assegnati al suo account */
+    ulterioriAgente?: string[];
+    [key: string]: any;
+}
+
+export interface UserImages {
+    avatar?: string | null;
+    cover?: string | null;
+}
+
 export interface UserDetails {
+    _id?: string;
+    id?: string;
     username: string;
+    email?: string;
     nome: string;
     cognome: string;
-    /** @deprecated Legacy numeric/string role. UI must use authz.activeGroupId/groupContexts. */
-    ruolo?: string;
+    codici?: UserCodes;
+    immagini?: UserImages;
+    magazzino?: string | null;
+    isMEPA?: boolean;
+    /** @deprecated Legacy numeric/string role. UI must use authz.caps and authz.activeGroupId/groupContexts. */
+    ruolo?: string | number;
+    /** @deprecated Legacy multi-role collection. UI must use authz.caps and authz.groupContexts. */
+    multiRuolo?: Array<string | number | Record<string, any>>;
+    /** @deprecated Legacy permissions collection. UI must use authz.caps. */
     permissions?: string[];
-    immagini?: {
-        avatar?: string;
-        cover?: string;
-    };
-    [key: string]: any;
     authz?: AuthzPayload;
+    [key: string]: any;
 }
 
 export interface UserState {

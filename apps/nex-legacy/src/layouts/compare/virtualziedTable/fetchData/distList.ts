@@ -69,7 +69,7 @@ export async function DistsListAPI({
 
         try {
             const res: any = await FetchData(
-                `${import.meta.env.VITE_API_SEARCH_ENDPOINT}distributors/list`,
+                `${import.meta.env.VITE_API_PRODUCTS}distributors/list`,
                 'GET',
                 null,
                 abortController

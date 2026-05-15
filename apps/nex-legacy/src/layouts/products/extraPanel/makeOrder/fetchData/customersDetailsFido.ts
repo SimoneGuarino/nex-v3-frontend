@@ -24,7 +24,7 @@ setClientSelected: (prev: any) => void}): void {
 
     if(!bodyToSend.csm){ return console.error('sembra che questo cliente non abbia un codice cliente'); }
 
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}pds/fd_dt`, 'POST', bodyToSend, 
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}pds/fd_dt`, 'POST', bodyToSend, 
     abortController).then(async (res: any) => {
         if(res && res.Data){
             setData(() => {

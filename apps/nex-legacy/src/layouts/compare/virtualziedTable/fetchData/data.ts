@@ -52,7 +52,7 @@ export async function DataRetrive({ buyerTarget, query, offset, abortController,
 
     try {
         const res = await FetchData<TableResponse>(
-            `${import.meta.env.VITE_API_SEARCH_ENDPOINT}table?${query}`,
+            `${import.meta.env.VITE_API_PRODUCTS}table?${query}`,
             "POST",
             bodyToSend,
             abortController

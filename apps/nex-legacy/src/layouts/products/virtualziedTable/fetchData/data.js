@@ -14,7 +14,7 @@ export function DataRetrive(setSearchDataContext, userContext, setMainLoad,
         bodyToSend.__dist = __dist;
     }
 
-    FetchData(import.meta.env.VITE_API_SEARCH_ENDPOINT + 'pds/products?' + query, 'POST', bodyToSend, 
+    FetchData(import.meta.env.VITE_API_PRODUCTS + 'pds/products?' + query, 'POST', bodyToSend, 
     abortController).then(res => {
         setSearchDataContext(prev => {
             return {...prev, dati:res.data}

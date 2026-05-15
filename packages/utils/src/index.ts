@@ -8,7 +8,6 @@ export * from './stringToColor';
 export * from './PickLowest';
 export * from './numberToEuro';
 export * from './cookie';
-export * from './checkAdminPermissions'
 export * from './date/getDate';
 export * from './stringToHTML';
 export * from './divideName';

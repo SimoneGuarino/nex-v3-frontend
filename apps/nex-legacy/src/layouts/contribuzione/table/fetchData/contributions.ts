@@ -24,7 +24,7 @@ export function ContributionAPI({ userContext, abortController, contributionsPer
         bodyToSend.tk = userContext.token;
     }
 
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}contribution/gt-ctb`, 'POST', bodyToSend,
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}contribution/gt-ctb`, 'POST', bodyToSend,
         abortController).then(async (res: any) => {
             contributionsPersonalList.current = res;
             setContributionsList_Base(res);

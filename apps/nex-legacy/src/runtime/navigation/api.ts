@@ -1,7 +1,7 @@
 import { authenticatedFetch, isAuthInvalidationError } from "@nex/shared-platform";
 import type { NavigationRuntimeResponse } from "./types";
 
-const AUTH_BASE = normalizeBase(import.meta.env.VITE_AUTH_API_ENDPOINT ?? import.meta.env.VITE_API_AUTH ?? import.meta.env.VITE_API_ENDPOINT ?? "");
+const AUTH_BASE = normalizeBase(import.meta.env.VITE_AUTH_API_ENDPOINT ?? import.meta.env.VITE_API_AUTH ?? import.meta.env.VITE_API_AUTH ?? "");
 
 function normalizeBase(value: string): string {
     if (!value) return "";

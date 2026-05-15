@@ -66,10 +66,11 @@ type ProductsDetailsProps = {
     open: boolean;
     onClose: () => void;
     product: CartProductDTO | TextRequestCartDTO;
-    /** true se Buyer/Admin/Dev (CheckAdminDev) */
+
     isBuyer: boolean;
-    /** true se Agent */
     isAgent: boolean;
+    isAdmin: boolean;
+
     qtsState: Stato | null;
 
     searchQuery: string;
@@ -148,7 +149,6 @@ type ProductsDetailsProps = {
     /** Stato che definisce un ulteriore condizione di blocco per interagire con il prodotto */
     locked?: boolean;
     userState?: UserState | null;
-    CheckAdminDev: boolean;
     /** Lock pannello principale guidato dal tour. */
     tourProductPanelLock?: boolean;
     /** Se true, la X della scheda prodotto resta disabilitata fino allo step di chiusura. */
@@ -2038,7 +2038,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     onClose,
     product,
     qtsState,
-    isBuyer, isAgent,
+    isBuyer, isAgent, isAdmin,
     searchQuery,
     searchDebounced,
     searchItems,
@@ -2075,7 +2075,6 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     onSelectCounterProposal,
     locked,
     userState,
-    CheckAdminDev,
     categoryIndex,
     tourProductPanelLock = false,
     tourProductSheetCloseDisabled = false,
@@ -2250,7 +2249,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     - ed è stato assegnato partendo da null (non da catalogo) */
     const canChangeValue = (value: string | null) =>
         !!product &&
-        (isAgent || CheckAdminDev) &&
+        (isAgent || isAdmin) &&
         (isDraftQuotation ?? false) &&
         hasValueAssignmentFromNull(value) &&
         !locked;
@@ -2261,7 +2260,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     - riga ancora senza buyer */
     const canShowBuyerSelect =
         !!product &&
-        (isAgent || CheckAdminDev) &&
+        (isAgent || isAdmin) &&
         (isDraftQuotation ?? false) &&
         !product.codice_buyer &&
         !locked;
@@ -2273,7 +2272,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     - ed è stato assegnato partendo da null (non da catalogo) */
     const canChangeBuyer =
         !!product &&
-        (isAgent || CheckAdminDev) &&
+        (isAgent || isAdmin) &&
         (isDraftQuotation ?? false) &&
         !!product.codice_buyer &&
         hasBuyerAssignmentFromNull &&
@@ -2299,11 +2298,11 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
      - l'utente è un buyer con lo stesso codice buyer o un admin/dev
      - e non è in stato di blocco (es. APPROVATA, VALIDAZIONE, RIFIUTATA, BOZZA)
      */
-    const showBuyerActions = !locked && !isAgent && (CheckAdminDev || (
-        (product && product.codice_buyer === userState?.details?.codici.buyer && isBuyer)
+    const showBuyerActions = !locked && !isAgent && (isAdmin || (
+        (product && product.codice_buyer === userState?.details?.codici?.buyer && isBuyer)
     )) && isBuyerFlowState && !isQtsLockedState;
 
-    const showAgentActions = (CheckAdminDev || isAgent) && !locked && !isBuyer && !isQtsLockedState;
+    const showAgentActions = (isAdmin || isAgent) && !locked && !isBuyer && !isQtsLockedState;
     const ruoloLabel = isBuyer ? "Buyer / Admin / Dev" : "Commerciale";
     const lastEvent = (product?.eventi ?? [])
         .slice()
@@ -2325,7 +2324,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
     // logica alternative commerciali
     const commercialAlternativeSuggestions = ((product as CartProductDTO)?.alternativeSuggestions ?? []) as CommercialAlternativeSuggestionDTO[];
     const hasCommercialAlternatives = commercialAlternativeSuggestions.length > 0;
-    const canManageCommercialAlternatives = (isAgent || CheckAdminDev) && isDraftQuotation && !locked && !isTextRequest;
+    const canManageCommercialAlternatives = (isAgent || isAdmin) && isDraftQuotation && !locked && !isTextRequest;
     const canBuyerUseCommercialAlternatives = showBuyerActions && hasCommercialAlternatives;
 
 
@@ -2811,7 +2810,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                                     <AdvancedPanel
                                                         document={product}
                                                         proposals={controproposte}
-                                                        isBuyer={isBuyer} isAdmin={CheckAdminDev}
+                                                        isBuyer={isBuyer} isAdmin={isAdmin}
                                                         isTextRequest={isTextRequest}
                                                         onChangeProposalQuantity={onChangeProposalQuantity}
                                                         onChangeProposalPrice={onChangeProposalPrice}
@@ -2912,7 +2911,7 @@ export const ProductsDetails: React.FC<ProductsDetailsProps> = ({
                                         <ProductDetailsReporting
                                             onClose={handleCloseProductDetails}
                                             productId={selectedIdProduct}
-                                            closeDisabled={tourProductSheetCloseDisabled}
+                                            // closeDisabled={tourProductSheetCloseDisabled}
                                             onReportProductAnomaly={onReportProductAnomaly}
                                             reportingAnomaly={reportingAnomaly}
                                             abortController={productDetailsAbortController}

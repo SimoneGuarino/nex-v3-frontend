@@ -36,6 +36,8 @@ import {
     tryUpdateTourMockQuotationState,
     tryUpdateTourMockQtsProductState,
 } from "../tour/runtime";
+import { useAuthz } from "authz/useAuthz";
+import { CAPS } from "authz/caps";
 
 
 // ——————————————————————————————————————————————————————————
@@ -383,6 +385,11 @@ export const toOptionLabel = (value: string, description?: string): string => {
 // HOOK
 // ——————————————————————————————————————————————————————————
 export function useDetailsQuotation() {
+    const { hasCap } = useAuthz();
+    const isAdminMode = hasCap(CAPS.QUOTAZIONI_ADMIN_MODE);
+    const isAgentMode = hasCap(CAPS.QUOTAZIONI_AGENT_MODE);
+    const isBuyerMode = hasCap(CAPS.QUOTAZIONI_BUYER_MODE);
+
     const { id: quotationIdParam } = useParams<{ id: string }>(); // id della quotazione dal path
     const quotationId = quotationIdParam || "";
 
@@ -459,12 +466,6 @@ export function useDetailsQuotation() {
     const lastApplied = useRef(0);  // ultima risposta applicata
     const seq = useRef(0);          // id sequenziale richieste inviate
 
-    const CheckAdminDev = CheckAdminPermissions({
-        userRole: userState?.details?.ruolo ?? "N/A",
-        permissions: userState?.details?.permissions,
-        rolesToCheck: [0, 1],
-        panelToCheck: 'dettagli_quotazione',
-    });
 
     /**
     * Stati prodotto considerati "completati" ai fini della chiusura quotazione.
@@ -626,9 +627,9 @@ export function useDetailsQuotation() {
          */
         if (isTourDetailsRuntimeActive(quotationId)) {
             hydrateTourQuotationDetailsState({
-                // Passiamo il ruolo utente corrente per permettere al runtime mock
+                // HasCap per il controllo permessi utente corrente per permettere al runtime mock
                 // di costruire una visualizzazione coerente (Buyer vs CAD).
-                viewerRole: userState?.details?.ruolo ?? null,
+                hasCap,
                 // Wiring minimale: il runtime tour usa questo valore per allineare
                 // il `codice_buyer` della riga fake all'utente buyer loggato.
                 viewerBuyerCode: userState?.details?.codici?.buyer ?? null,
@@ -926,7 +927,7 @@ export function useDetailsQuotation() {
         if (fromDebounced) {
             const tourMockResults = getTourMockSubstitutionSearchResults({
                 quotationId,
-                viewerRole: userState?.details?.ruolo ?? null,
+                hasCap,
                 query,
                 isSubstitutionContext: Boolean(openProductQtsSettings && !openSearch),
             });
@@ -1598,9 +1599,9 @@ export function useDetailsQuotation() {
         return await new Promise((resolve) => {
             AddProductsToCartAPI({
                 abortController: new AbortController(),
-                user: userState,
                 quotationId,
                 item: payload,
+                hasCap,
                 HandleComplete: () => {
                     setCart((prev) =>
                         prev.map((p) =>
@@ -1686,9 +1687,9 @@ export function useDetailsQuotation() {
         return await new Promise((resolve) => {
             AddProductsToCartAPI({
                 abortController: new AbortController(),
-                user: userState,
                 quotationId,
                 item: payload,
+                hasCap,
                 HandleComplete: () => {
                     setCart((prev) =>
                         prev.map((p) =>
@@ -1756,7 +1757,7 @@ export function useDetailsQuotation() {
             const user = userState.details;
             const actorRole = user?.ruolo ?? "SYSTEM";
             const actorIsBuyer = isBuyerRole(actorRole);
-            const actorRoleLabel = CheckAdminDev ? "Administratore" : actorIsBuyer ? "Buyer" : "Commerciale";
+            const actorRoleLabel = isAdminMode ? "Administratore" : actorIsBuyer ? "Buyer" : "Commerciale";
             const actorDisplay =
                 [user?.nome, (user as any)?.cognome].filter(Boolean).join(" ") || user?.username || "Sistema";
 
@@ -1773,7 +1774,7 @@ export function useDetailsQuotation() {
             // - Buyer action  → notifica al richiedente
             // - Commerciale action → notifica al buyer assegnato
             const audience: NotificationAudience =
-                notify?.audience ?? (CheckAdminDev ? "BOTH" : actorIsBuyer ? "REQUESTER" : "BUYER");
+                notify?.audience ?? (isAdminMode ? "BOTH" : actorIsBuyer ? "REQUESTER" : "BUYER");
 
             // Copy per CAMBIO_STATO basata su toState (stato attuale), come da vincolo.
             const stateCopy = isProductWorkflowState(metaTo)
@@ -1824,7 +1825,7 @@ export function useDetailsQuotation() {
 
             //return Notifications({ _id: user._id, body: body_, userToken: userState.token });
         },
-        [quotationId, userState, CheckAdminDev],
+        [quotationId, userState, isAdminMode],
     );
 
     const isRequester = useMemo(() => {
@@ -1928,7 +1929,7 @@ export function useDetailsQuotation() {
          */
         const handledByTourRuntime = tryAddProductToTourMockCart({
             quotationId,
-            viewerRole: userState?.details?.ruolo ?? null,
+            hasCap,
             product: ProductDoc,
             setCart,
         });
@@ -1971,8 +1972,8 @@ export function useDetailsQuotation() {
         // chiama l'API per aggiungere il prodotto al carrello
         AddProductsToCartAPI({
             abortController: new AbortController(),
-            user: userState,
             quotationId,
+            hasCap,
             HandleComplete: (res: AddProductsResponse) => {
                 setCart((prevCart: Array<CartProductDTO | TextRequestCartDTO>) => {
                     const newCart = [...prevCart];
@@ -2115,9 +2116,9 @@ export function useDetailsQuotation() {
         if (!productId) { enqueueSnackbar("Ops.. il prodotto non presenta l'id e quindi non risulta essere valido", { type: 'error' }); return; }
         DeleteProductsToCartAPI({
             abortController: new AbortController(),
-            user: userState,
             quotationId,
             product_id: productId,
+            hasCap,
             HandleComplete: (_: AddProductsResponse) => {
                 enqueueSnackbar("Prodotto rimosso dal carrello.", { type: 'success' });
                 setCart((prevCart: Array<CartProductDTO | TextRequestCartDTO>) => {
@@ -2150,8 +2151,8 @@ export function useDetailsQuotation() {
         };
         AddProductsToCartAPI({
             abortController: new AbortController(),
-            user: userState,
             quotationId,
+            hasCap,
             HandleComplete: (_: AddProductsResponse) => {
                 setCart(prev => {
                     const index = prev.findIndex(i => i.kind === "PRODUCT" && (i as CartProductDTO).product_id === productId);
@@ -2517,7 +2518,7 @@ export function useDetailsQuotation() {
          */
         const handledByTourRuntime = tryUpdateTourMockQtsProductState({
             quotationId,
-            viewerRole: userState?.details?.ruolo ?? null,
+            hasCap,
             idDoc,
             nextState: state,
             setCart,
@@ -2712,7 +2713,7 @@ export function useDetailsQuotation() {
                         tags: ["quotazioni", "prodotti-quotazione", "note"]
                     },
                     enqueueSnackbar: {
-                        message: "Nota inviata con successo.",
+                        message: "Nota aggiunta con successo.",
                         type: "success",
                     }
                 }
@@ -2751,7 +2752,7 @@ export function useDetailsQuotation() {
             }));
         };
 
-        const actorRole = user?.ruolo ?? "SYSTEM";
+        const actorRole = user.authz?.activeGroup?.key ?? "N/A";
         const actorName = user?.nome ?? null;
         const actorUsername = user?.username ?? null;
         const event = buildProductEvent({
@@ -2948,7 +2949,7 @@ export function useDetailsQuotation() {
                 createdBy: {
                     nome: userState?.details?.nome ?? null,
                     username: userState?.details?.username ?? null,
-                    ruolo: userState?.details?.ruolo ?? null,
+                    ruolo: userState?.details?.authz?.activeGroup?.key ?? null,
                 },
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -3380,7 +3381,10 @@ export function useDetailsQuotation() {
     // RETURN HOOK
     // ——————————————————————————————————————————————————————————
     return {
-        CheckAdminDev,
+        hasCap,
+        isAdminMode,
+        isAgentMode,
+        isBuyerMode,
 
         quotationId,
         userState,

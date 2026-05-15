@@ -1,6 +1,7 @@
 import { FetchData } from "examples/Fetch";
 import { filterTypeOptions } from "layouts/quotazioni/types/quotations";
 import type { MutableRefObject } from "react";
+import { CAPS, type Cap } from "authz/caps";
 import type { UserState } from "types/UserContext";
 import { OnCreateRequestType } from "../../pages";
 
@@ -19,34 +20,27 @@ export interface CreateQuotationDataProps {
     HandleComplete: (payload: { _id: string; msg: string; titolo?: string; prog_num?: number }) => void; // il BE può restituire anche 'titolo'
     HandleError: (errorMessage: string) => void;
     ChangeLoadStatus?: (args: { from: string; bool: boolean }) => void;
+    /**
+     * Capability resolver provided by useAuthz().
+     * Keep this fetch helper hook-free and let the caller inject the current AuthZ runtime.
+     */
+    hasCap: (cap: Cap | string) => boolean;
 };
 
 
 // ——————————————————————————————————————————————————————————
 // HELPERS
 // ——————————————————————————————————————————————————————————
-const norm = (s?: string) =>
-    String(s ?? "")
-        .normalize("NFD")
-        // @ts-ignore unicode property escapes
-        .replace(/\p{Diacritic}/gu, "")
-        .trim()
-        .toLowerCase();
-
-const AGENT_ROLE_NAMES = new Set(["commerciale", "agente", "agent"].map(norm));
-
-const isAgent = (user?: UserState | null): boolean => {
-    const details: any = user?.details ?? {};
-    if (AGENT_ROLE_NAMES.has(norm(details?.ruolo))) return true;
-
-    const mr = details?.multiRuolo;
-    if (Array.isArray(mr)) {
-        for (const entry of mr) {
-            if (typeof entry === "string" && AGENT_ROLE_NAMES.has(norm(entry))) return true;
-            if (entry && typeof entry === "object" && AGENT_ROLE_NAMES.has(norm(entry.ruolo))) return true;
-        }
-    }
-    return false;
+const canCreateQuotation = (hasCap: CreateQuotationDataProps["hasCap"]): boolean => {
+    /**
+     * Creation is a commercial/agent action.
+     * Admin mode is intentionally accepted for operational back-office creation flows.
+     * Buyer mode alone must not pass this client-side guard.
+     */
+    return (
+        hasCap(CAPS.QUOTAZIONI_AGENT_MODE) ||
+        hasCap(CAPS.QUOTAZIONI_ADMIN_MODE)
+    );
 };
 
 // usa SOLO l'id utente (stringa)
@@ -92,6 +86,7 @@ export async function createQuotationData({
     HandleComplete,
     HandleError,
     ChangeLoadStatus,
+    hasCap,
 }: CreateQuotationDataProps): Promise<void> {
     const FROM = "createQuotationData";
     try {
@@ -107,9 +102,10 @@ export async function createQuotationData({
             extra: payload.extraForm
         };
 
-        // controllo ruolo
-        if (!isAgent(user)) {
-            HandleError("permesso negato: l’utente non ha il ruolo agente (Commerciale).");
+        // Capability guard: role/multiRuolo are deprecated.
+        // The backend still remains the source of truth; this prevents invalid UI submissions early.
+        if (!canCreateQuotation(hasCap)) {
+            HandleError("permesso negato: l’utente non ha la capability per creare quotazioni.");
             return;
         };
 

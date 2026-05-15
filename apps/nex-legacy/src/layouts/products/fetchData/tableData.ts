@@ -20,7 +20,7 @@ export function TableDataAPI({userContext, abortController, setTableData} :
         bodyToSend.__dist = CookieCompareV3('stored_settings_prodotti');
     }
 
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}table?`, 'POST', bodyToSend, 
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}table?`, 'POST', bodyToSend, 
     abortController).then(async (res: any) => {
         setTableData(res.data)
     }).catch((error: any) => {

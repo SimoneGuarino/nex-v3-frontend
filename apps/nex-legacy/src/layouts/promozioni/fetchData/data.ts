@@ -19,7 +19,7 @@ filters: {cdp: string; cdl: string}, setTableLoad: (prev: boolean) => void; setC
         bodyToSend.tk = userContext.token;
     }
 
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}sales/data`, 'POST', bodyToSend, 
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}sales/data`, 'POST', bodyToSend, 
     abortController).then(async (res: any) => {
         if(res){
             let columnsToCheck = [{ key: 'Qta scaglione da 1', exist: false }, { key: 'Qta scaglione a 1', exist: false }];

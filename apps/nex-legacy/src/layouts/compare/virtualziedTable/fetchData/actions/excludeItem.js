@@ -2,7 +2,7 @@ import { FetchData } from '../../../../../examples/Fetch';
 
 export function ExcludeItem(data, setData, userContext, abortController, itemId) {
     if(userContext.details === undefined){return;}
-    FetchData(import.meta.env.VITE_API_SEARCH_ENDPOINT + 'exclude/create/items', 'POST', {
+    FetchData(import.meta.env.VITE_API_PRODUCTS + 'exclude/create/items', 'POST', {
         tk: userContext.token,
         Codice: data[itemId].Codice,
         IdCompare: data[itemId]._id,

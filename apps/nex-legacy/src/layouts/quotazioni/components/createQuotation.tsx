@@ -18,6 +18,7 @@ import { SearchCustomersAPI } from "../fetchdata/get/searchCustomers";
 import { formatISODate, toLocalDateTimeInputValue } from "utils/date/getDate";
 import FDSwitch from "components/UI/input/FDSwitch";
 import { useTour } from "tour/TourProvider";
+import { useAuthz } from "authz/useAuthz";
 
 
 const MdCloseIcon = MdClose as React.FC<{ size?: number; className?: string }>;
@@ -149,6 +150,7 @@ function isValidateFromDetails(details: FormStateProps["details"]): { status: bo
 // ——————————————————————————————————————————————————————————
 /** modale minimale, senza stile: input titolo + Crea/Chiudi */
 export default function CreateQuotationModal({ open, loading, isMEPAUser, onClose, onCreate }: Props) {
+    const { hasCap } = useAuthz();
     const [customer, setCustomer] = useState<CustomerQuickDetailsDTO | null>(null);
 
     const [customerOptions, setCustomerOptions] = useState<CustomerQuickDetailsDTO[]>([]);
@@ -263,15 +265,19 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
         const timer = setTimeout(async () => {
             try {
                 setCustomerLoading(true);
-                const params = new URLSearchParams({
+                /* const params = new URLSearchParams({
                     query: q,
                     context: "quotations",
                     limit: "20",
-                });
+                });*/
 
                 const items = await SearchCustomersAPI({
                     abortController: controller,
-                    params: params.toString(),
+                    query: q,
+                    context: "quotations",
+                    limit: 20,
+                    requestedModules: ["basic", "fido"],
+                    hasCap,
                     ChangeLoadStatus: () => { },
                 });
                 if (!items) { return; }
@@ -290,9 +296,9 @@ export default function CreateQuotationModal({ open, loading, isMEPAUser, onClos
             clearTimeout(timer);
             controller.abort();
         };
-    }, [customerSearch, shouldShowCustomerSelect]);
+    }, [customerSearch, shouldShowCustomerSelect, hasCap]);
 
-
+    
     if (!open) return null;
 
     // reset stati

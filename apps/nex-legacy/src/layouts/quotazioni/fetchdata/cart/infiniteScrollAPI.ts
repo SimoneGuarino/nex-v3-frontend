@@ -37,7 +37,7 @@ export async function InfiniteScrollAPI({
         throw new Error("id quotazione non valido.");
     };
 
-    const base = import.meta.env.VITE_API_SEARCH_ENDPOINT;
+    const base = import.meta.env.VITE_API_PRODUCTS;
 
     const url = new URL(`${base}quotations/${quotationId}/products-list`);
     url.searchParams.set("ofs", String(Math.max(0, ofs | 0)));

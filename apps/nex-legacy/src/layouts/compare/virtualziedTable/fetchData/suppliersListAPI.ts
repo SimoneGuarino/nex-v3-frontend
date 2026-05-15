@@ -16,7 +16,7 @@ export function SuppliersListAPI({userContext, abortController, setData, setColu
         bodyToSend.tk = userContext.token;
     }
 
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}spl`, 'POST', bodyToSend, 
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}spl`, 'POST', bodyToSend, 
     abortController).then(async (res: any) => {
         setColumns((prev: any) => {
             const copy = [...prev];

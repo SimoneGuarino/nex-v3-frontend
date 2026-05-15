@@ -8,7 +8,7 @@ interface UserContext {
 }
 
 export function CategoryListAPI({abortController, setCategoryData} : {abortController: any, setCategoryData: (prev : any) => void}): void {
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}v1/categories`, 'GET', null, abortController)
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}v1/categories`, 'GET', null, abortController)
     .then(async (res: any) => {
         setCategoryData(res);
     }).catch((error: any) => {

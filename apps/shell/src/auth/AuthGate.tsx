@@ -61,7 +61,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             }
 
             const hydrated = await ensureHydratedSharedSession({
-                apiEndpoint: import.meta.env.VITE_API_ENDPOINT,
+                apiEndpoint: import.meta.env.VITE_API_AUTH,
             });
 
             if (cancelled) return;

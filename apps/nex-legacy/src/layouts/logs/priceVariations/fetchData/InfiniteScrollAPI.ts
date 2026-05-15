@@ -29,7 +29,7 @@ export function InfiniteScrollAPI({userContext, abortController, setData, params
     }
     
     return new Promise((resolve, reject) => {
-        FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}pds-logs/gt-dt`, 'POST', {...bodyToSend, ...params},
+        FetchData(`${import.meta.env.VITE_API_PRODUCTS}pds-logs/gt-dt`, 'POST', {...bodyToSend, ...params},
         abortController).then(async (res) => {
             setData((prev: any) => { 
                 return [...prev, ...res]

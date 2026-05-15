@@ -22,7 +22,7 @@ export async function DownloadDistFileAPI({ nome, formato, userContext }: Downlo
     }
 
     try {
-        const url = `${import.meta.env.VITE_API_SEARCH_ENDPOINT}distributors/export/${encodeURIComponent(nome)}/${encodeURIComponent(formato)}`;
+        const url = `${import.meta.env.VITE_API_PRODUCTS}distributors/export/${encodeURIComponent(nome)}/${encodeURIComponent(formato)}`;
         const response = await fetch(url, {
             method: 'GET',
             headers: {

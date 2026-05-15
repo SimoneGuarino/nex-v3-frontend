@@ -52,7 +52,7 @@ export async function MakeReservationBuyerAPI({
     try {
         setLoading?.(true);
 
-        const url = `${import.meta.env.VITE_API_SEARCH_ENDPOINT}noPromo/prenotaBuyer`;
+        const url = `${import.meta.env.VITE_API_PRODUCTS}noPromo/prenotaBuyer`;
 
         const res = await FetchData<ReservationBuyerResponse>(url, "POST", payload, abortController);
 

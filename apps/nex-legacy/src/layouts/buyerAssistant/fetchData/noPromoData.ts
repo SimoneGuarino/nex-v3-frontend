@@ -46,7 +46,7 @@ export async function NoPromoDataAPI({
     try {
         ChangeLoadStatus({ from: 'noPromo', bool: true });
 
-        const baseUrl = `${import.meta.env.VITE_API_SEARCH_ENDPOINT}noPromo/lista`;
+        const baseUrl = `${import.meta.env.VITE_API_PRODUCTS}noPromo/lista`;
 
         // 1. FETCH DATI PAGINATI
         const paginatedRes = await FetchData(

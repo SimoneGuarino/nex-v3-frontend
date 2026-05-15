@@ -19,7 +19,7 @@ params: any, setErr: (prev: boolean) => void}): void {
         bodyToSend.of = 0;
     }
 
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}pds-logs/gt-tt`, 'POST', {...bodyToSend, ...params}, 
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}pds-logs/gt-tt`, 'POST', {...bodyToSend, ...params}, 
     abortController).then(async (res: any) => {
         setTotal(res);
     }).catch((error: any) => {

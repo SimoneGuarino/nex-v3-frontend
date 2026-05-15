@@ -17,6 +17,8 @@ import {
     isBuyerViewer,
     isTourMockQuotationId,
 } from "./mockQuotation";
+import { Cap, CAPS } from "authz/caps";
+
 
 // --------------------------------------------------
 // TYPES
@@ -26,7 +28,7 @@ import {
  * Lo teniamo esplicito per rendere chiaro quali stati vengono "seedati" nel ramo tour.
  */
 type HydrateTourQuotationDetailsStateParams = {
-    viewerRole?: string | null;
+    hasCap: (cap: Cap | string) => boolean;
     /**
      * Codice buyer del viewer corrente.
      * Serve solo nel mock tour buyer per allineare la riga fake
@@ -44,6 +46,7 @@ type HydrateTourQuotationDetailsStateParams = {
     setLoading: Dispatch<SetStateAction<{ [key: string]: boolean | Map<string, boolean> }>>;
 };
 
+
 // --------------------------------------------------
 // RUNTIME GUARDS
 // --------------------------------------------------
@@ -56,6 +59,7 @@ export function isTourDetailsRuntimeActive(quotationId: unknown): boolean {
     return isTourMockQuotationId(quotationId);
 }
 
+
 // --------------------------------------------------
 // RUNTIME HYDRATION
 // --------------------------------------------------
@@ -67,7 +71,7 @@ export function isTourDetailsRuntimeActive(quotationId: unknown): boolean {
  * - pulire eventuali stati residuali di ricerca/paginazione
  */
 export function hydrateTourQuotationDetailsState({
-    viewerRole,
+    hasCap,
     viewerBuyerCode,
     setQts,
     setCustomer,
@@ -88,9 +92,9 @@ export function hydrateTourQuotationDetailsState({
      * applichiamo questa normalizzazione solo nel runtime tour mock,
      * senza toccare minimamente i flussi reali backend.
      */
-    const payload = buildTourMockQuotationDetailsResponseForViewer(viewerRole);
-    const mockCart = buildTourMockCartForViewer(viewerRole, viewerBuyerCode);
-    const mockProductsList = buildTourMockProductsListForViewer(viewerRole);
+    const payload = buildTourMockQuotationDetailsResponseForViewer(hasCap);
+    const mockCart = buildTourMockCartForViewer(hasCap, viewerBuyerCode);
+    const mockProductsList = buildTourMockProductsListForViewer(hasCap);
 
     // Seed principale: dettaglio quotazione + anagrafica cliente.
     setQts((prev) => {
@@ -144,24 +148,16 @@ export function hydrateTourQuotationDetailsState({
  * - il comportamento richiesto Ã¨ limitato a CAD;
  * - centralizziamo qui la regola per evitare condizioni duplicate nei componenti.
  */
-function isCommercialAdminDevViewer(viewerRole?: string | null): boolean {
-    const roleRaw = String(viewerRole ?? "").trim();
-    const roleNorm = roleRaw.toLowerCase();
-
-    if (
-        roleNorm === "commerciale" ||
-        roleNorm === "admin" ||
-        roleNorm === "dev"
-    ) {
-        return true;
-    }
-
-    if (/^\d+$/.test(roleRaw)) {
-        const mapped = String(getRolesMappedByIndex()[roleRaw] ?? "").trim().toLowerCase();
-        return mapped === "commerciale" || mapped === "admin" || mapped === "dev";
-    }
-
-    return false;
+function isCommercialAdminDevViewer(hasCap: (cap: Cap | string) => boolean): boolean {
+    /**
+     * Creation is a commercial/agent action.
+     * Admin mode is intentionally accepted for operational back-office creation flows.
+     * Buyer mode alone must not pass this client-side guard.
+     */
+    return (
+        hasCap(CAPS.QUOTAZIONI_AGENT_MODE) ||
+        hasCap(CAPS.QUOTAZIONI_ADMIN_MODE)
+    );
 }
 
 /**
@@ -179,14 +175,19 @@ function isCommercialAdminDevViewer(viewerRole?: string | null): boolean {
  */
 export function tryAddProductToTourMockCart(params: {
     quotationId: unknown;
-    viewerRole?: string | null;
     product: ProductDoc;
     setCart: Dispatch<SetStateAction<Array<CartProductDTO | TextRequestCartDTO>>>;
+    hasCap: (cap: Cap | string) => boolean;
 }): boolean {
-    const { quotationId, viewerRole, product, setCart } = params;
+    const { quotationId, product, setCart, hasCap } = params;
 
     if (!isTourDetailsRuntimeActive(quotationId)) return false;
-    if (!isCommercialAdminDevViewer(viewerRole)) return false;
+    // Capability guard: role/multiRuolo are deprecated.
+    // The backend still remains the source of truth; this prevents invalid UI submissions early.
+    if (!isCommercialAdminDevViewer(hasCap)) {
+        return false;
+    };
+
     if (!product?._id) return false;
 
     setCart((prev) => {
@@ -271,15 +272,15 @@ export function clearTourAddToCartLoading(params: {
  */
 export function getTourMockSubstitutionSearchResults(params: {
     quotationId: unknown;
-    viewerRole?: string | null;
+    hasCap: (cap: Cap | string) => boolean;
     isSubstitutionContext: boolean;
     query?: string;
 }): ProductDoc[] | null {
-    const { quotationId, viewerRole, isSubstitutionContext, query } = params;
+    const { quotationId, hasCap, isSubstitutionContext, query } = params;
 
     if (!isTourDetailsRuntimeActive(quotationId)) return null;
-    const isBuyer = isBuyerViewer(viewerRole);
-    const isCad = isCommercialAdminDevViewer(viewerRole);
+    const isBuyer = isBuyerViewer(hasCap);
+    const isCad = isCommercialAdminDevViewer(hasCap);
     if (!isBuyer && !isCad) return null;
 
     // Contesto sostituzione: prodotto demo usato nel flusso proposta/controproposta.
@@ -290,7 +291,7 @@ export function getTourMockSubstitutionSearchResults(params: {
     // Contesto catalogo (AS panel): solo CAD, mai Buyer.
     if (!isCad) return null;
 
-    const catalog = buildTourMockProductsListForViewer(viewerRole);
+    const catalog = buildTourMockProductsListForViewer(hasCap);
     const normalizedQuery = String(query ?? "").trim().toLowerCase();
     if (!normalizedQuery) return catalog;
 
@@ -409,17 +410,17 @@ export function tryUpdateTourMockQuotationState(params: {
  */
 export function tryUpdateTourMockQtsProductState(params: {
     quotationId: unknown;
-    viewerRole?: string | null;
     idDoc: string;
     nextState: string;
+    hasCap: (cap: Cap | string) => boolean;
     setCart: Dispatch<SetStateAction<Array<CartProductDTO | TextRequestCartDTO>>>;
     setOpenProductQtsSettings: Dispatch<SetStateAction<CartProductDTO | TextRequestCartDTO | null>>;
 }): boolean {
     const {
         quotationId,
-        viewerRole,
         idDoc,
         nextState,
+        hasCap,
         setCart,
         setOpenProductQtsSettings,
     } = params;
@@ -430,7 +431,7 @@ export function tryUpdateTourMockQtsProductState(params: {
      * - abilitiamo Buyer + CAD, così anche lo step "Accetta" commerciale non chiama API su ID mock.
      */
     if (!isTourDetailsRuntimeActive(quotationId)) return false;
-    if (!isBuyerViewer(viewerRole) && !isCommercialAdminDevViewer(viewerRole)) return false;
+    if (!isBuyerViewer(hasCap) && !isCommercialAdminDevViewer(hasCap)) return false;
     if (!idDoc) return false;
 
     const updatedAt = new Date().toISOString();
@@ -1472,15 +1473,15 @@ export function restoreTourMockBeforeOpenRuntime(params: {
  */
 export function runTourCadAsPanelSeedSearchRuntime(params: {
     quotationId: unknown;
-    viewerRole?: string | null;
+    hasCap: (cap: Cap | string) => boolean;
     searchDebounced: (query: string) => void;
 }): boolean {
-    const { quotationId, viewerRole, searchDebounced } = params;
+    const { quotationId, hasCap, searchDebounced } = params;
 
     // Guard runtime: se non siamo nel dettaglio mock tour non facciamo nulla.
     if (!isTourDetailsRuntimeActive(quotationId)) return false;
     // Guard ruolo: la seed è richiesta solo per Commerciale/Admin/Dev.
-    if (!isCommercialAdminDevViewer(viewerRole)) return false;
+    if (!isCommercialAdminDevViewer(hasCap)) return false;
 
     // Query demo del prodotto fake principale usato nel tour quotazioni.
     searchDebounced(TOUR_STATIC_PRODUCT.CodiceProduttore);

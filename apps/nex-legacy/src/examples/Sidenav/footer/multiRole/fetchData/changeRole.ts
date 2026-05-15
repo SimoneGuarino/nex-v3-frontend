@@ -19,7 +19,7 @@ export async function ChangeRoleAPI({ role, abortController, HandleComplete, Han
             HandleError('Qualcosa è andato storto, se questo errore persiste, perfavore contatta il nostro supporto tecnico.');
         });
     */
-    return await FetchData(`${import.meta.env.VITE_API_ENDPOINT}mn8hngld92ffdekxsl6r/actAs`, 'POST', {ar: role}, abortController)
+    return await FetchData(`${import.meta.env.VITE_API_AUTH}mn8hngld92ffdekxsl6r/actAs`, 'POST', {ar: role}, abortController)
     .then((res:  { newToken: string, ruolo: string; descrizione: string }) => {
         return HandleComplete(res);
     }).catch((errorState: any) => {

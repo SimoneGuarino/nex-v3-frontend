@@ -2,7 +2,7 @@ import { FetchData } from '../../../../../examples/Fetch/fetchCredentials';
 
 export function CreateAccountAPI(newUserData, setCAStatus, setSuccess, abortController, openErrorSB, userContext, setLoadingBtnStatus) {
     if(userContext.details === undefined){return;}
-    FetchData(import.meta.env.VITE_API_ENDPOINT + '77ao5hyFgAikQYV0/gJMLax', 'POST', {
+    FetchData(import.meta.env.VITE_API_AUTH + '77ao5hyFgAikQYV0/gJMLax', 'POST', {
         tk: userContext.token,
         nm: newUserData.Nome,
         lnm: newUserData.Cognome,

@@ -403,6 +403,7 @@ export function Quotazioni() {
         createQuotationData({
             abortController: createAbortRef.current,
             user: userState,
+            hasCap,
             payload: { titolo, note, type, customer, dateTo, extraForm: cleanedExtraForm },
             HandleComplete: () => {
                 setCreating(false);

@@ -6,6 +6,7 @@ import type { CustomerFullPayload } from "components/UI/panels/customersPanel/ty
 import type { QuotationOkLinkItemDTO } from "layouts/quotazioni/fetchdata/get/getQuotationOkLinks";
 import type { Role } from "tour/types";
 import { getRolesMappedByIndex } from "utils/ruoli/index";
+import { Cap, CAPS } from "authz/caps";
 
 // --------------------------------------------------
 // CONSTANTS
@@ -165,19 +166,12 @@ export function isTourMockQuotationId(value: unknown): boolean {
  * - ruolo testuale "Buyer"
  * - ruolo numerico che mappa a "Buyer" (da REACT_APP_ROLES)
  */
-export function isBuyerViewer(viewerRole?: string | null): boolean {
-    const roleRaw = String(viewerRole ?? "").trim();
-    const roleNorm = roleRaw.toLowerCase();
-
-    if (roleNorm === "buyer" || roleNorm.includes("buyer")) return true;
-
-    if (/^\d+$/.test(roleRaw)) {
-        const label = String(getRolesMappedByIndex()[roleRaw] ?? "").trim().toLowerCase();
-        return label === "buyer" || label.includes("buyer");
-    }
-
-    return false;
-}
+export function isBuyerViewer(hasCap?: (cap: Cap | string) => boolean): boolean {
+    /**  Buyer mode alone must pass this client-side guard. */
+    return (
+        hasCap?.(CAPS.QUOTAZIONI_BUYER_MODE) ?? false
+    );
+};
 
 // --------------------------------------------------
 // CORE BUILDERS
@@ -218,6 +212,7 @@ export function buildTourMockQuotation(): QuotazioneDTO & { __tourMock?: boolean
             fine: new Date("2126-04-10T23:59:59.999Z") as any,
         },
         buyersProgress: [],
+        extra: {},
         // Flag locale per identificare/rimuovere la riga fake senza ambiguita.
         __tourMock: true,
     };
@@ -291,10 +286,10 @@ export function buildTourMockQuotationDetailsResponse(): QuotazioneDetailsRespon
  * - Altri ruoli: stato BOZZA (flusso pre-assegnazione)
  */
 export function buildTourMockQuotationDetailsResponseForViewer(
-    viewerRole?: string | null,
+    hasCap?: (cap: Cap | string) => boolean,
 ): QuotazioneDetailsResponse {
     const payload = buildTourMockQuotationDetailsResponse();
-    const isBuyer = isBuyerViewer(viewerRole);
+    const isBuyer = isBuyerViewer(hasCap);
     const listPhase = getTourMockQuotationListPhase();
 
     /**
@@ -411,7 +406,7 @@ function buildTourMockProductRowForBuyerWithCode(buyerCode: string): CartProduct
  * - Altri ruoli: cart vuoto
  */
 export function buildTourMockCartForViewer(
-    viewerRole?: string | null,
+    hasCap: (cap: Cap | string) => boolean,
     viewerBuyerCode?: string | null,
 ): Array<CartProductDTO | TextRequestCartDTO> {
     const listPhase = getTourMockQuotationListPhase();
@@ -427,10 +422,10 @@ export function buildTourMockCartForViewer(
      * - CAD: la riga fake sparisce perché il cart iniziale per quei ruoli è vuoto.
      */
     if (listPhase === "closed_ok") {
-        return buildTourMockClosedCartForViewer(viewerRole, viewerBuyerCode);
+        return buildTourMockClosedCartForViewer(hasCap, viewerBuyerCode);
     }
 
-    if (!isBuyerViewer(viewerRole)) return [];
+    if (!isBuyerViewer(hasCap)) return [];
     return [buildTourMockProductRowForBuyerWithCode(resolveTourBuyerCode(viewerBuyerCode))];
 }
 
@@ -442,10 +437,10 @@ export function buildTourMockCartForViewer(
  * mentre il Buyer deve vedere il progresso al 100%.
  */
 export function buildTourMockClosedCartForViewer(
-    viewerRole?: string | null,
+    hasCap?: (cap: Cap | string) => boolean,
     viewerBuyerCode?: string | null,
 ): Array<CartProductDTO | TextRequestCartDTO> {
-    const buyerCode = isBuyerViewer(viewerRole)
+    const buyerCode = isBuyerViewer(hasCap)
         ? resolveTourBuyerCode(viewerBuyerCode)
         : TOUR_STATIC_CART_PRODUCT.buyerCode;
 
@@ -472,10 +467,10 @@ export function buildTourMockClosedCartForViewer(
  *   quali OC/FB vengono mostrati nello step finale.
  */
 export function buildTourMockOkLinksForViewer(
-    viewerRole?: string | null,
+    hasCap: (cap: Cap | string) => boolean,
     viewerBuyerCode?: string | null,
 ): QuotationOkLinkItemDTO[] {
-    const closedCart = buildTourMockClosedCartForViewer(viewerRole, viewerBuyerCode);
+    const closedCart = buildTourMockClosedCartForViewer(hasCap, viewerBuyerCode);
     const productRows = closedCart.filter((row) => (row.kind ?? "PRODUCT") === "PRODUCT") as CartProductDTO[];
 
     /**
@@ -536,10 +531,10 @@ export function buildTourMockOkLinksForViewer(
  *   lavora direttamente su "Quotazione Prodotti".
  */
 export function buildTourMockProductsListForViewer(
-    viewerRole?: string | null,
+    hasCap: (cap: Cap | string) => boolean,
 ): ProductDoc[] {
     // Buyer escluso volutamente dal seed lista prodotti.
-    if (isBuyerViewer(viewerRole)) return [];
+    if (isBuyerViewer(hasCap)) return [];
 
     /**
      * Snapshot minimo ma completo per la ProductCard:

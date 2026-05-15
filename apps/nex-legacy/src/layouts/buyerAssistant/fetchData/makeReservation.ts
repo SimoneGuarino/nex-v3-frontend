@@ -63,7 +63,7 @@ export async function MakeReservationAPI({
     try {
         setLoading?.(true);
 
-        const url = `${import.meta.env.VITE_API_SEARCH_ENDPOINT}noPromo/prenota`;
+        const url = `${import.meta.env.VITE_API_PRODUCTS}noPromo/prenota`;
 
         const res = await FetchData<ReservationResponse>(url, "POST", payload, abortController);
 

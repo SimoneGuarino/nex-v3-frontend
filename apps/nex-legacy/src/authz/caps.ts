@@ -8,6 +8,23 @@ export const CAPS = {
     USERS_ONLINE_VIEW: "legacy.users.online.view",
 
     /**
+     * Customer search / fido shared lookup
+     */
+    CUSTOMERS_SEARCH_USE: "customers.search.use",
+    CUSTOMERS_SEARCH_ALL: "customers.search.all",
+    CUSTOMERS_SEARCH_OWN_AGENTS: "customers.search.own_agents",
+    CUSTOMERS_FIDO_READ: "customers.fido.read",
+
+    /**
+     * Legacy context-specific customer search usage
+     */
+    //QUOTAZIONI_CUSTOMER_SEARCH_USE: "legacy.quotazioni.customer_search.use",
+    CLIENTI_CUSTOMER_SEARCH_USE: "legacy.clienti.customer_search.use",
+    ORDINI_CUSTOMER_SEARCH_USE: "legacy.ordini.customer_search.use",
+    FATTURATI_CUSTOMER_SEARCH_USE: "legacy.fatturati.customer_search.use",
+    TRACKINGS_CUSTOMER_SEARCH_USE: "legacy.trackings.customer_search.use",
+
+    /**
      * AI / assistant
      */
     BUYER_ASSISTANT_USE: "legacy.buyer_assistant.use",

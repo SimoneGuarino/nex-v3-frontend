@@ -106,7 +106,7 @@ function SearchHere({
         const delayDebounceFn = setTimeout(() => {
             if (searchBoxFocus) {
                 setLoadBool(false);
-                fetch(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}search`, {
+                fetch(`${import.meta.env.VITE_API_PRODUCTS}search`, {
                     signal: abortController.current!.signal,
                     method: "POST",
                     headers: { "Content-Type": "application/JSON" },

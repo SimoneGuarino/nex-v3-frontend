@@ -29,7 +29,7 @@ export function InfiniteScrollAPI({userContext, abortController, query, setData,
     }
     
     return new Promise((resolve, reject) => {
-        FetchData(import.meta.env.VITE_API_SEARCH_ENDPOINT + 'pds/products?skip=0&' + query, 'POST', {...bodyToSend},
+        FetchData(import.meta.env.VITE_API_PRODUCTS + 'pds/products?skip=0&' + query, 'POST', {...bodyToSend},
         abortController).then(async (res) => {
             setData((prev: any) => { 
                 return {...prev, dati: [...prev.dati, ...res.data]}

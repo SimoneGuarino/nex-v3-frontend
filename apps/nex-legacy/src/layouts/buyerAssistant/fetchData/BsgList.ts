@@ -56,7 +56,7 @@ export async function GetBsgAPI({
     try {
         setLoading?.(true);
 
-        const url = `${import.meta.env.VITE_API_SEARCH_ENDPOINT}noPromo/bsg`;
+        const url = `${import.meta.env.VITE_API_PRODUCTS}noPromo/bsg`;
 
         const res = await FetchData<BsgResponse>(url, "GET", null, abortController);
 
@@ -105,7 +105,7 @@ export async function CreateBsgAPI({
     try {
         setLoading?.(true);
 
-        const url = `${import.meta.env.VITE_API_SEARCH_ENDPOINT}noPromo/bsg`;
+        const url = `${import.meta.env.VITE_API_PRODUCTS}noPromo/bsg`;
 
         const res = await FetchData<CreateBsgResponse>(url, "POST", payload, abortController);
 
@@ -157,7 +157,7 @@ export async function UpdateBsgAPI({
     try {
         setLoading?.(true);
 
-        const url = `${import.meta.env.VITE_API_SEARCH_ENDPOINT}noPromo/bsg`;
+        const url = `${import.meta.env.VITE_API_PRODUCTS}noPromo/bsg`;
 
         const res = await FetchData<UpdateBsgResponse>(url, "PATCH", payload, abortController);
 

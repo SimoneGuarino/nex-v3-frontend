@@ -28,7 +28,7 @@ export async function ExcludeElements<S extends SearchDataShape>(
 ): Promise<void> {
     if (userContext.details === undefined) return;
 
-    const base = import.meta.env.VITE_API_SEARCH_ENDPOINT ?? '';
+    const base = import.meta.env.VITE_API_PRODUCTS ?? '';
     const url = `${base}exclude/read/items`;
 
     try {

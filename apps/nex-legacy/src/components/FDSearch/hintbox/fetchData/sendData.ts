@@ -31,7 +31,7 @@ export async function SendData(
     if (userContext?.details === undefined) return;
 
     try {
-        const endpoint = (import.meta.env.VITE_API_SEARCH_ENDPOINT ?? "") + "search/ret";
+        const endpoint = (import.meta.env.VITE_API_PRODUCTS ?? "") + "search/ret";
 
         // se FetchData non ha tipi, TS lo considera any: forziamo T a unknown e poi normalizziamo
         const data = (await FetchData(

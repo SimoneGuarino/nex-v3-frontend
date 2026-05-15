@@ -19,7 +19,7 @@ params: any, setLoadStatus: (prev: boolean) => void, setErr: (prev: boolean) => 
         bodyToSend.of = 0;
     };
 
-    FetchData(`${import.meta.env.VITE_API_SEARCH_ENDPOINT}pds-logs/gt-dt`, 'POST', {...bodyToSend, ...params}, 
+    FetchData(`${import.meta.env.VITE_API_PRODUCTS}pds-logs/gt-dt`, 'POST', {...bodyToSend, ...params}, 
     abortController).then(async (res: any) => {
         setData(res);
         setLoadStatus(false);

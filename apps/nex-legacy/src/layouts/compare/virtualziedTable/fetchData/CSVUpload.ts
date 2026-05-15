@@ -40,7 +40,7 @@ export async function CSVUploadRequest(
 
     const handleDownloadCsv = async (path: string, fileName: string) => {
         const pathClean = path.startsWith("/") ? path.slice(1) : path;
-        const fileUrl = `${import.meta.env.VITE_API_SEARCH_ENDPOINT}${pathClean}`;
+        const fileUrl = `${import.meta.env.VITE_API_PRODUCTS}${pathClean}`;
 
         try {
             const response = await fetch(fileUrl);
@@ -64,7 +64,7 @@ export async function CSVUploadRequest(
 
     try {
         setProgressUpload(30);
-        const endpointUrl = `${import.meta.env.VITE_API_SEARCH_ENDPOINT}upload/csv`;
+        const endpointUrl = `${import.meta.env.VITE_API_PRODUCTS}upload/csv`;
 
         const result = await FetchFileData<UploadResponseJson>(endpointUrl, {
             method: "POST",

@@ -67,7 +67,7 @@ function normalizeDaysWindow(d?: number): DaysWindow {
 }
 
 function buildBaseUrl(): string {
-    const base = import.meta.env.VITE_API_SEARCH_ENDPOINT;
+    const base = import.meta.env.VITE_API_PRODUCTS;
     if (!base) throw new Error("REACT_APP_API_SEARCH_ENDPOINT non valorizzata");
     return base.endsWith("/") ? base : `${base}/`;
 }

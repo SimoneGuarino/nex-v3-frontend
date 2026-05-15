@@ -35,7 +35,7 @@ export async function SendData<S extends HasDatiState>(
 ): Promise<void> {
     if (userContext.details === undefined) return;
 
-    const base = import.meta.env.VITE_API_SEARCH_ENDPOINT ?? '';
+    const base = import.meta.env.VITE_API_PRODUCTS ?? '';
     const url = `${base}pds/search/ret`;
 
     try {

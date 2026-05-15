@@ -53,7 +53,7 @@ export async function fetchPromosList({
     to,
     q,
 }: FetchPromosListParams): Promise<PromoListResponse> {
-    const base = import.meta.env.VITE_API_SEARCH_ENDPOINT ?? "";
+    const base = import.meta.env.VITE_API_PRODUCTS ?? "";
 
     const params = new URLSearchParams();
     params.set("period", period);
