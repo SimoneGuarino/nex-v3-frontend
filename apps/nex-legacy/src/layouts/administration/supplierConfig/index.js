@@ -4,7 +4,6 @@ import { useState, useContext, useEffect } from "react";
 import { UserContext } from "../../../context/UserContext";
 
 //@Component
-import MDSnackbar from "components/MDSnackbar";
 import MDBox from "components/MDBox";
 
 import Divider from "@mui/material/Divider";
@@ -86,42 +85,6 @@ export default function SupplierConfig(){
       "Table" : "esprinet_products"
     } ]);
 
-
-
-    //Notifica Generale di Error/Info/Success
-    //--- Messaggio di Errore
-    const [error, setError] = useState("");
-    //--- Stato del Messaggio se aperto o meno
-    const [errorSB, setErrorSB] = useState(false);
-    const closeErrorSB = () => setErrorSB(false);
-    const openErrorSB = () => setErrorSB(true);
-
-    /*-----Possibile Choose
-      "primary",
-      "secondary",
-      "info",
-      "success",
-      "warning",
-      "error",
-      "dark",
-      "light", */
-    // --- Richiamando e settando uno di questi valori definisce il colore e l'icona in utilizzo dal pop-up
-    const [dymIcon, setDymIcon] = useState("warning");
-
-    const renderErrorSB = (
-      <MDSnackbar
-        color={dymIcon}
-        icon={dymIcon}
-        title="Focelda Dashboard"
-        content={error}
-        dateTime="1 sec fa"
-        open={errorSB}
-        onClose={closeErrorSB}
-        close={closeErrorSB}
-        bgWhite
-      />
-    );
-
     const [arrays, setArrayOfObjects] = useState([]);
 
     useEffect(() => {
@@ -165,7 +128,6 @@ export default function SupplierConfig(){
                           </Card>
                         )
                     })}
-                    {renderErrorSB}
                     </>
                   )
                 )

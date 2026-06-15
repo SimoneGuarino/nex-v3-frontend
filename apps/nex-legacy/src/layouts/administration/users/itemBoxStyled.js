@@ -5,7 +5,6 @@ import { Stack, Avatar, IconButton, Button } from '@mui/material';
 
 //internal Components
 import MDTypography from "components/MDTypography";
-import MDBadge from "components/MDBadge";
 
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -122,14 +121,6 @@ setIndexUserSelected, Ban_Callback, setCAStatus }) {
                             {elm.username}
                         </MDTypography>
                     </Stack>
-
-                    <Stack direction='row' gap={1}>
-                        <MDBadge badgeContent={elm.stato.codice} color={PickBadgeColor(elm.stato.codice)} variant="gradient" size="sm" container={true} />
-                        <MDBadge badgeContent={(Array.isArray(elm.ruolo) ? 
-                            elm.ruolo.length > 0 ? 
-                                elm.ruolo : "Non Definito"
-                        : (elm.ruolo || "Non Definito"))} color={'info'} variant="gradient" size="sm" container={true} />
-                    </Stack>
                     <Stack direction='row' alignItems='center' gap={1}>
                         <AccessTimeFilledIcon sx={{ ...css_p }} />
                         <MDTypography component="h3" style={{ ...css_p }}>
@@ -156,7 +147,6 @@ setIndexUserSelected, Ban_Callback, setCAStatus }) {
                     </IconButton>
                 </Stack>
             </Stack>
-
         </Stack>
     ))
 

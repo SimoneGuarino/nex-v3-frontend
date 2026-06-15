@@ -32,6 +32,8 @@ interface AIHeaderProps {
     menuRef: any;
     selectedModel: string;
     setOpenModelSelect: (open: boolean) => void;
+    embedded?: boolean;
+    mepaLocked?: boolean;
 };
 
 
@@ -63,8 +65,10 @@ const AIHeader: React.FC<AIHeaderProps> = ({ mode, conversation_id, showHero, is
     menuRef,
     selectedModel,
     setOpenModelSelect,
+    embedded = false,
+    mepaLocked = false,
 }) => {
-    const { setOpen } = useContext(AIContext);
+    const { setOpen, aiScope } = useContext(AIContext);
     const [model, version] = selectedModel.split('-');
 
 
@@ -78,6 +82,7 @@ const AIHeader: React.FC<AIHeaderProps> = ({ mode, conversation_id, showHero, is
     // Determina il comportamento del pulsante chiudi
     // Se settings aperto, chiude solo settings; altrimenti chiude tutto
     const handleCloseClick = () => {
+        if (mepaLocked) return;
         if (isSettingsOpen) {
             handleSettingsToggle(); // Chiude i settings e torna alla chat
         } else {
@@ -85,12 +90,12 @@ const AIHeader: React.FC<AIHeaderProps> = ({ mode, conversation_id, showHero, is
         }
     };
 
-    const closeTooltipText = isSettingsOpen ? 'Torna alla chat' : 'Chiudi';
+    const closeTooltipText = isSettingsOpen ? 'Torna alla chat' : embedded ? 'Nascondi assistente AI' : 'Chiudi';
 
     return (
-        <div className={`w-auto pr-3 pb-2 pt-4 pl-6 flex dark:text-white text-black text-sm ${(!showHero || isSettingsOpen) ? 'ml-12' : 'ml-0'} transition-margin duration-300 relative z-40`}>
+        <div className={`w-auto pr-3 pb-2 pt-4 pl-6 flex dark:text-white text-black text-sm ${(!showHero || isSettingsOpen) ? 'ml-12' : 'ml-0'} transition-margin duration-300 relative z-10`}>
             <div className="flex items-center gap-2">
-                <div ref={menuRef} className="hover:scale-105 transition-transform cursor-pointer mr-2"
+                {!mepaLocked && <div ref={menuRef} className="hover:scale-105 transition-transform cursor-pointer mr-2"
                     onClick={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
                         if (!isSettingsOpen) {
                             setOpenModelSelect(true);
@@ -101,25 +106,27 @@ const AIHeader: React.FC<AIHeaderProps> = ({ mode, conversation_id, showHero, is
                     rightIcon={!isSettingsOpen ? <FiChevronDownIcon size={12} /> : undefined} >
                         {isSettingsOpen ? '' : <>{model.replace(/_/g, " ")}<span className="ml-2 opacity-50 !text-sm">{version}</span></>}
                     </FDButton>
-                </div>
+                </div>}
 
                 {!isSettingsOpen && (
                     <>
                         <Tag text="Private" icon={<LockIcon size={12} />} data_tooltip_id='general-ai-tooltip' data_tooltip_content="Chat privata" />
+                        {aiScope.kind === "MEPA_TENDER" && <Tag text="MEPA RAG" icon={<CloudIcon size={12} />}
+                            data_tooltip_id='general-ai-tooltip' data_tooltip_content={`Workspace gara: ${aiScope.title ?? aiScope.tenderId}`} />}
                         {conversation_id && <Tag text={conversation_id.slice(0, 6) + "..."} icon={<CloudIcon size={12} />}
                             data_tooltip_id='general-ai-tooltip' data_tooltip_content={`ID della sessione: ${conversation_id}`} />}
                     </>
                 )}
             </div>
-            <FDIconButton
+            {!mepaLocked && <FDIconButton
                 icon={<SettingIcon size={20} />}
                 className={`h-fit ml-auto z-10 transition-colors duration-200 ${isSettingsOpen ? 'text-blue-500 dark:text-blue-400' : ''}`}
                 variant="text"
                 dataTooltipId='general-ai-tooltip'
                 dataTooltipContent={isSettingsOpen ? "Chiudi impostazioni" : "Apri impostazioni"}
                 onClick={handleSettingsToggle}
-            />
-            <ToggleButton onToggle={toggleMode} mode={mode} />
+            />}
+            {!embedded && <ToggleButton onToggle={toggleMode} mode={mode} />}
             <FDIconButton
                 onClick={currentSidebarToggle}
                 variant="text"
@@ -128,14 +135,14 @@ const AIHeader: React.FC<AIHeaderProps> = ({ mode, conversation_id, showHero, is
                 dataTooltipContent={sidebarTooltipText}
                 icon={<PanelIcon size={20} />}
             />
-            <FDIconButton
+            {!mepaLocked && <FDIconButton
                 variant="text"
                 className="h-fit z-10"
                 dataTooltipId='general-ai-tooltip'
                 dataTooltipContent={closeTooltipText}
                 icon={<CloseIcon size={20} />}
                 onClick={handleCloseClick}
-            />
+            />}
         </div>
     )
 };

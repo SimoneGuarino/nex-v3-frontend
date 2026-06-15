@@ -8,9 +8,9 @@ interface UserContext {
     token: string;
 };
 
-export function ParamsDataAPI({userContext, abortController, setData, setLoadState, openErrorSB} : 
+export function ParamsDataAPI({userContext, abortController, setData, setLoadState} : 
     {userContext: UserContext, abortController: any, setData: (prev : any) => void;
-        setLoadState: (prev: boolean) => void; openErrorSB: (icon: string, message: string) => void;
+        setLoadState: (prev: boolean) => void;
     }): void {
     if (userContext.details === undefined) { return; }
     FetchData(`${import.meta.env.VITE_API_CUSTOMERSFIDO}prm-mng`, 'POST', {

@@ -167,9 +167,9 @@ const TableRendererInner: React.FC<TableRendererProps> = ({ table }) => {
                         className="bg-gray-100 dark:bg-neutral-800"
                     >
                         <tr>
-                            {table.columns.map((col) => (
+                            {table.columns.map((col, index) => (
                                 <th
-                                    key={col}
+                                    key={col + index}
                                     className="border-b border-gray-300 dark:border-neutral-700 px-3 py-2 text-left align-top"
                                     style={{
                                         fontWeight: 600,

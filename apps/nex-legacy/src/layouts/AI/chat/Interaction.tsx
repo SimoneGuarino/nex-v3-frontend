@@ -136,19 +136,13 @@ function usePrevious<T>(value: T): T | undefined {
     return ref.current;
 }
 
-const ScrollToBottomButton: React.FC<{ onClick: () => void, showHistoryTab?: boolean }> = ({ onClick, showHistoryTab }) => (
+const ScrollToBottomButton: React.FC<{ onClick: () => void, showHistoryTab?: boolean }> = ({ onClick }) => (
     <FDIconButton
         icon={<ArrowDownIcon size={20} />}
         variant="general"
         onClick={onClick}
-        aria-label="Vai all'ultimo"
-        className={`fixed bottom-30 z-30 flex items-center gap-2 bg-white dark:bg-neutral-800
-        border border-gray-300 dark:border-neutral-600 shadow-md hover:shadow-lg transition`}
-        style={{
-            right: showHistoryTab ? `calc(50% - 280px / 2)` : "50%",
-            transform: "translateX(50%)", // se usi right:50% spingi verso destra; alternativamente usa left logic
-        }}
-
+        aria-label="Vai all'ultimo messaggio"
+        className="absolute bottom-5 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 border border-gray-300 bg-white shadow-md transition hover:shadow-lg dark:border-neutral-600 dark:bg-neutral-800"
     />
 );
 
@@ -352,21 +346,24 @@ const ChatInteraction: React.FC<ChatInteractionProps> = ({
     }, [messages, prevMessages, isUserNearBottom, scheduleScroll]);
 
     return (
-        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden p-6 px-10 space-y-4">
-            {messages.map((msg, i) => (
-                <MessageItem
-                    key={msg._id}
-                    msg={msg}
-                    index={i}
-                    isLast={i === messages.length - 1}
-                    onPinMessage={onPinMessage}
-                    onUnpinMessage={onUnpinMessage}
-                    pinnedMessages={pinnedMessages}
-                    RetryOnFail={RetryOnFail}
-                />
-            ))}
-            {/* Nuovo loader in stile reasoning */}
-            <ReasoningStatus isActive={!!loadStatus.ai_message} />
+        <div className="relative flex-1 min-h-0 overflow-hidden">
+            <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden p-6 px-10 space-y-4">
+                {messages.map((msg, i) => (
+                    <MessageItem
+                        key={msg._id}
+                        msg={msg}
+                        index={i}
+                        isLast={i === messages.length - 1}
+                        onPinMessage={onPinMessage}
+                        onUnpinMessage={onUnpinMessage}
+                        pinnedMessages={pinnedMessages}
+                        RetryOnFail={RetryOnFail}
+                    />
+                ))}
+                {/* Nuovo loader in stile reasoning */}
+                <ReasoningStatus isActive={!!loadStatus.ai_message} />
+                <div ref={bottomRef} aria-hidden="true" style={{ height: 1, width: "100%" }} />
+            </div>
 
             {!isUserNearBottom && (
                 <ScrollToBottomButton
@@ -374,14 +371,13 @@ const ChatInteraction: React.FC<ChatInteractionProps> = ({
                     onClick={() => {
                         // forza lo scroll e abilita follow per AI se necessario
                         scheduleScroll();
-                        // consideriamo che l’utente ora è “a fondo”
+                        // consideriamo che l’utente ora è “a fondo"
                         // reset delle interruzioni per permettere follow se arriva AI
                         userInterruptedRef.current = false;
                         aiShouldAutoScrollRef.current = true;
                     }}
                 />
             )}
-            <div ref={bottomRef} aria-hidden="true" style={{ height: 1, width: "100%" }} />
         </div>
     );
 };

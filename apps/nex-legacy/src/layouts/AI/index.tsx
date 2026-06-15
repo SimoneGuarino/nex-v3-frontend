@@ -3,7 +3,7 @@ import { motion, useMotionValue, useAnimation, AnimatePresence } from "framer-mo
 import { v4 as uuidv4 } from "uuid"; // npm install uuid
 import { Tooltip } from "react-tooltip";
 //context
-import { AIContext, Conversation, Message } from "context/AIContext";
+import { AIContext, Conversation, Message, AIScope } from "context/AIContext";
 //componenti
 import Hero from "./Hero";
 import PromptInput from "./PromptInput";
@@ -17,6 +17,7 @@ import PinnedMessageBox from "./chat/PinnedMessageBox";
 //fetchdatas
 import { AgentAPI } from "./fetchData/Agent";
 import { getAgents, IAgent, formatAgentForSelect } from "./fetchData/Agents";
+import { askMepaAi, getMepaChatMessages } from "layouts/mepaTools/fetchData/mepaAi";
 //utils
 import { parseAgentResponse } from "./utils/parseAgentResponse";
 import { emitSelectedModelChange, onRequestSelectedModel, onSelectedModelChange } from "./utils/modelEvents";
@@ -41,13 +42,214 @@ const IoCloud = IoCloudOutline as React.FC<{ size?: number, className?: string }
 const BOX_W = 800; // Dimensioni predefinite della finestra
 const BOX_H = 600; // Dimensioni predefinite della finestra
 
+const isMepaScope = (scope: AIScope): scope is Extract<AIScope, { kind: "MEPA_TENDER" }> => {
+    return scope.kind === "MEPA_TENDER" && !!scope.tenderId;
+};
+
+const getMepaThreadId = (tenderId: string) => `thread-${tenderId}`;
+
+const isMepaConversation = (conversation?: Conversation | null): boolean => {
+    if (!conversation?.id) return false;
+    return conversation.id.startsWith("thread-") || /^MEPA\s*·/i.test(String(conversation.title ?? ""));
+};
+
+const normalizeMepaAnswerForUi = (value: unknown): string => {
+    const raw = String(value ?? "Risposta AI ricevuta.").replace(/\r\n/g, "\n").trim();
+    if (!raw) return "Risposta AI ricevuta.";
+
+    // The backend owns citations/evidence. The main text must remain readable and must not
+    // contain raw RAG metadata accidentally emitted by the model.
+    const lines = raw
+        .split("\n")
+        .map((line) => line.trimEnd())
+        .filter((line) => {
+            const l = line.toLowerCase();
+            if (/\b(documentid|documenttitle|chunkid|sectiontitle|raw excerpt|score|excerpt:)\b/i.test(line)) return false;
+            if (/^fonti\s*\(/i.test(line)) return false;
+            if (/^fonti rilevanti/i.test(line)) return false;
+            if (/^citazioni\s*:/i.test(line)) return false;
+            if (/^evidenze\s*:/i.test(line)) return false;
+            return !l.includes("documentid:") && !l.includes("chunkid:");
+        });
+
+    let cleaned = lines.join("\n").trim();
+    // If the model still appended a technical source dump, cut it and rely on deterministic sources.
+    cleaned = cleaned.replace(/\n+\s*(?:Fonti|Citazioni|Evidenze)\s*(?:rilevanti|consultate|recuperate)?\s*[:\-][\s\S]*$/i, "").trim();
+    cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+    return cleaned || "Risposta AI ricevuta.";
+};
+
+const compactMepaText = (value: unknown, max = 140): string => {
+    const text = String(value ?? "").replace(/\s+/g, " ").trim();
+    return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+};
+
+const makeMepaEvidenceHref = (item: any): string | null => {
+    const chunkId = item?.chunkId;
+    return chunkId ? `nex-mepa-evidence:${encodeURIComponent(String(chunkId))}` : null;
+};
+
+const withClickableMepaCitations = (text: string, sources: any[]): string => {
+    if (!Array.isArray(sources) || !sources.length) return text;
+    return text.replace(/\[(\d{1,2})\]/g, (full, value) => {
+        const idx = Number(value) - 1;
+        const href = makeMepaEvidenceHref(sources[idx]);
+        return href ? `[${value}](${href})` : full;
+    });
+};
+
+const formatMepaSourceLine = (item: any, index: number): string => {
+    const n = index + 1;
+    const documentTitle = compactMepaText(item?.documentTitle ?? item?.documentId ?? "Documento", 90);
+    const page = item?.page ? `pag. ${item.page}` : "pagina n.d.";
+    const section = item?.sectionTitle ? `sezione ${compactMepaText(item.sectionTitle, 70)}` : "sezione n.d.";
+    const excerpt = compactMepaText(item?.excerpt ?? item?.text ?? "", 180);
+    const score = typeof item?.relevance === "number" ? item.relevance : typeof item?.score === "number" ? item.score : null;
+    const scoreText = typeof score === "number" ? ` · score ${score.toFixed(2)}` : "";
+    const chunk = item?.chunkId ? ` · chunk ${String(item.chunkId).slice(0, 10)}` : "";
+    const base = `- [${n}] **${documentTitle}** — ${page}, ${section}${scoreText}${chunk}`;
+    return excerpt ? `${base}\n  > ${excerpt}` : base;
+};
+
+const formatMepaSourcesBlock = (items: any[] = []): string => {
+    const sources = items.slice(0, 6);
+    if (!sources.length) return "";
+    return [`### Fonti consultate`, ...sources.map(formatMepaSourceLine)].join("\n");
+};
+
+const formatMepaActionsBlock = (items: any[] = []): string => {
+    const actions = items.slice(0, 5).map((a: any) => `- ${String(a?.label ?? a?.type ?? "Azione suggerita")}`);
+    return actions.length ? [`### Azioni suggerite`, ...actions].join("\n") : "";
+};
+
+const formatMepaLimitationsBlock = (items: any[] = []): string => {
+    const limitations = items.slice(0, 4).map((item: any) => `- ${String(item)}`);
+    return limitations.length ? [`### Limiti / verifiche`, ...limitations].join("\n") : "";
+};
+
+const formatMepaAiBlocks = (data: any): Message["blocks"] => {
+    const rawAnswer = normalizeMepaAnswerForUi(data?.answer ?? data?.message?.content ?? "Risposta AI ricevuta.");
+    const citations = Array.isArray(data?.citations) ? data.citations : [];
+    const chunks = Array.isArray(data?.chunks) ? data.chunks : [];
+    const sources = citations.length ? citations : chunks;
+    const answer = withClickableMepaCitations(rawAnswer, sources);
+    const blocks: Message["blocks"] = [];
+
+    blocks.push({
+        kind: "text",
+        text: answer,
+    });
+
+    const sourcesBlock = formatMepaSourcesBlock(sources);
+    if (sourcesBlock) {
+        blocks.push({ kind: "text", text: sourcesBlock });
+    }
+
+    const actionsBlock = formatMepaActionsBlock(Array.isArray(data?.suggestedActions) ? data.suggestedActions : []);
+    if (actionsBlock) {
+        blocks.push({ kind: "text", text: actionsBlock });
+    }
+
+    const limitationsBlock = formatMepaLimitationsBlock(Array.isArray(data?.limitations) ? data.limitations : []);
+    if (limitationsBlock) {
+        blocks.push({ kind: "text", text: limitationsBlock });
+    }
+
+    const metaParts = [
+        data?.retrievalProvider ? `Provider: ${data.retrievalProvider}` : null,
+        data?.retrievalMode ? `Modalità: ${data.retrievalMode}` : null,
+        data?.intent ? `Intent: ${data.intent}` : null,
+        typeof data?.confidence === "number" ? `Confidenza: ${Math.round(data.confidence * 100)}%` : null,
+    ].filter(Boolean);
+
+    if (metaParts.length) {
+        blocks.push({ kind: "text", text: `### Dettagli risposta\n${metaParts.join(" · ")}` });
+    }
+
+    return blocks;
+};
+
+const buildMepaAiRawContent = (data: any): string => {
+    const payload = {
+        blocks: formatMepaAiBlocks(data),
+    };
+    try {
+        return JSON.stringify(payload);
+    } catch {
+        return String(data?.answer ?? data?.message?.content ?? "Risposta AI ricevuta.");
+    }
+};
+
+
+const toTimestamp = (value: unknown): number => {
+    const parsed = value ? new Date(String(value)).getTime() : NaN;
+    return Number.isFinite(parsed) ? parsed : Date.now();
+};
+
+const sortMepaRowsByCreatedAt = (rows: any[]): any[] => {
+    return [...(Array.isArray(rows) ? rows : [])].sort((a, b) => toTimestamp(a?.createdAt) - toTimestamp(b?.createdAt));
+};
+
+const buildMepaConversationFromApi = (threadId: string, tenderTitle: string | undefined, rows: any[]): Conversation => {
+    const messages: Message[] = sortMepaRowsByCreatedAt(rows).map((row: any) => {
+        const isAssistant = row?.role === "assistant";
+        const id = String(row?._id ?? row?.id ?? uuidv4());
+        if (!isAssistant) {
+            return {
+                _id: id,
+                type: "user",
+                content: String(row?.content ?? ""),
+                createdAt: toTimestamp(row?.createdAt),
+            };
+        }
+
+        const retrievalMeta = row?.retrievalMeta ?? {};
+        const data = {
+            answer: row?.content ?? "",
+            citations: Array.isArray(row?.evidenceRefs) ? row.evidenceRefs : [],
+            evidenceRefs: Array.isArray(row?.evidenceRefs) ? row.evidenceRefs : [],
+            suggestedActions: Array.isArray(row?.suggestedActions) ? row.suggestedActions : [],
+            limitations: Array.isArray(retrievalMeta?.limitations) ? retrievalMeta.limitations : [],
+            retrievalProvider: row?.retrievalProvider ?? retrievalMeta?.retrievalProvider,
+            retrievalMode: retrievalMeta?.retrievalMode,
+            intent: retrievalMeta?.intent,
+            confidence: typeof retrievalMeta?.confidence === "number" ? retrievalMeta.confidence : undefined,
+        };
+
+        return {
+            _id: id,
+            type: "ai",
+            version: `MEPA-RAG · ${data.retrievalProvider ?? "provider n.d."}`,
+            title: data.intent ? String(data.intent).replace(/_/g, " ") : "Talk with documents",
+            content: buildMepaAiRawContent(data),
+            blocks: formatMepaAiBlocks(data),
+            createdAt: toTimestamp(row?.createdAt),
+        };
+    });
+
+    return {
+        id: threadId || uuidv4(),
+        title: tenderTitle ? `MEPA · ${compactMepaText(tenderTitle, 34)}` : "MEPA · Talk with documents",
+        messages,
+        createdAt: messages[0]?.createdAt ?? Date.now(),
+    };
+};
+
 
 // ——————————————————————————————————————————————————————————
 // MAIN COMPONENT
 // ——————————————————————————————————————————————————————————
-const AILayout: React.FC = () => {
-    const { open, conversation, setConversation, history, setHistory } = useContext(AIContext);
+type AILayoutVariant = "global" | "embedded";
+
+interface AILayoutProps {
+    variant?: AILayoutVariant;
+}
+
+const AILayout: React.FC<AILayoutProps> = ({ variant = "global" }) => {
+    const { open, setOpen, conversation, setConversation, history, setHistory, aiScope, aiPresentationMode } = useContext(AIContext);
     const [mode, setMode] = useState<"fullscreen" | "windowed">("windowed");
+    const isPageDocked = isMepaScope(aiScope) && aiPresentationMode === "PAGE_DOCKED";
+    const isEmbedded = variant === "embedded";
     const [savedPosition, setSavedPosition] = useState({ x: 100, y: 100 });
     const [showHero, setShowHero] = useState(true); // Mostra la schermata iniziale di benvenuto
     const [talkMode, setTalkMode] = useState(false); // Modalità di conversazione vocale, se abilitata
@@ -93,6 +295,8 @@ const AILayout: React.FC = () => {
     });
 
     const abortController = useRef<AbortController | null>(null);
+    const lastLoadedMepaThreadRef = useRef<string | null>(null);
+    const mepaHistoryAbortRef = useRef<AbortController | null>(null);
 
     // ——————————————————————————————————————————————————————————
     // HANDLERS - UI & STATE
@@ -102,6 +306,102 @@ const AILayout: React.FC = () => {
     const ChangeLoadStatus = ({ from, bool }: { from: string, bool: boolean }) => {
         setLoadStatus((prev) => ({ ...prev, [from]: bool !== undefined ? bool : !prev[from] }))
     };
+
+    const mepaTenderId = isMepaScope(aiScope) ? aiScope.tenderId : null;
+    const mepaTenderTitle = isMepaScope(aiScope) ? aiScope.title : undefined;
+
+    useEffect(() => {
+        if (isEmbedded || isMepaScope(aiScope)) return;
+        if (!isMepaConversation(conversation)) return;
+
+        // Quando si esce dal workspace MEPA il pannello globale deve tornare
+        // realmente general-purpose. La conversazione MEPA resta nella history
+        // contestuale, ma non deve essere riusata fuori gara perché domande e
+        // riferimenti dipendono da tenderId, RAG e documenti della pratica.
+        setConversation(null);
+        setShowHero(true);
+        setPinnedMessages([]);
+        setShowHistoryTab(false);
+        setShowSettings(false);
+        ChangeLoadStatus({ from: "ai_message", bool: false });
+    }, [aiScope, conversation, isEmbedded, setConversation]);
+
+    useEffect(() => {
+        if (!isEmbedded || !mepaTenderId) return;
+
+        const threadKey = getMepaThreadId(mepaTenderId);
+        setOpen(true);
+        setMode("windowed");
+        setOpenModelSelect(false);
+        setShowSettings(false);
+
+        // Enterprise-grade persistence loading:
+        // Non marcare il thread come caricato prima del completamento della request.
+        // In React StrictMode la prima effect può essere abortita; se salvassimo subito
+        // lastLoadedMepaThreadRef, la seconda effect salterebbe il load e la UI resterebbe in hero.
+        if (lastLoadedMepaThreadRef.current === threadKey && conversation?.id === threadKey) {
+            setShowHero((conversation.messages?.length ?? 0) === 0);
+            return;
+        }
+
+        mepaHistoryAbortRef.current?.abort();
+        const controller = new AbortController();
+        mepaHistoryAbortRef.current = controller;
+        const controllerRef: React.MutableRefObject<AbortController | null> = { current: controller };
+
+        getMepaChatMessages({
+            abortController: controllerRef,
+            tenderId: mepaTenderId,
+            limit: 80,
+        })
+            .then((res: any) => {
+                if (controller.signal.aborted) return;
+
+                const rows = res?.data?.messages ?? [];
+                const threadId = res?.data?.threadId ?? threadKey;
+
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    lastLoadedMepaThreadRef.current = threadKey;
+                    const emptyConv: Conversation = {
+                        id: threadId,
+                        title: mepaTenderTitle ? `MEPA · ${compactMepaText(mepaTenderTitle, 34)}` : "MEPA · Talk with documents",
+                        messages: [],
+                        createdAt: Date.now(),
+                    };
+                    setConversation(emptyConv);
+                    setHistory((prev: Conversation[]) => [emptyConv, ...prev.filter((item) => item.id !== emptyConv.id)]);
+                    setShowHero(true);
+                    return;
+                }
+
+                const conv = buildMepaConversationFromApi(threadId, mepaTenderTitle, rows);
+                lastLoadedMepaThreadRef.current = threadKey;
+                setConversation(conv);
+                setHistory((prev: Conversation[]) => [conv, ...prev.filter((item) => item.id !== conv.id)]);
+                setShowHero(false);
+            })
+            .catch((error: any) => {
+                if (error?.name === "AbortError") return;
+                console.warn("MEPA AI chat history unavailable", error);
+                lastLoadedMepaThreadRef.current = null;
+                const emptyConv: Conversation = {
+                    id: threadKey,
+                    title: mepaTenderTitle ? `MEPA · ${compactMepaText(mepaTenderTitle, 34)}` : "MEPA · Talk with documents",
+                    messages: [],
+                    createdAt: Date.now(),
+                };
+                setConversation(emptyConv);
+                setHistory((prev: Conversation[]) => [emptyConv, ...prev.filter((item) => item.id !== emptyConv.id)]);
+                setShowHero(true);
+            });
+
+        return () => {
+            controller.abort();
+            if (mepaHistoryAbortRef.current === controller) {
+                mepaHistoryAbortRef.current = null;
+            }
+        };
+    }, [isEmbedded, mepaTenderId, mepaTenderTitle, setOpen, setConversation, setHistory]);
 
     // Funzione per gestire l'apertura della cronologia delle conversazioni
     const handleHistoryTab = () => {
@@ -144,6 +444,7 @@ const AILayout: React.FC = () => {
 
     // Al primo mount, settiamo i motion values e il controller
     useEffect(() => {
+        if (isEmbedded) return;
         controls.set({
             x: savedPosition.x,
             y: savedPosition.y,
@@ -151,7 +452,7 @@ const AILayout: React.FC = () => {
             height: BOX_H,
             borderRadius: "1rem",
         });
-    }, [open]);
+    }, [open, controls, isEmbedded, savedPosition.x, savedPosition.y]);
 
     // ——————————————————————————————————————————————————————————
     // EFFECTS - DATA FETCH
@@ -193,6 +494,21 @@ const AILayout: React.FC = () => {
             }
         };
     }, []);
+
+    useEffect(() => {
+        if (!isEmbedded) return;
+        setMode("windowed");
+
+        // Il layout embedded viene montato dentro una card responsive: non deve ereditare
+        // translate/width/height della finestra floating. Forziamo solo il reflow dei figli
+        // assoluti/canvas dopo che la card ha calcolato le dimensioni definitive.
+        const frame = window.requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
+        const timer = window.setTimeout(() => window.dispatchEvent(new Event("resize")), 160);
+        return () => {
+            window.cancelAnimationFrame(frame);
+            window.clearTimeout(timer);
+        };
+    }, [isEmbedded, mepaTenderId]);
 
     // Quando finisce un drag, salviamo la posizione nel React state
     const handleDragEnd = (_e: any, info: any) => {
@@ -249,6 +565,13 @@ const AILayout: React.FC = () => {
         let baseConv: Conversation;
         if (!showHero && conversation) {
             baseConv = conversation as Conversation;
+        } else if (isMepaScope(aiScope)) {
+            baseConv = {
+                id: getMepaThreadId(aiScope.tenderId),
+                title: aiScope.title ? `MEPA · ${compactMepaText(aiScope.title, 34)}` : "MEPA · Talk with documents",
+                messages: [],
+                createdAt: Date.now(),
+            };
         } else {
             baseConv = {
                 id: uuidv4(),
@@ -298,24 +621,27 @@ const AILayout: React.FC = () => {
 
         // Funzione per aggiungere un messaggio dell'AI alla conversazione
         function AddAIMessage(aiMessage: Message) {
-            // Aggiungi il messaggio dell'AI alla conversazione
-            const updatedWithAI = {
-                ...newConv,
-                messages: [...newConv.messages, aiMessage],
-            };
-            // Se l'ID della conversazione che si sta per aggiornare corrisponde a quello corrente, aggiorna la conversazione
-            // Questo evita di sovrascrivere la conversazione corrente provocando un switch della conversazione
+            const conversationId = newConv.id;
+            let resolvedConversation: Conversation | null = null;
+
             setConversation((prev: Conversation | null) => {
-                if (prev && prev.id === updatedWithAI.id) {
-                    return updatedWithAI;
-                }
-                return prev; // altrimenti ritorna la conversazione precedente
+                if (!prev || prev.id !== conversationId) return prev;
+                resolvedConversation = {
+                    ...prev,
+                    messages: [...(prev.messages ?? []), aiMessage],
+                };
+                return resolvedConversation;
             });
-            // Aggiorna la cronologia delle conversazioni
-            // Mappa la cronologia per aggiornare la conversazione corrente con il nuovo messaggio
-            setHistory((prev: Conversation[]) =>
-                prev.map((conv: Conversation) => (conv.id === updatedWithAI.id ? updatedWithAI : conv))
-            );
+
+            setHistory((prev: Conversation[]) => {
+                const existing = prev.find((conv: Conversation) => conv.id === conversationId);
+                const base = resolvedConversation ?? existing ?? newConv;
+                const updatedWithAI: Conversation = {
+                    ...base,
+                    messages: [...(base.messages ?? []), aiMessage],
+                };
+                return [updatedWithAI, ...prev.filter((conv: Conversation) => conv.id !== conversationId)];
+            });
             ChangeLoadStatus({ from: "ai_message", bool: false });
         };
 
@@ -350,7 +676,39 @@ const AILayout: React.FC = () => {
             AddAIMessage(aiMessage);
         };
 
-        // Chiama l'API dell'agente per inviare il messaggio
+        // Se il pannello AI è contestualizzato su una workspace MEPA, usa il TENDER_DOCUMENT_CHAT_AGENT.
+        // In questo modo manteniamo una sola source UI per la chat AI, ma cambiamo il backend tool in base al contesto operativo.
+        if (isMepaScope(aiScope)) {
+            askMepaAi({
+                abortController,
+                tenderId: aiScope.tenderId,
+                threadId: newConv.id || getMepaThreadId(aiScope.tenderId),
+                question: userMessage.content,
+                includeDossier: true,
+                includeValidatedData: true,
+            })
+                .then((res: any) => {
+                    const data = res?.data ?? {};
+                    const blocks = formatMepaAiBlocks(data);
+                    const aiMessage: Message = {
+                        type: "ai",
+                        version: `MEPA-RAG · ${data?.retrievalProvider ?? "provider n.d."}`,
+                        title: data?.intent ? String(data.intent).replace(/_/g, " ") : "Talk with documents",
+                        content: buildMepaAiRawContent(data),
+                        blocks,
+                        createdAt: toTimestamp(data?.message?.createdAt),
+                        _id: String(data?.message?._id ?? data?.message?.id ?? uuidv4()),
+                    };
+                    AddAIMessage(aiMessage);
+                })
+                .catch((error: any) => {
+                    if (error?.name !== "AbortError") console.error(error);
+                    HandleError("Non riesco a interrogare i documenti della gara. Verifica RAG, Vespa e service-ai.");
+                });
+            return;
+        }
+
+        // Chiama l'API dell'agente generale per inviare il messaggio
         AgentAPI({
             abortController,
             prompt: {
@@ -647,7 +1005,7 @@ const AILayout: React.FC = () => {
     // Effetto per gestire lo scroll del body in base alla modalità
     // Se la modalità è fullscreen, disabilita lo scroll del body
     useEffect(() => {
-        if (mode === 'fullscreen') {
+        if (!isEmbedded && mode === 'fullscreen') {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = '';
@@ -656,15 +1014,17 @@ const AILayout: React.FC = () => {
         return () => {
             document.body.style.overflow = '';
         };
-    }, [mode]);
+    }, [mode, isEmbedded]);
 
+
+    if (isPageDocked && variant === "global") return null;
+    if (!isPageDocked && variant === "embedded") return null;
 
     return (<AnimatePresence>
         {open && <>
-            <div className={`fixed inset-0 overflow-hidden ${mode === 'fullscreen' ? 'z-50' : 'z-20 pointer-events-none'
-                }`}>
+            <div className={`${isEmbedded ? 'relative h-full min-h-0 w-full overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900' : `fixed inset-0 overflow-hidden ${mode === 'fullscreen' ? 'z-50' : 'z-20 pointer-events-none'}`}`}>
                 <motion.div
-                    drag={mode === "windowed"}
+                    drag={!isEmbedded && mode === "windowed"}
                     dragMomentum={false}
                     dragConstraints={{
                         top: 0,
@@ -672,11 +1032,11 @@ const AILayout: React.FC = () => {
                         right: windowW - BOX_W,
                         bottom: windowH - BOX_H,
                     }}
-                    style={{ x, y }}
-                    animate={controls}
+                    style={isEmbedded ? { transform: "none", width: "100%", height: "100%" } : { x, y }}
+                    animate={isEmbedded ? undefined : controls}
                     onDragEnd={handleDragEnd}
                     className={`relative pointer-events-auto z-20 bg-white dark:bg-zinc-800 transition-colors duration-300
-                    shadow-2xl flex flex-row overflow-hidden dark:text-white text-black`}
+                    ${isEmbedded ? 'h-full w-full shadow-none rounded-[28px]' : 'shadow-2xl'} flex flex-row overflow-hidden dark:text-white text-black`}
                 >
                     <SideBar
                         open={showHistoryTab && !showSettings}
@@ -688,7 +1048,7 @@ const AILayout: React.FC = () => {
                         setIdSelected={setIdSelected}
                     />
 
-                    <div className={`flex flex-col relative w-full h-full ${(showHistoryTab && !showSettings) ? 'pl-70' : 'pl-0'} transition-margin duration-300`}>
+                    <div className={`flex flex-col relative w-full h-full ${(!isEmbedded && showHistoryTab && !showSettings) ? 'pl-70' : 'pl-0'} transition-[padding] duration-300`}>
                         <AIHeader toggleMode={toggleMode} mode={mode} conversation_id={conversation?.id} showHero={showHero} handleHistoryTab={handleHistoryTab} isHistoryTabOpen={showHistoryTab}
                             isSettingsOpen={showSettings}
                             handleSettingsToggle={handleSettingsToggle}
@@ -697,15 +1057,21 @@ const AILayout: React.FC = () => {
                             selectedModel={selectedModel}
                             setOpenModelSelect={setOpenModelSelect}
                             menuRef={menuRef}
+                            embedded={isEmbedded}
+                            mepaLocked={isEmbedded && isMepaScope(aiScope)}
                         />
 
                         {/* Pannello Settings */}
                         <Settings isOpen={showSettings} showSidebar={showSettingsSidebar} />
 
                         <div
-                            className={`logo-water-wrapper absolute ${!talkMode ?
-                                showHero ? 'left-1/2 w-3/3 h-3/3 min-w-[600px]' : `${showHistoryTab ? 'ml-70' : 'ml-0'} top-3 left-4 w-10 h-10`
-                                : `${showHistoryTab ? 'ml-35' : 'ml-0'} left-0 top-[15%] w-full h-2/3`} 
+                            className={`logo-water-wrapper absolute ${isEmbedded
+                                ? (!talkMode
+                                    ? (showHero ? 'inset-0 h-full w-full min-w-0' : 'top-3 left-4 h-10 w-10')
+                                    : 'left-0 top-[15%] h-2/3 w-full')
+                                : (!talkMode
+                                    ? (showHero ? 'left-1/2 w-3/3 h-3/3 min-w-[600px]' : `${(!isEmbedded && showHistoryTab) ? 'ml-70' : 'ml-0'} top-3 left-4 w-10 h-10`)
+                                    : `${showHistoryTab ? 'ml-35' : 'ml-0'} left-0 top-[15%] w-full h-2/3`)} 
                             transition-all duration-300 ease-in-out ${showSettings ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                             style={{
                                 overflow: 'hidden',
@@ -720,7 +1086,7 @@ const AILayout: React.FC = () => {
                                 transition={{ duration: 0.4 }}
                                 className="flex-1 flex items-center justify-center"
                             >
-                                <Hero handleSend={handleSend} ChangeLoadStatus={ChangeLoadStatus} />
+                                <Hero handleSend={handleSend} ChangeLoadStatus={ChangeLoadStatus} embedded={isEmbedded} />
                             </motion.div>
                         ) : (
                             <motion.div
@@ -743,7 +1109,7 @@ const AILayout: React.FC = () => {
                         {!showSettings && (
                             <PromptInput talkMode={talkMode} onSend={handleSend}
                                 ChangeLoadStatus={ChangeLoadStatus} HandleChangeTalkMode={HandleChangeTalkMode}
-                                loadStatus={loadStatus} abortController={abortController} />
+                                loadStatus={loadStatus} abortController={abortController} embedded={isEmbedded} />
                         )}
                     </div>
 

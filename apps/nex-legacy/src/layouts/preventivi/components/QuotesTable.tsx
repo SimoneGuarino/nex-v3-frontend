@@ -1,8 +1,8 @@
 import React from "react";
 import { TableVirtualized } from "components/Virtualized/table";
 import type { QuoteHeader } from "../types";
-import FDIconButton from "components/FDIconButton";
 import { FiEye } from "react-icons/fi";
+import { FDIconButton } from "components/UI/buttons/FDIconButton";
 
 const FiEyeIcon = FiEye as React.FC<{ size?: number; className?: string }>;
 
@@ -52,8 +52,8 @@ export default function QuotesTable(props: QuotesTableProps) {
                 render: ({ row }: { row: QuoteHeader }) => (
                     <div className="w-full h-full flex items-center justify-center">
                         <FDIconButton
+                            icon={<FiEyeIcon />}
                             size="small"
-                            iconOnly
                             onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation();
                                 if (!row) return;
@@ -61,9 +61,7 @@ export default function QuotesTable(props: QuotesTableProps) {
                             }}
                             data-tooltip-id="preventivi-tooltip"
                             data-tooltip-content="Apri dettaglio preventivo"
-                        >
-                            <FiEyeIcon />
-                        </FDIconButton>
+                        />
                     </div>
                 ),
             },

@@ -1,13 +1,12 @@
 import { Backdrop, Button, Card, Divider, Stack } from '@mui/material';
 import React from 'react';
-import { useFiltersContext } from '../../../context/filtersContext';
 import VirtualizedList from "./virtualizedCategoryFilter";
-import FDIconButton from 'components/FDIconButton';
 import { icon_close } from 'config/icons';
 import { icon_info } from 'config/icons';
 
 import AdminFilter from './admin';
 import MDTypography from 'components/MDTypography';
+import FDIconButton from 'components/UI/buttons/FDIconButton';
 
 
 
@@ -139,9 +138,7 @@ export function Filters(props) {
         <Stack dismissible="true" p={2} height='100%' width='100%' alignItems="center" translate="no">
             <Stack direction='row' width='100%'>
                 <MDTypography fontSize={'1.3em'} pl='10px'>Filtri</MDTypography>
-                <FDIconButton sx={{marginLeft: 'auto'}} onClick={() => ChangeStatusFilters()}>
-                    {icon_close()}
-                </FDIconButton>
+                <FDIconButton icon={icon_close()} className="ml-auto" onClick={() => ChangeStatusFilters()} />
             </Stack>
 
             <Divider sx={{backgroundColor: '#ccc', width: '100%'}}/>

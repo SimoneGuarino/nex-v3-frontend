@@ -10,7 +10,6 @@ import {
     icon_save, icon_megaphone, icon_info, icon_firstPlace,
     icon_multiFunction,
 } from 'config/icons';
-import FDIconButton from 'components/FDIconButton';
 
 import ConvertModule from 'classes/convert';
 import { NumberToEuro } from 'utils/numberToEuro';
@@ -24,8 +23,8 @@ const Convert = new ConvertModule();
 
 
 function BlockViewCard({ index, elm, setData, key_prop, handleClick, selectedFile, PickLowest,
-checked, ChangeCheckedBlock, advicedPrice, HandleProductExpandedDist, ChangeDetailsDistPanelVisibility,
-Contribuzione, ReduceEuroContributions, setContribution_selected }) {
+    checked, ChangeCheckedBlock, advicedPrice, HandleProductExpandedDist, ChangeDetailsDistPanelVisibility,
+    Contribuzione, ReduceEuroContributions, setContribution_selected }) {
     const { preferences } = useNexTheme();
     const darkMode = preferences.mode === "dark";
     const palette = MainTheme().palette;
@@ -65,7 +64,7 @@ Contribuzione, ReduceEuroContributions, setContribution_selected }) {
     };
 
 
-    const FocIsLower = Boolean(PickLowest((elm.Prezzo || 0), (elm.PrezzoListino || 0)) < 
+    const FocIsLower = Boolean(PickLowest((elm.Prezzo || 0), (elm.PrezzoListino || 0)) <
         PickLowest((elm.Fornitori[advicedPrice.from]?.Prezzo || 0), (elm.Fornitori[advicedPrice.from]?.PrezzoListino || 0)));
 
     return (
@@ -75,9 +74,11 @@ Contribuzione, ReduceEuroContributions, setContribution_selected }) {
             transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1) 0ms',
             height: 420,
         }} onClick={(e) => handleClick(e, index)}
-        sx={selectedFile.includes(index) ? { backgroundColor: `${darkMode ? palette.primary.dark : palette.primary.main}` }
-            : { backgroundColor: `${darkMode ? '#1c1c1c' : ''}`, 
-            '&:hover': { backgroundColor: `${darkMode ? palette.grey[800] : palette.grey[300]}` } }}>
+            sx={selectedFile.includes(index) ? { backgroundColor: `${darkMode ? palette.primary.dark : palette.primary.main}` }
+                : {
+                    backgroundColor: `${darkMode ? '#1c1c1c' : ''}`,
+                    '&:hover': { backgroundColor: `${darkMode ? palette.grey[800] : palette.grey[300]}` }
+                }}>
             <Stack sx={{ height: 'inherit' }}>
                 <Stack p={2}>
                     <Stack direction='row'>
@@ -86,26 +87,26 @@ Contribuzione, ReduceEuroContributions, setContribution_selected }) {
                         </MDTypography>
 
                         <Stack direction='row' sx={{ marginLeft: 'auto' }} alignItems='center' gap={1}>
-                            {elm.Promo &&  <Tag text={`In Promo | ${elm.CodicePromo}`} icon={icon_megaphone({ width: 20, height: 20})}
-                            data_tooltip_id='general-compare-tooltip' 
-                            data_tooltip_content={`Questo prodotto attualmente si trova in Promo. || ${elm.CodicePromo}`}/>}
+                            {elm.Promo && <Tag text={`In Promo | ${elm.CodicePromo}`} icon={icon_megaphone({ width: 20, height: 20 })}
+                                data_tooltip_id='general-compare-tooltip'
+                                data_tooltip_content={`Questo prodotto attualmente si trova in Promo. || ${elm.CodicePromo}`} />}
                             <Checkbox sx={{ p: 0 }} checked={checked} color='secondary'
                                 onClick={(() => ChangeCheckedBlock())} />
                         </Stack>
 
                     </Stack>
                     <Stack direction='row'>
-                        <MDTypography variant="body2"   sx={{ fontSize: '0.9rem' }}>
+                        <MDTypography variant="body2" sx={{ fontSize: '0.9rem' }}>
                             {elm.CodiciGTIN[0]}
                         </MDTypography>
-                        <MDTypography variant="body2"  
+                        <MDTypography variant="body2"
                             data-tooltip-id="general-compare-tooltip"
                             data-tooltip-content='Marca'
                             sx={{ fontSize: '0.75rem', fontWeight: 500, marginLeft: 'auto' }}>
                             {elm.Marca}
                         </MDTypography>
                     </Stack>
-                    <MDTypography variant="body2"   sx={{ fontSize: '0.75rem' }}>
+                    <MDTypography variant="body2" sx={{ fontSize: '0.75rem' }}>
                         {elm.Descrizione.Corta}
                     </MDTypography>
                 </Stack>
@@ -114,12 +115,12 @@ Contribuzione, ReduceEuroContributions, setContribution_selected }) {
                     <Stack direction='row' gap={2} mb={2} sx={{ width: '100%' }}>
                         <Stack alignItems='left' sx={{ flexBasis: '70%' }}>
                             <Stack direction='row'>
-                                <MDTypography variant="body2"  
+                                <MDTypography variant="body2"
                                     data-tooltip-id="general-compare-tooltip"
                                     data-tooltip-content='Costo Medio Gestionale' sx={{ fontSize: '0.75rem' }}>
                                     CMG
                                 </MDTypography>
-                                <MDTypography   sx={{
+                                <MDTypography sx={{
                                     fontSize: '0.9rem', fontWeight: '200',
                                     marginLeft: 'auto'
                                 }}>
@@ -128,68 +129,68 @@ Contribuzione, ReduceEuroContributions, setContribution_selected }) {
                             </Stack>
 
                             <Stack direction='row'>
-                                <MDTypography variant="body2"   sx={{ fontSize: '0.75rem' }}>
+                                <MDTypography variant="body2" sx={{ fontSize: '0.75rem' }}>
                                     Disponibilità
                                 </MDTypography>
-                                <MDTypography variant="body2"   sx={{ fontSize: '0.75rem', marginLeft: 'auto' }}>
+                                <MDTypography variant="body2" sx={{ fontSize: '0.75rem', marginLeft: 'auto' }}>
                                     {advicedPrice.dispo} pz
                                 </MDTypography>
                             </Stack>
 
                             {(Boolean(elm.contribuzioni) && elm.contribuzioni.length > 0) &&
                                 <Stack width='100%' direction='row' gap={1} alignItems='center' sx={{ fontSize: '0.75rem' }}>
-                                    <MDTypography variant="body2"  
+                                    <MDTypography variant="body2"
                                         sx={{ fontSize: 'inherit' }}>
                                         Contribuzione esistente</MDTypography>
                                     <Stack direction='row' gap={1} ml='auto'>
                                         {elm?.contribuzioni.map((data, index) => (
-                                            <React.Fragment><MDTypography key={index} variant="body2"  
+                                            <React.Fragment><MDTypography key={index} variant="body2"
                                                 sx={{ fontSize: 'inherit' }}>
                                                 {NumberToEuro({ convert: data.importo })}
                                             </MDTypography>
                                                 {(elm?.contribuzioni.length - 1) != index &&
-                                                    <MDTypography key={index} variant="body2"  
+                                                    <MDTypography key={index} variant="body2"
                                                         sx={{ fontSize: 'inherit' }}>
                                                         -
                                                     </MDTypography>}
                                             </React.Fragment>
                                         ))}
                                     </Stack>
-                                    <FDIconButton onClick={_ => handleExpandClick(elm.contribuzioni, false)}
-                                    sx={{ borderRadius: 2, backgroundColor: `${darkMode ? palette.primary.dark : '#90d3ff87'}`,
-                                    "&:hover": { backgroundColor: `${darkMode ? palette.primary.light : palette.primary.light}` }}}>
-                                        {icon_multiFunction({width: 15, height: 15, color: `${darkMode ? palette.white.main : ''}` })}
-                                        {icon_info({width: 15, height: 15, color: `${darkMode ? palette.white.main : ''}` })}
-                                    </FDIconButton>
+                                    <FDIconButton
+                                        icon={<>
+                                            {icon_multiFunction({ width: 15, height: 15, color: `${darkMode ? palette.white.main : ''}` })}
+                                            {icon_info({ width: 15, height: 15, color: `${darkMode ? palette.white.main : ''}` })}
+                                        </>}
+                                        onClick={_ => handleExpandClick(elm.contribuzioni, false)} />
                                 </Stack>}
 
                             {(Boolean(elm.margin) || Boolean(elm.ribasso) || Boolean(elm.contributed)) && <Stack sx={{ width: '100%', fontSize: '0.8rem' }}>
                                 {Boolean(elm.ribasso) && <Stack direction='row'>
-                                    <MDTypography   variant="body2" sx={{ fontSize: 'inherit' }}>
+                                    <MDTypography variant="body2" sx={{ fontSize: 'inherit' }}>
                                         ribasso personalizzato</MDTypography>
-                                    <MDTypography   sx={{
+                                    <MDTypography sx={{
                                         fontSize: '0.8rem', fontWeight: 'bold', marginLeft: 'auto'
                                     }}>
                                         {elm.ribasso}{elm.ribasso_type ? '€' : '%'}</MDTypography>
                                 </Stack>}
                                 {Boolean(elm.margin) && <Stack direction='row' >
-                                    <MDTypography   variant="body2" sx={{ fontSize: 'inherit' }}>
+                                    <MDTypography variant="body2" sx={{ fontSize: 'inherit' }}>
                                         margine personalizzato</MDTypography>
-                                    <MDTypography   sx={{
+                                    <MDTypography sx={{
                                         fontSize: '0.8rem', fontWeight: 'bold', marginLeft: 'auto'
                                     }}>
                                         {elm.margin}%</MDTypography>
                                 </Stack>}
 
                                 {Boolean(elm.contributed) && <Stack direction='row' alignItems='center' gap={1} justifyContent='space-between'>
-                                    <MDTypography   variant="body2" sx={{ fontSize: 'inherit' }}>
+                                    <MDTypography variant="body2" sx={{ fontSize: 'inherit' }}>
                                         Contribuzione Focelda</MDTypography>
 
                                     <Stack alignItems='center' direction='row' gap={1}>
-                                        <MDTypography   sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                        <MDTypography sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
                                             {elm.contributed.name}</MDTypography>
                                         -
-                                        <MDTypography   sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                        <MDTypography sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
                                             {Convert.euro(elm.contributed.euro).Data}</MDTypography>
                                     </Stack>
                                 </Stack>}
@@ -198,7 +199,7 @@ Contribuzione, ReduceEuroContributions, setContribution_selected }) {
                         </Stack>
 
                         <Stack ml='auto' alignSelf='flex-start' direction='row' gap={1}>
-                            <MDTypography  
+                            <MDTypography
                                 data-tooltip-id="general-compare-tooltip"
                                 data-tooltip-content='Prezzo Focelda'
                                 sx={{
@@ -211,18 +212,18 @@ Contribuzione, ReduceEuroContributions, setContribution_selected }) {
                     </Stack>
 
                     {advicedPrice.from?.toUpperCase() != 'NESSUNO' && <Stack align-items="flex-end" alignItems='center' mt='auto'
-                        sx={{ backgroundColor: `${darkMode ? palette.grey[900]: '#fff6e7'}`, borderRadius: 2, padding: 1 }}>
+                        sx={{ backgroundColor: `${darkMode ? palette.grey[900] : '#fff6e7'}`, borderRadius: 2, padding: 1 }}>
                         <Stack direction='row' width='100%' alignItems='center'>
-                            <MDTypography variant="body2"  
+                            <MDTypography variant="body2"
                                 sx={{ fontSize: '0.7rem', color: '#d7a01e', fontWeight: 400 }}>
                                 PREZZO CONSIGLIATO</MDTypography>
                             <Stack direction='row' gap={1}
                                 sx={{ flexBasis: '100%', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                <FDIconButton onClick={() => HandleEditPriceMode()}>
-                                    {!editPriceMode ? icon_edit({ width: 17.5, height: 17.5 }) : icon_save({ width: 17.5, height: 17.5 })}
-                                </FDIconButton>
+                                <FDIconButton
+                                    icon={editPriceMode ? icon_save({ width: 17.5, height: 17.5 }) : icon_edit({ width: 17.5, height: 17.5 })}
+                                    onClick={() => HandleEditPriceMode()} />
 
-                                {!editPriceMode ? <MDTypography   sx={{
+                                {!editPriceMode ? <MDTypography sx={{
                                     fontSize: '1rem', textAlign: 'right',
                                     fontWeight: 'bold', color: '#d7a01e'
                                 }}>
@@ -254,11 +255,11 @@ Contribuzione, ReduceEuroContributions, setContribution_selected }) {
 
                         </Stack>
                         <Stack direction='row' width='100%'>
-                            <MDTypography variant="body2"  
+                            <MDTypography variant="body2"
                                 sx={{ fontSize: '0.65rem', color: '#d7a01e' }}>
                                 Fornitore con il prezzo piu basso</MDTypography>
                             <Stack direction='row' gap={2} ml='auto'>
-                                <MDTypography   sx={{
+                                <MDTypography sx={{
                                     fontSize: '0.68rem',
                                     fontWeight: '400', alignSelf: 'flex-start', color: '#d7a01e'
                                 }}>
@@ -266,7 +267,7 @@ Contribuzione, ReduceEuroContributions, setContribution_selected }) {
                                         (elm.PrezzoListino || 0)) : PickLowest((elm.Fornitori[advicedPrice.from]?.Prezzo || 0),
                                             (elm.Fornitori[advicedPrice.from]?.PrezzoListino || 0))).toFixed(2) + "€"}
                                 </MDTypography>
-                                <MDTypography   sx={{
+                                <MDTypography sx={{
                                     fontSize: '0.68rem',
                                     fontWeight: '400', alignSelf: 'flex-start', color: '#d7a01e'
                                 }}>
@@ -278,11 +279,9 @@ Contribuzione, ReduceEuroContributions, setContribution_selected }) {
                 </CardContent>
 
                 <CardActions disableSpacing>
-                    <FDIconButton onClick={_ => handleExpandClick(elm.Fornitori, true)}
+                    <FDIconButton icon={icon_info()} onClick={_ => handleExpandClick(elm.Fornitori, true)}
                         data-tooltip-id="general-compare-tooltip"
-                        data-tooltip-content='Dettagli dei Fornitori correlati'>
-                        {icon_info()}
-                    </FDIconButton>
+                        data-tooltip-content='Dettagli dei Fornitori correlati' />
                     {FocIsLower && <span
                         data-tooltip-id="general-compare-tooltip"
                         data-tooltip-content='Focelda ha il prezzo piu basso rispetto agli altri fornitori'

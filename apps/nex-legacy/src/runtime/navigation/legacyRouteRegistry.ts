@@ -26,19 +26,15 @@ const Tables = lazyDefault(() => import("layouts/compare"));
 const SignIn = lazyDefault(() => import("layouts/authentication/sign-in"));
 const Profile = lazyDefault(() => import("layouts/profile/Overview"));
 const UserManagement = lazyDefault(() => import("layouts/administration/users/userManagement.js"));
-const GeneralSettings = lazyDefault(() => import("layouts/administration/generalSettings"));
 const FidoCliente = lazyDefault(() => import("layouts/fido/customerProfile"));
 const OrdiniFB = lazyDefault(() => import("layouts/ordini/ordiniFB/index"));
 const OrdiniFBCNR = lazyDefault(() => import("layouts/ordini/ordiniFBCNR/index.js"));
-const Maintenance = lazyDefault(() => import("../../maintenance"));
 const TargetStocks = lazyDefault(() => import("layouts/stocks/targetStocks"));
 const SwotDashboard = lazyDefault(() => import("layouts/swot"));
 const Documenti = lazyDefault(() => import("layouts/documentiPDF"));
 const Cloud = lazyDefault(() => import("layouts/drive/brandsDrive"));
 const Contribuzione = lazyDefault(() => import("layouts/contribuzione"));
 const PesiVolumi = lazyDefault(() => import("layouts/pesiVolumi"));
-const SupplierConfigurator = lazyNamed(() => import("layouts/configuratore/supplier"), "SupplierConfigurator");
-const Products = lazyNamed(() => import("layouts/products"), "Products");
 const OCFLogs = lazyNamed(() => import("layouts/administration/logs_oc_of"), "OCFLogs");
 const StocksTargetConfigurator = lazyNamed(() => import("layouts/configuratore/obiettiviStocks"), "StocksTargetConfigurator");
 const InserimentoFBOF = lazyDefault(() => import("layouts/ordini/inserimentoOFFB"));
@@ -49,7 +45,6 @@ const MailUpLogs = lazyDefault(() => import("layouts/logs/mailUpLogs/index"));
 const NewsletterClienti = lazyNamed(() => import("layouts/marketing/newsletters/index"), "NewsletterClienti");
 const GruppiMailUpClienti = lazyNamed(() => import("layouts/marketing/gruppi-mailUp/index"), "GruppiMailUpClienti");
 const AnagraficaClienti = lazyNamed(() => import("layouts/marketing/anagrafica/index"), "AnagraficaClienti");
-const CorrelazioneCategorieDistributori = lazyDefault(() => import("layouts/configuratore/correlazioneCategorie"));
 const CustomersSituation = lazyDefault(() => import("layouts/clienti"));
 const RegoleSalvate = lazyDefault(() => import("layouts/php/regole_salvate"));
 const GestioneResi = lazyDefault(() => import("layouts/php/gestione_resi"));
@@ -85,7 +80,6 @@ export const legacyRouteRegistry: LegacyRouteRegistry = [
     { key: "fb", component: OrdiniFB },
     { key: "fb_cnr", component: OrdiniFBCNR },
     { key: "sblocco_ordini", component: SbloccoOrdini },
-    { key: "prodotti", component: Products },
     { key: "quotazioni", component: Quotazioni },
     { key: "listini_promo", component: ListiniPromo },
 
@@ -122,8 +116,6 @@ export const legacyRouteRegistry: LegacyRouteRegistry = [
 
     { key: "configuratori", component: PageNotFound },
     { key: "consumabili_g&g", component: ConfiguratorPanel },
-    { key: "fornitori", component: SupplierConfigurator },
-    { key: "correlazione_categorie_distributori", component: CorrelazioneCategorieDistributori },
     { key: "confg_obiettivi_stocks", component: StocksTargetConfigurator },
 
     { key: "web", component: PageNotFound },
@@ -151,11 +143,10 @@ export const legacyRouteRegistry: LegacyRouteRegistry = [
 
     { key: "administration", component: PageNotFound },
     { key: "user_management", component: UserManagement },
-    { key: "general_settings", component: GeneralSettings },
     { key: "logs_prodotti", component: ProductsLogs },
     { key: "ocf_logs", component: OCFLogs },
 
-    { key: "maintenance", component: Maintenance },
+    { key: "maintenance", component: PageNotFound },
     { key: "404", component: PageNotFound },
 ];
 

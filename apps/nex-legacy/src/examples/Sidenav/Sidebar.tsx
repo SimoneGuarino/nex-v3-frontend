@@ -127,13 +127,6 @@ function Sidenav({ color = "info", brand = "", brandName, routes, runtimeManaged
 
     const [menuRole, setMenuRole] = useState<boolean>(false);
     const menuRef = useRef<HTMLDivElement>(null) as MutableRefObject<HTMLDivElement | null>; // Riferimento per il menu contestuale dei messaggi fissati
-    const abortController = useRef<AbortController | null>(null);
-
-    // Funzione per cambiare lo stato di caricamento
-    // 'from' è il tipo di caricamento, 'bool' è il nuovo stato
-    const ChangeLoadStatus = ({ from, bool }: { from: string, bool: boolean }) => {
-        setLoadStatus((prev) => ({ ...prev, [from]: bool !== undefined ? bool : !prev[from] }))
-    };
 
     // chiudi su cambio route, se mobile
     useEffect(() => {

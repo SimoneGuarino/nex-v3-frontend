@@ -5,9 +5,9 @@ import MDTypography from "components/MDTypography";
 
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import FDIconButton from "components/FDIconButton";
 import { MainTheme } from "assets/settingsTheme";
 import { useNexTheme } from "@nex/theme-system";
+import FDIconButton from "components/UI/buttons/FDIconButton";
 
 // Tipi per il tema passato a ChooseColor
 type ThemeKey = string | null | undefined;
@@ -125,11 +125,10 @@ export function PopupInfo({
                     </MDTypography>
                     {closeVar && (
                         <FDIconButton
+                            icon={<CloseRoundedIcon />}
                             onClick={handleChangeinfo}
-                            sx={{ marginLeft: "auto", padding: 0 }}
-                        >
-                            <CloseRoundedIcon />
-                        </FDIconButton>
+                            className="ml-auto"
+                        />
                     )}
                 </Stack>
             </Stack>

@@ -14,7 +14,7 @@ export interface PreviewResponse {
 
 /**
  * Costruisce l’URL base dall'env (rimuove eventuale slash finale)
- * Esempio env: REACT_APP_API_PDF_READER=https://localhost/mq2rt7jqq26auv5osfi8
+ * Esempio env: VITE_API_PDF_READER=https://localhost/mq2rt7jqq26auv5osfi8
  */
 function getBase(): string {
     const raw = import.meta.env.VITE_API_PDF_READER || "";

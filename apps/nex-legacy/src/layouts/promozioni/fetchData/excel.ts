@@ -10,8 +10,7 @@ interface UserContext {
 }
 
 export function DwdExcelAPI(userContext: UserContext, abortController: any, 
-filtersInTable: {cdp: string; cdl: string},
-openErrorSB: (icons: string, message: string) => void): void {
+filtersInTable: {cdp: string; cdl: string} ): void {
     if (userContext.details === undefined) { return; }
     FetchData(`${import.meta.env.VITE_API_PRODUCTS}sales/exports`, 'POST', {
         tk: userContext.token,

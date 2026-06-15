@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 
 //@internal components
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
-import MDSnackbar from "../../../components/MDSnackbar";
 
 import { VirtuosoGridVI } from './VirtuosoGridVI.js';
 
@@ -72,25 +71,6 @@ const FidoManagement: React.FC<{}> = () => {
     //Notifica Generale di Error/Info/Success
     //--- Messaggio di Errore
     const [error, setError] = React.useState<String>("");
-    //--- Stato del Messaggio se aperto o meno
-    const [errorSB, setErrorSB] = React.useState<Boolean>(false);
-    const closeErrorSB = () => setErrorSB(false);
-    const openErrorSB = (icon: string, message: string) => { setErrorSB(true); setDymIcon(icon); setError(message) };
-    // --- Richiamando e settando uno di questi valori definisce il colore e l'icona in utilizzo dal pop-up
-    const [dymIcon, setDymIcon] = React.useState<string>("warning");
-    const renderErrorSB = (
-        <MDSnackbar
-            color={dymIcon}
-            icon={dymIcon}
-            title="Focelda Dashboard"
-            content={error}
-            dateTime="1 sec fa"
-            open={errorSB}
-            onClose={closeErrorSB}
-            close={closeErrorSB}
-            bgWhite
-        />
-    );
 
     const [loadState, setLoadState] = React.useState<boolean>(true);
     const [loadActionState, setLoadActionState] = React.useState<boolean>(false);
@@ -244,7 +224,7 @@ const FidoManagement: React.FC<{}> = () => {
 
     useEffect(() => {
         if (userContext.details === undefined) { return; }
-        DataAPI(userContext, abortController, setData, setLoadState, openErrorSB);
+        DataAPI(userContext, abortController, setData, setLoadState);
         // Pulisci l'abortController quando il componente si smonta
         return () => {
             cancelRequest();
@@ -255,7 +235,7 @@ const FidoManagement: React.FC<{}> = () => {
         ActionOnBlock({ data: { idb: e._id }, tp: 1 })
         TakeRequestAPI({
             userContext: userContext, abortController: abortController,
-            elementSelected: e, openErrorSB: openErrorSB, reloadData: DataAPI, setData: setData
+            elementSelected: e, reloadData: DataAPI, setData: setData
         });
     }, [data]);
 
@@ -330,8 +310,7 @@ const FidoManagement: React.FC<{}> = () => {
 
     return (
         <DashboardLayout>
-            <FiltersBar userContext={userContext} setData={setData} setLoadState={setLoadState}
-                openErrorSB={openErrorSB} totalNumber={data.length} euroTotal={euroTotal} />
+            <FiltersBar userContext={userContext} setData={setData} setLoadState={setLoadState} totalNumber={data.length} euroTotal={euroTotal} />
             {!loadState ?
                 data.length > 0 ? <VirtuosoGridVI
                     setData={setData}
@@ -341,7 +320,6 @@ const FidoManagement: React.FC<{}> = () => {
                     listOfRequestStatus={listOfRequestStatus}
                     TakeRequest={TakeRequest}
                     ChangeStatusDB={ChangeStatusDB}
-                    openErrorSB={openErrorSB}
                     rowSelected={rowSelected}
                     setRowSelected={setRowSelected}
                     CreateChat={CreateChat}
@@ -367,7 +345,6 @@ const FidoManagement: React.FC<{}> = () => {
                 maxWidth: "15vw", minWidth: 150, fontSize: '0.87rem', zIndex: 9999,
                 textAlign: 'center'
             }} />
-            {renderErrorSB}
         </DashboardLayout>
     )
 };

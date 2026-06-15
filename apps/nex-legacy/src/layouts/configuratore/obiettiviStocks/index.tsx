@@ -16,7 +16,6 @@ import { SaveConditionAPI } from './fetchData/saveCondition';
 import ErrorIMG from 'assets/images/5203299_trasparent.webp';
 import { GeneralError } from 'components/NoData/generalError';
 import { SuppliersListAPI } from './fetchData/SuppliersListAPI';
-import MDSnackbar from 'components/MDSnackbar';
 import { TableDataAPI } from './fetchData/tableData';
 import { TableVirtualized } from 'components/Virtualized/table';
 
@@ -107,28 +106,6 @@ export const StocksTargetConfigurator: React.FC<ConfiguratoreFornitoriProps> = (
     const [userContext, setUserContext] = React.useContext<any>(UserContext);
     //Errore Fetch iniziale (Emoji Error)
     const [err, setErr] = React.useState(false);
-    //--- Stato del Messaggio se aperto o meno
-    const [errorSB, setErrorSB] = React.useState<Boolean>(false);
-    const closeErrorSB = () => setErrorSB(false);
-    const openErrorSB = (icon: string, message: string) => { setErrorSB(true); setDymIcon(icon); setError(message) };
-
-    // --- Richiamando e settando uno di questi valori definisce il colore e l'icona in utilizzo dal pop-up
-    const [dymIcon, setDymIcon] = React.useState<string>("warning");
-    //--- Messaggio di Errore
-    const [error, setError] = React.useState<String>("");
-    const renderErrorSB = (
-        <MDSnackbar
-            color={dymIcon}
-            icon={dymIcon}
-            title="Focelda Dashboard"
-            content={error}
-            dateTime="1 sec fa"
-            open={errorSB}
-            onClose={closeErrorSB}
-            close={closeErrorSB}
-            bgWhite
-        />
-    );
     const [onLoad, setOnLoad] = React.useState<boolean>(true);
 
     //0 => Inserisci Nuova Condizione || 1 => Modifica Condizione Esistente in tabella
@@ -509,7 +486,7 @@ export const StocksTargetConfigurator: React.FC<ConfiguratoreFornitoriProps> = (
                         <FiltersBar ChangeStatusPanelSupplierToEdit={ChangeStatusPanelSupplierToEdit}
                             dataToInsert={dataToInsert} setDataToInsert={setDataToInsert} TagDist={TagDist}
                             InsertConditionInTable={InsertConditionInTable} saveBtnState={CheckDataToInsert(dataToInsert)}
-                            tableData={tableData} openErrorSB={openErrorSB} Search={Search} onLoad={onLoad} />
+                            tableData={tableData} Search={Search} onLoad={onLoad} />
                     </Stack>
                 </Card>
 
@@ -533,7 +510,6 @@ export const StocksTargetConfigurator: React.FC<ConfiguratoreFornitoriProps> = (
                 DeletePropsOnItem={DeletePropsOnItem} openedBy={extraSuppliersPanelOpenedBy} RetriveDistData={RetriveDistData}
                 SaveChangedConfiguration={SaveChangedConfiguration} />
         </React.Fragment> : <GeneralError img={ErrorIMG} />}
-        {renderErrorSB}
         <Tooltip id="general-confg-suppliers-tooltip" place="bottom" style={{
             maxWidth: "15vw", minWidth: 150, fontSize: '0.87rem', zIndex: 9999,
             textAlign: 'center'

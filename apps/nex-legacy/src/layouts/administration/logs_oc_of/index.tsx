@@ -3,7 +3,6 @@ import { UserContext } from "context/UserContext";
 
 import { Stack } from '@mui/material';
 import DashboardLayout from 'examples/LayoutContainers/DashboardLayout';
-import MDSnackbar from 'components/MDSnackbar';
 import { PopupInfo } from 'components/PopupInfo';
 import { GeneralError } from 'components/NoData/generalError';
 import { Tooltip } from 'react-tooltip';
@@ -28,27 +27,6 @@ export const OCFLogs: React.FC<ConfiguratoreFornitoriProps> = () => {
     const [userContext, setUserContext] = React.useContext<any>(UserContext);
     //Errore Fetch iniziale (Emoji Error)
     const [err, setErr] = React.useState(false);
-    //--- Stato del Messaggio se aperto o meno
-    const [errorSB, setErrorSB] = React.useState<Boolean>(false);
-    const closeErrorSB = () => setErrorSB(false);
-    // --- Richiamando e settando uno di questi valori definisce il colore e l'icona in utilizzo dal pop-up
-    const [dymIcon, setDymIcon] = React.useState<string>("warning");
-    //--- Messaggio di Errore
-    const [error, setError] = React.useState<String>("");
-    const renderErrorSB = (
-        <MDSnackbar
-            color={dymIcon}
-            icon={dymIcon}
-            title="Focelda Dashboard"
-            content={error}
-            dateTime="1 sec fa"
-            open={errorSB}
-            onClose={closeErrorSB}
-            close={closeErrorSB}
-            bgWhite
-        />
-    );
-
 
     const [tableData, setTableData] = React.useState<Array<Object>>([]);
     //statehook per i dati inseriti dall'utente.
@@ -138,7 +116,6 @@ export const OCFLogs: React.FC<ConfiguratoreFornitoriProps> = () => {
                 }}
             />
         </Stack> : <GeneralError img={ErrorIMG} />}
-        {renderErrorSB}
         <Tooltip id="general-confg-suppliers-tooltip" place="bottom" style={{
             maxWidth: "15vw", minWidth: 150, fontSize: '0.87rem', zIndex: 9999,
             textAlign: 'center'

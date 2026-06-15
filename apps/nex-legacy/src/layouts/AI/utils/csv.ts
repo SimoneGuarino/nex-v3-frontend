@@ -9,7 +9,7 @@ export function exportToCsv(
     csvLines.push(
         columns
             .map(col => `"${col.replace(/"/g, '""')}"`)
-            .join(',')
+            .join(';')
     );
 
     // 2) righe
@@ -19,7 +19,7 @@ export function exportToCsv(
                 const v = cell == null ? '' : String(cell);
                 return `"${v.replace(/"/g, '""')}"`;
             })
-            .join(',');
+            .join(';');
         csvLines.push(line);
     }
 

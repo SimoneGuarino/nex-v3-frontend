@@ -13,12 +13,12 @@ import { InfiniteScrollAPI } from './fetchData/InfiniteScrollAPI';
 import { format } from 'date-fns';
 import { ConvertToItalianDate, DivideName, GetDate } from 'utils/index';
 import { Comments } from 'layouts/ordini/sbloccoOrdini/extraPanel/comments';
-import FDIconButton from 'components/FDIconButton';
 import { useGeneralDataContext } from 'context/GeneralDataContext';
 import { enqueueSnackbar } from 'components/MessageBox';
 import { UserState } from 'types/UserContext';
 import { useTour } from "tour/TourProvider";
 import { useNexTheme } from '@nex/theme-system';
+import { FDIconButton } from 'components/UI/buttons/FDIconButton';
 
 
 // ——————————————————————————————————————————————————————————
@@ -215,19 +215,17 @@ export const RenderRow: React.FC<RenderRowProps> = ({ index, elm, setRowSelected
                     data-tour-allow
                     data-tooltip-id='general-confg-suppliers-tooltip'
                     data-tooltip-content='In questa richiesta sono presenti delle note.'
-                    sx={{
-                        '&:hover': { backgroundColor: `${darkMode ? theme.palette.grey[800] : theme.palette.grey[300]}` }
-                    }}>
-                    {icon_note({ width: 25, height: 25, color: `${darkMode ? palette.grey[400] : palette.grey[700]}` })}
-                </FDIconButton>}
+                    icon={<span className="relative inline-flex">
+                        {icon_note({ width: 25, height: 25, color: `${darkMode ? palette.grey[400] : palette.grey[700]}` })}
+                    </span>} />}
             <div className="mx-6 h-[55px] w-px bg-neutral-300/70 dark:bg-white/10" />
-            <FDIconButton onClick={handleChatClick}
+            <FDIconButton
+                icon={icon_forum({ width: 25, height: 25, color: `${darkMode ? palette.grey[400] : palette.grey[700]}` })}
+                onClick={handleChatClick}
                 data-tour="sblocco-chat"
                 data-tour-allow
                 data-tooltip-id='general-confg-suppliers-tooltip'
-                data-tooltip-content='Apri e visualizza la chat avvenuta in questo blocco.'>
-                {icon_forum({ width: 25, height: 25, color: `${darkMode ? palette.grey[400] : palette.grey[700]}` })}
-            </FDIconButton>
+                data-tooltip-content='Apri e visualizza la chat avvenuta in questo blocco.' />
         </div>
     </div>
 };

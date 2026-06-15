@@ -8,9 +8,9 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import FDIconButton from 'components/FDIconButton';
 import { Button, Divider } from '@mui/material';
 import { MainTheme } from 'assets/settingsTheme';
+import FDIconButton from 'components/UI/buttons/FDIconButton';
 
 
 function Settings({ columns, visibleColumns, setVisibleColumns, toggleColumnVisibility }) {
@@ -112,11 +112,10 @@ function Settings({ columns, visibleColumns, setVisibleColumns, toggleColumnVisi
         <Fragment>
             {infoMenu()}
             <FDIconButton
+                icon={<MoreVertIcon />}
                 data-tooltip-id="general-compare-tooltip"
                 data-tooltip-content='Impostazioni dei Fornitori'
-                aria-label="sort" onClick={(e) => handleOpenMenu(e)}>
-                <MoreVertIcon />
-            </FDIconButton>
+                aria-label="sort" onClick={(e) => handleOpenMenu(e)} />
         </Fragment>
     );
 }

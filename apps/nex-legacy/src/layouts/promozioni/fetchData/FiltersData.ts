@@ -8,8 +8,8 @@ interface UserContext {
     token: string;
 }
 
-export function FiltersDataAPI({userContext, abortController, setFiltersData, setFiltersLoad, openErrorSB} : 
-{userContext: UserContext, abortController: any; openErrorSB : any;
+export function FiltersDataAPI({userContext, abortController, setFiltersData, setFiltersLoad} : 
+{userContext: UserContext, abortController: any;
         setFiltersData: (prev: any) => void; setFiltersLoad: (prev: any) => void}): void {
     if (userContext.details === undefined) { return; }
 

@@ -118,7 +118,7 @@ function ShellHeader({ chromeMode }: { chromeMode: ShellChromeMode }) {
 
 export default function ShellLayout({ children }: Props) {
     const location = useLocation();
-    const activeMicrofrontend = resolveActiveMicrofrontend(location);
+    const activeMicrofrontend = resolveActiveMicrofrontend(location as any);
     const chromeMode = activeMicrofrontend?.chrome ?? "minimal";
     const showSidebar = chromeMode === "full";
     const showHeader = chromeMode !== "hidden";

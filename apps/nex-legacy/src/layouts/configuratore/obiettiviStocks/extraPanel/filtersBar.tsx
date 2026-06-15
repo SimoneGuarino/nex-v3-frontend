@@ -9,6 +9,7 @@ import LoadingButton from '@mui/lab/LoadingButton';
 import { MainTheme } from 'assets/settingsTheme';
 import MDButton from 'components/MDButton';
 import { useNexTheme } from '@nex/theme-system';
+import { enqueueSnackbar } from 'components/MessageBox/SnackbarProvider/SnackbarProvider';
 
 interface distSelectedProps {
     name: string;
@@ -31,14 +32,13 @@ interface AddElementsProps {
     InsertConditionInTable: () => Array<object>;
     saveBtnState: boolean;
     tableData: any;
-    openErrorSB: (icon: string, message: string) => void;
     Search: () => void;
     onLoad: boolean;
 }
 
 
 export const FiltersBar: React.FC<AddElementsProps> = ({ ChangeStatusPanelSupplierToEdit, dataToInsert, setDataToInsert,
-    TagDist, InsertConditionInTable, saveBtnState, tableData, openErrorSB, Search, onLoad,
+    TagDist, InsertConditionInTable, saveBtnState, tableData, Search, onLoad,
 }) => {
     const { preferences } = useNexTheme();
     const darkMode = preferences.mode === "dark";
@@ -239,8 +239,11 @@ export const FiltersBar: React.FC<AddElementsProps> = ({ ChangeStatusPanelSuppli
 
     const Save = () => {
         if (CheckIfDataIsAlreadyIn()) {
-            openErrorSB("info",
-                "L'elemento è gia presente nella tabella, perfavore inserisci un'altra configurazione."); return;
+            enqueueSnackbar("L'elemento è gia presente nella tabella, perfavore inserisci un'altra configurazione.", {
+                title: 'Ops..',
+                type: 'info',
+            });
+            return;
         }
         const dataToPass = InsertConditionInTable();
         if (Array.isArray(dataToPass)) {

@@ -6,7 +6,6 @@ import './style.css';
 import Settings from '../../settingsTable'
 import { icon_eurSymbol, icon_gridView, icon_percent } from 'config/icons';
 import { icon_reorder } from 'config/icons';
-import FDIconButton from 'components/FDIconButton';
 import { icon_fileDownload } from 'config/icons';
 import { icon_filter } from 'config/icons';
 import theme from 'assets/theme';
@@ -15,6 +14,7 @@ import MDTypography from 'components/MDTypography';
 import { icon_quantity } from 'config/icons';
 import { MainTheme } from 'assets/settingsTheme';
 import { useNexTheme } from '@nex/theme-system';
+import FDIconButton from 'components/UI/buttons/FDIconButton';
 
 
 export function ParamBar({ paramState, setParamState, distList__, visibleColumns, 
@@ -70,10 +70,11 @@ ChangeStatusFilters, ChangeRibassoType, FilterByQuantity }) {
             style={{ padding: '2px 15px', borderRadius: 15 }}
             justifyContent='flex-end' alignItems='center'>
             <Stack direction='row' mr='auto' gap={2}>
-                <FDIconButton onClick={() => ChangeBOIMPPanleVisibility()} data-tooltip-id='general-compare-tooltip'
-                    data-tooltip-content='Scarica il BOIMP in formato Excel'>
-                    {icon_fileDownload({ width: 35 })}
-                </FDIconButton>
+                <FDIconButton
+                    icon={icon_fileDownload({ width: 30 })}
+                    onClick={() => ChangeBOIMPPanleVisibility()} 
+                    data-tooltip-id='general-compare-tooltip'
+                    data-tooltip-content='Scarica il BOIMP in formato Excel' />
                 <SwtichView />
             </Stack>
 
@@ -135,9 +136,7 @@ ChangeStatusFilters, ChangeRibassoType, FilterByQuantity }) {
 
             <Divider orientation='vertical' sx={{ backgroundColor: '#ccc', height: 50 }} />
             <Stack direction='row' alignItems='center' gap={1}>
-                <FDIconButton onClick={() => ChangeStatusFilters()}>
-                    {icon_filter({ width: 28 })}
-                </FDIconButton>
+                <FDIconButton icon={icon_filter({ width: 28 })} onClick={() => ChangeStatusFilters()} />
                 <Settings columns={distList__} visibleColumns={visibleColumns} 
                 toggleColumnVisibility={toggleColumnVisibility} setVisibleColumns={setVisibleColumns}/>
             </Stack>

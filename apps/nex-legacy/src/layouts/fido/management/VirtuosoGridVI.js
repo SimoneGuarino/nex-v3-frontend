@@ -55,7 +55,7 @@ const RenderRow = ({ index, elm, setRowSelected, rowSelected, setStatusBox, list
 };
 
 
-function VirtuosoGridVI({ setData, abortController, openErrorSB, CreateChat, chronoPanelStatus,
+function VirtuosoGridVI({ setData, abortController, CreateChat, chronoPanelStatus,
     data, listOfRequestStatus, TakeRequest, ChangeStatusDB, ChangeItemChrono, rowSelected, setRowSelected, statusBox, setStatusBox, openOverview, closeOverview, lockCrono, lockChatCard, lockOverviewOpen, isActive, }) {
     const palette = MainTheme().palette;
 
@@ -184,7 +184,7 @@ function VirtuosoGridVI({ setData, abortController, openErrorSB, CreateChat, chr
             />
 
         </Stack>
-        <Overview data={data} setData={setData} abortController={abortController} openErrorSB={openErrorSB}
+        <Overview data={data} setData={setData} abortController={abortController}
             rowSelected={rowSelected} setRowSelected={setRowSelected}
             statusBox={statusBox} setStatusBox={setStatusBox} genColorForRequestStatus={GenStatusColor}
             listOfRequestStatus={listOfRequestStatus} userContext={userContext} CheckLUGotTheST={CheckLUGotTheST}

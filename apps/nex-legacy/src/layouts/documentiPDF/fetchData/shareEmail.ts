@@ -82,7 +82,7 @@ export async function ShareEmailAPI({
     ChangeLoadStatus?.({ from: "ShareEmailAPI", bool: true });
 
     return await FetchData<ShareEmailResponse>(
-        // Base URL già configurato in REACT_APP_API_PDF_READER (include il gateway nginx)
+        // Base URL già configurato in VITE_API_PDF_READER (include il gateway nginx)
         `${import.meta.env.VITE_API_PDF_READER}pdf/v2/shareEmail`,
         "POST",
         // Payload coerente con il BE: { to, message, docs }

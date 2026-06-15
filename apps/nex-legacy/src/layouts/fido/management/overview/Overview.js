@@ -56,7 +56,7 @@ const styleMainBox = {
 }
 
 
-export function Overview({ data, setData, abortController, openErrorSB, rowSelected, setRowSelected,
+export function Overview({ data, setData, abortController, rowSelected, setRowSelected,
     statusBox, setStatusBox, genColorForRequestStatus, listOfRequestStatus, chronoPanelStatus,
     userContext, CheckLUGotTheST, TaskAssignment, ChangeStatus, onClose, lockChat, isActive = true, }) {
     const { openChat, createChatBlock } = useGeneralDataContext();
@@ -113,7 +113,7 @@ export function Overview({ data, setData, abortController, openErrorSB, rowSelec
             case "save":
                 setEditMode(null)
                 if (editChanges[field] && editChanges[field] != e) {
-                    ChangeFieldValue(userContext, abortController, data[rowSelected], openErrorSB, editChanges);
+                    ChangeFieldValue(userContext, abortController, data[rowSelected], editChanges);
                     setData(prev => {
                         const copy = [...prev];
                         copy[rowSelected]['Dettagli'][field] = parseFloat(editChanges[field]);

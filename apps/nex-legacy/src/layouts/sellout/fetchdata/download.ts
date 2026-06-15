@@ -80,7 +80,7 @@ export async function triggerSelloutDownload(
         const base = getLegacyBase();
         if (!base) {
             console.warn(
-                "REACT_APP_API_MARIA_MACHINE non configurata: impossibile usare l'endpoint legacy."
+                "VITE_API_MARIA_MACHINE non configurata: impossibile usare l'endpoint legacy."
             );
             return;
         }

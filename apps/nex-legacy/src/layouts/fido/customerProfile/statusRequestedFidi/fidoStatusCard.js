@@ -17,8 +17,8 @@ import ConvertModule from 'classes/convert';
 import { MainTheme } from 'assets/settingsTheme';
 import { icon_chat, icon_note } from 'config/icons';
 import { StringToHTML } from 'utils/stringToHTML';
-import FDIconButton from 'components/FDIconButton';
 import { useNexTheme } from '@nex/theme-system';
+import FDIconButton from 'components/UI/buttons/FDIconButton';
 const Convert = new ConvertModule();
 
 const paragraph_secondary_css = {
@@ -253,9 +253,7 @@ function FidoStatusCard({ index, elm, key_prop, CreateChat }) {
                     </Stack>
                     {elm?.CommentoEsito && <Stack direction='row' gap={1} alignItems='center' justifyContent='space-between'>
                         <MDTypography sx={paragraph_secondary_css}>Commento Esito</MDTypography>
-                        <FDIconButton onClick={handleExpandClick}>
-                            {icon_note()}
-                        </FDIconButton>
+                        <FDIconButton icon={icon_note()} onClick={handleExpandClick} />
                     </Stack>}
                 </Stack>
 

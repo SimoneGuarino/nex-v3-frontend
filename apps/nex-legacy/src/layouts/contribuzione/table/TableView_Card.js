@@ -10,7 +10,6 @@ import ConvertModule from 'classes/convert';
 import { icon_TrendingUp, icon_TrendingDown, icon_multiFunction, icon_info } from 'config/icons';
 import { icon_edit } from 'config/icons';
 import { icon_megaphone } from 'config/icons';
-import FDIconButton from 'components/FDIconButton';
 import { icon_save } from 'config/icons';
 import { icon_firstPlace } from 'config/icons';
 import { NumberToEuro } from 'utils/numberToEuro';

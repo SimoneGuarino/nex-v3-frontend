@@ -8,12 +8,12 @@ import MDTypography from "components/MDTypography";
 import { MainTheme } from 'assets/settingsTheme';
 import { icon_chrono, icon_forum, icon_time } from 'config/icons';
 import { useGeneralDataContext } from 'context/GeneralDataContext';
-import FDIconButton from 'components/FDIconButton';
 import { ConvertToItalianDate } from 'utils/italianDate';
 import FDBox from 'components/UI/box/FDBox';
 
 import ConvertModule from "classes/convert.js";
 import { useNexTheme } from '@nex/theme-system';
+import FDIconButton from 'components/UI/buttons/FDIconButton';
 const Convert = new ConvertModule();
 
 
@@ -48,18 +48,21 @@ export function ItemBoxStyled({ index, elmDetails, elm, rowSelected,
                     <Stack gap={2} alignItems='flex-start' flex={40}>
                         <Stack direction='row' gap={2} alignItems='center' width='100%'>
                             <Stack gap={1} alignItems='center' data-tour="crono-change-status">
-                                <FDIconButton disabled={lockCrono} onClick={() => ChangeItemChrono(elm)}
+                                <FDIconButton icon={icon_chrono({ color: palette.white, width: 25, height: 25 })} disabled={lockCrono} onClick={() => ChangeItemChrono(elm)}
                                     sx={{ width: 'fit-content' }}
                                     data-tooltip-id='general-fido-tooltip'
-                                    data-tooltip-content='Cronologia cambiamento di stati'>
-                                    {icon_chrono({ color: palette.white, width: 25, height: 25 })}
-                                </FDIconButton>
+                                    data-tooltip-content='Cronologia cambiamento di stati' />
 
-                                {([2, 3].includes(elm.Stato) && elm.messageExist) && <FDIconButton disabled={lockChatCard} onClick={() => CreateChat({ item: elm })}
-                                    data-tooltip-id='general-fido-tooltip'
-                                    data-tooltip-content='Vedi la chat avvenuta per la richiesta'>
-                                    {icon_forum({ color: palette.white, width: 20, height: 20 })}{icon_chrono({ color: palette.white, width: 20, height: 20 })}
-                                </FDIconButton>}
+                                {([2, 3].includes(elm.Stato) && elm.messageExist) && 
+                                    <FDIconButton
+                                        icon={<>
+                                            {icon_forum({ color: palette.white, width: 20, height: 20 })}
+                                            {icon_chrono({ color: palette.white, width: 20, height: 20 })}
+                                        </>}
+                                        disabled={lockChatCard} 
+                                        onClick={() => CreateChat({ item: elm })}
+                                        data-tooltip-id='general-fido-tooltip'
+                                        data-tooltip-content='Vedi la chat avvenuta per la richiesta' />}
                             </Stack>
 
                             <Stack alignItems='flex-start' width='100%'>

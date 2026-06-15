@@ -248,7 +248,7 @@ function renderNode(node: Node, key: number): JSX.Element {
       );
 
     case "table":
-      if (!node.rows || node.rows.length === 0) return <></>;
+      if (!node.rows || node.rows.length === 0) return <React.Fragment key={key} />;
       const [header, ...body] = node.rows;
       return (
         <div key={key} className="overflow-x-auto my-2">
@@ -278,10 +278,10 @@ function renderNode(node: Node, key: number): JSX.Element {
       );
 
     case "text":
-      return <>{renderInline(node.content || "")}</>;
+      return <React.Fragment key={key}>{renderInline(node.content || "")}</React.Fragment>;
 
     default:
-      return <></>;
+      return <React.Fragment key={key} />;
   }
 }
 
@@ -324,11 +324,45 @@ function renderInline(text: string): (string | JSX.Element)[] {
     </em>
   ));
 
-  // Link [text](url)
-  nodes = splitMap(nodes, /\[([^\]]+)\]\(([^)]+)\)/g, (m, i) => (
-    <a key={`link-${i}`} href={m[2]} target="_blank" rel="noreferrer" className="text-blue-600 dark:text-blue-400 underline hover:opacity-80">
-      {m[1]}
-    </a>
+  // Link [text](url). Internal MEPA evidence links are rendered as source pills
+  // and dispatch a page-level event consumed by the MEPA workspace Evidence Viewer.
+  nodes = splitMap(nodes, /\[([^\]]+)\]\(([^)]+)\)/g, (m, i) => {
+    const href = m[2];
+    if (href.startsWith("nex-mepa-evidence:")) {
+      const chunkId = decodeURIComponent(href.replace("nex-mepa-evidence:", ""));
+      return (
+        <button
+          key={`mepa-evidence-${i}`}
+          type="button"
+          title={`Apri fonte ${m[1]}`}
+          onClick={(event) => {
+            event.preventDefault();
+            window.dispatchEvent(new CustomEvent("nex:mepa:evidence:open", { detail: { chunkId } }));
+          }}
+          className="mx-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-blue-200 bg-blue-50 px-1.5 align-super text-[10px] font-semibold leading-none text-blue-700 shadow-sm transition hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/25"
+        >
+          {m[1]}
+        </button>
+      );
+    }
+    return (
+      <a key={`link-${i}`} href={href} target="_blank" rel="noreferrer" className="text-blue-600 dark:text-blue-400 underline hover:opacity-80">
+        {m[1]}
+      </a>
+    );
+  });
+
+  // Citation references like [1], [2], rendered as compact ChatGPT-like source pills.
+  // This is intentionally after markdown links so [label](url) is not converted.
+  nodes = splitMap(nodes, /\[(\d{1,2})\](?!\()/g, (m, i) => (
+    <sup key={`citation-${m[1]}-${i}`} className="mx-0.5 inline-flex align-super">
+      <span
+        title={`Fonte ${m[1]}`}
+        className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-blue-200 bg-blue-50 px-1.5 text-[10px] font-semibold leading-none text-blue-700 shadow-sm dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-200"
+      >
+        {m[1]}
+      </span>
+    </sup>
   ));
 
   return nodes;

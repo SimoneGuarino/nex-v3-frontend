@@ -1,7 +1,7 @@
 import { enqueueSnackbar } from 'components/MessageBox';
 import { FetchData } from '../../../../examples/Fetch';
 
-export function ChangeFieldValue(userContext, abortController, elementSelected, openErrorSB, editChanges) {
+export function ChangeFieldValue(userContext, abortController, elementSelected, editChanges) {
     if(userContext.details === undefined){return;}
     FetchData(import.meta.env.VITE_API_CUSTOMERSFIDO + 'cfv-fdo', 'POST', {
         tk: userContext.token,

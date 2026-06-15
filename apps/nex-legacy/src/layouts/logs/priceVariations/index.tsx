@@ -10,7 +10,6 @@ import { UserContext } from "context/UserContext";
 
 import { Stack } from '@mui/material';
 import DashboardLayout from 'examples/LayoutContainers/DashboardLayout';
-import MDSnackbar from 'components/MDSnackbar';
 import { PopupInfo } from 'components/PopupInfo';
 import { GeneralError } from 'components/NoData/generalError';
 import { Tooltip } from 'react-tooltip';

@@ -7,12 +7,11 @@ import { ConvertToItalianDate } from 'utils/italianDate';
 import { useGeneralDataContext } from 'context/GeneralDataContext';
 import { enqueueSnackbar } from 'components/MessageBox';
 import { DivideName } from 'utils/divideName';
-import FDIconButton from 'components/FDIconButton';
 import { icon_forum, icon_note } from 'config/icons';
 import { useTour } from "tour/TourProvider";
-import FDButton from 'components/UI/buttons/FDButton';
 import FDBox from 'components/UI/box/FDBox';
 import { useNexTheme } from '@nex/theme-system';
+import FDIconButton from 'components/UI/buttons/FDIconButton';
 
 // ——————————————————————————————————————————————————————————
 // INTERFACES
@@ -217,7 +216,9 @@ export const RenderRow: React.FC<RenderRowProps> = ({ index, elm, setRowSelected
                     {icon_note({ width: 25, height: 25, color: `${darkMode ? palette.grey[700] : palette.grey[500]}` })}</span>
             }
 
-            {/**BUTTONS */}
+            {/**
+             * NEXV3 - DA CONTROLLARE PRIMA DI MESSA IN PRODUZIONE
+             * BUTTONS */}
             <FDIconButton
                 data-tour="sblocco-chat"
                 className='h-fit'
@@ -235,16 +236,11 @@ export const RenderRow: React.FC<RenderRowProps> = ({ index, elm, setRowSelected
                 disabled={chatDisabled}                  // se FDIconButton lo supporta
                 aria-disabled={chatDisabled}             // fallback a11y
                 tabIndex={chatDisabled ? -1 : 0}         // evita focus durante il lock
-                sx={{
-                    pointerEvents: chatDisabled ? 'none' : 'auto', // blocca hover/click anche se disabled non è supportato
-                    opacity: chatDisabled ? 0.5 : 1,               // feedback visivo
-                }}
                 data-tooltip-id='general-confg-suppliers-tooltip'
                 data-tooltip-content={chatDisabled
                     ? 'Azione disabilitata durante il tour'
                     : 'Apri e visualizza la chat avvenuta in questo blocco.'}
-            >
-                <span className="relative inline-flex">
+                icon={<span className="relative inline-flex">
                     {icon_forum({ width: 25, height: 25, color: `${darkMode ? palette.grey[400] : palette.grey[700]}` })}
                     {showUnreadBadge && (
                         <span
@@ -263,8 +259,8 @@ export const RenderRow: React.FC<RenderRowProps> = ({ index, elm, setRowSelected
                             {unread > 99 ? '99+' : unread}
                         </span>
                     )}
-                </span>
-            </FDIconButton>
+                </span>}
+            />
         </div>
     </FDBox>
 }

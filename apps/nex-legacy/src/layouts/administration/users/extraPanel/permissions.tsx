@@ -14,7 +14,6 @@ import PermissionMoudle from '../../../../classes/permission';
 import styled from '@emotion/styled';
 
 import { PopupInfo } from 'components/PopupInfo';
-import { companys, rolesAvaible } from 'classes/core';
 import MDTypography from 'components/MDTypography';
 import { MainTheme } from 'assets/settingsTheme';
 import { Tag } from 'components/Tag/Tag';
@@ -22,7 +21,15 @@ import routes from 'routes';
 import { useNexTheme } from '@nex/theme-system';
 const Permission = new PermissionMoudle();
 
+interface RolesAvaibleProps {
+    name: string,
+    index: number
+}
 
+const companys = ['Focelda', 'IOT'];
+const rolesAvaible: Array<RolesAvaibleProps> = [{name: 'Dev', index: 0}, {name: 'Admin', index: 1}, 
+    {name: "Buyer", index: 2}, {name: 'Commerciale', index: 3}, 
+    {name: 'Amministrativo', index: 4}, {name: 'Logistica', index: 5}];
 
 
 interface ExpandMoreProps extends IconButtonProps {

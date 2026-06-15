@@ -42,6 +42,19 @@ export type Conversation = {
     createdAt: number;
 };
 
+export type AIScope =
+    | {
+        kind: "GENERAL";
+      }
+    | {
+        kind: "MEPA_TENDER";
+        tenderId: string;
+        title?: string;
+        subtitle?: string;
+      };
+
+export type AIPresentationMode = "FLOATING" | "PAGE_DOCKED";
+
 // Tipi per il contesto AI
 type AIContextType = {
     open: boolean;
@@ -53,6 +66,12 @@ type AIContextType = {
     conversation: Conversation | null;
     setConversation: Dispatch<SetStateAction<Conversation | null>>;
     aiUnreadCount: number;
+    aiScope: AIScope;
+    setAiScope: Dispatch<SetStateAction<AIScope>>;
+    aiPresentationMode: AIPresentationMode;
+    setAiPresentationMode: Dispatch<SetStateAction<AIPresentationMode>>;
+    aiAttentionPulse: number;
+    requestAiAttention: () => void;
 };
 
 
@@ -70,6 +89,12 @@ export const AIContext = createContext<AIContextType>({
     conversation: null,
     setConversation: () => { },
     aiUnreadCount: 0,
+    aiScope: { kind: "GENERAL" },
+    setAiScope: () => { },
+    aiPresentationMode: "FLOATING",
+    setAiPresentationMode: () => { },
+    aiAttentionPulse: 0,
+    requestAiAttention: () => { },
 });
 
 const collectAIMessageIds = (conversations: Conversation[]): string[] => {
@@ -93,6 +118,13 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [history, setHistory] = useState<Conversation[]>([]); // Cronologia delle conversazioni
     const [conversation, setConversation] = useState<Conversation | null>(null); // Conversazione corrente
     const [aiUnreadCount, setAiUnreadCount] = useState<number>(0); // Messaggi AI non letti nel bottone topbar
+    const [aiScope, setAiScope] = useState<AIScope>({ kind: "GENERAL" }); // Contesto operativo AI (generale o workspace MEPA)
+    const [aiPresentationMode, setAiPresentationMode] = useState<AIPresentationMode>("FLOATING"); // Modalità di presentazione del pannello AI
+    const [aiAttentionPulse, setAiAttentionPulse] = useState<number>(0); // Segnale one-way per richiamare l'attenzione sul pannello AI gia' visibile
+
+    const requestAiAttention = () => {
+        setAiAttentionPulse((prev) => prev + 1);
+    };
 
     // Tiene traccia dei messaggi AI già considerati "letti" dal client.
     const seenAIMessageIdsRef = useRef<Set<string>>(new Set());
@@ -140,6 +172,12 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
                 conversation,
                 setConversation,
                 aiUnreadCount,
+                aiScope,
+                setAiScope,
+                aiPresentationMode,
+                setAiPresentationMode,
+                aiAttentionPulse,
+                requestAiAttention,
             }}
         >
             {children}

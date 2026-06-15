@@ -17,7 +17,6 @@ import { UserContext } from "../../../context/UserContext";
 import { Tooltip } from "react-tooltip";
 
 // components
-import MDSnackbar from "components/MDSnackbar";
 import Loader from "../../../Loader";
 import FDBox from "components/UI/box/FDBox";
 
@@ -44,6 +43,7 @@ import type { UserChoose } from "./types";
 import { useSectionTour } from "tour/useSectionTour";
 import { Role } from "tour/types";
 import FDButton from "components/UI/buttons/FDButton";
+import { enqueueSnackbar } from "components/MessageBox";
 
 
 /* =======================
@@ -301,18 +301,6 @@ function Payments() {
         return abortController.current;
     };
 
-    // snackbar / errori
-    const [error, setError] = useState<string>("");
-    const [errorSB, setErrorSB] = useState<boolean>(false);
-    const closeErrorSB = () => setErrorSB(false);
-    const [dymIcon, setDymIcon] = useState<"warning" | "error" | "success" | string>("warning");
-
-    const openErrorSB = (icon: "warning" | "error" | "success" | string, message: string) => {
-        setErrorSB(true);
-        setDymIcon(icon);
-        setError(message);
-    };
-
     // socket realtime
     const socketRef = useRef<typeof socket | null>(null);
 
@@ -423,7 +411,7 @@ function Payments() {
                 ChangeLoadStatus({ from: "search", bool: false });
             } catch (e: any) {
                 console.error(e);
-                openErrorSB("error", e?.message || "Errore durante il recupero pagamenti");
+                enqueueSnackbar(e?.message || "Errore durante il recupero pagamenti", { title: "Errore", variant: "error" });
                 ChangeLoadStatus({ from: "table", bool: false });
                 ChangeLoadStatus({ from: "search", bool: false });
             }
@@ -445,7 +433,7 @@ function Payments() {
             })
             .catch((e: any) => {
                 console.error(e);
-                openErrorSB("error", e?.message || "Errore durante lo scroll infinito");
+                enqueueSnackbar(e?.message || "Errore durante il recupero pagamenti", { title: "Errore", variant: "error" });
                 ChangeLoadStatus({ from: "infiniteScroll", bool: false });
                 return false;
             });
@@ -480,7 +468,7 @@ function Payments() {
                 }
 
                 setTotal((prev) => prev + incoming.length);
-                openErrorSB("success", "Hai dei nuovi pagamenti!.");
+                enqueueSnackbar("Hai dei nuovi pagamenti!.", { title: "Successo", variant: "success" });
             });
         }
 
@@ -608,18 +596,6 @@ function Payments() {
                         }}
                     />
                 }
-            />
-
-            <MDSnackbar
-                color={dymIcon}
-                icon={dymIcon}
-                title="Focelda Dashboard"
-                content={error}
-                dateTime="1 sec ago"
-                open={errorSB}
-                onClose={closeErrorSB}
-                close={closeErrorSB}
-                bgWhite
             />
 
             <Tooltip

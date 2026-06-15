@@ -66,8 +66,22 @@ export const Tab: React.FC<TabProps> = ({ label, icon, variant = 'ghost', color 
 // ——————————————————————————————————————————————————————————
 // MAIN COMPONENT
 // ——————————————————————————————————————————————————————————
+const isMepaConversation = (conversation?: Conversation | null): boolean => {
+    if (!conversation?.id) return false;
+    return conversation.id.startsWith("thread-") || /^MEPA\s*·/i.test(String(conversation.title ?? ""));
+};
+
+const getMepaThreadId = (tenderId: string) => `thread-${tenderId}`;
+
 const SideBar: React.FC<SideBarProps> = ({ open, menuRef, setIdSelected, resetToHero, LoadConversation }) => {
-    const { history, conversation } = useContext(AIContext);
+    const { history, conversation, aiScope } = useContext(AIContext);
+    const visibleHistory = history.filter((item: Conversation) => {
+        const isMepa = isMepaConversation(item);
+        if (aiScope.kind === "MEPA_TENDER") {
+            return item.id === getMepaThreadId(aiScope.tenderId);
+        }
+        return !isMepa;
+    });
 
     return (
         <AnimatePresence>
@@ -111,7 +125,7 @@ const SideBar: React.FC<SideBarProps> = ({ open, menuRef, setIdSelected, resetTo
                         <h2 className="text-sm font-light px-4">Chat</h2>
                         <div className="flex-1 overflow-auto p-4">
                             <ul className="space-y-2">
-                                {history.map((conversation_: Conversation) => {
+                                {visibleHistory.map((conversation_: Conversation) => {
                                     const isActive = Boolean(conversation && conversation_?.id === conversation?.id);
                                     return (
                                         <li key={conversation_.id} 

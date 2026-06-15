@@ -3,7 +3,6 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { Tooltip } from "react-tooltip";
 import Sidenav from "examples/Sidenav/Sidebar";
 import ReqFidoStatus from "examples/ReqFidoStatus";
-import Maintenance from "../maintenance";
 import DashboardNavbar from "examples/Navbars";
 import AILayout from "layouts/AI";
 import { ResetWelcomePassword } from "layouts/authentication/reset-password";
@@ -30,7 +29,7 @@ export default function AppShell({
         return (
             <ThemeProvider theme={activeTheme}>
                 <CssBaseline />
-                <Maintenance />
+                {/*<Maintenance />*/}
             </ThemeProvider>
         );
     if (!userContext || Object.keys(userContext).length === 0) return null;

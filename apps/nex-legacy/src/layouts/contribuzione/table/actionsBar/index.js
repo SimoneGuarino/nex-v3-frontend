@@ -8,11 +8,11 @@ import LoadingButton from '@mui/lab/LoadingButton';
 import MDTypography from 'components/MDTypography';
 import { icon_close, icon_delete, icon_eurSymbol, icon_percent, icon_saveMoney } from 'config/icons';
 import { icon_save } from 'config/icons';
-import FDIconButton from 'components/FDIconButton';
 import { icon_multiFunction } from 'config/icons';
 import { CheckAdminPermissions } from 'utils/checkAdminPermissions';
 import { MainTheme } from 'assets/settingsTheme';
 import { useNexTheme } from '@nex/theme-system';
+import FDIconButton from 'components/UI/buttons/FDIconButton';
 
 
 export function ActionsBar({ selectedFile, MakeEmptySelection, numFileSelected,
@@ -31,9 +31,8 @@ contributionsList, setTemp_param, userContext, buyerTarget}) {
                 elmToReturn = <FDIconButton
                     data-tooltip-id="general-compare-tooltip"
                     data-tooltip-content={tooltip_content}
-                    onClick={func} sx={{ ...sx }}>
-                    {icon}
-                </FDIconButton>
+                    onClick={func} sx={{ ...sx }}
+                    icon={icon} />
                 break;
             case 'LoadingButton':
                 elmToReturn = <LoadingButton sx={{ padding: 0, width: 25, height: 25, minWidth: 25, color: '#666b72' }}

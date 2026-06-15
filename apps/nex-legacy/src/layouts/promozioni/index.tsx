@@ -18,7 +18,6 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout"
 import { UserContext } from "context/UserContext";
 
 import { Card, Stack, Fade, Skeleton } from "@mui/material"
-import MDSnackbar from "components/MDSnackbar";
 
 import { FiltersDataAPI } from "./fetchData/FiltersData";
 import { DataAPI } from "./fetchData/data";
@@ -102,28 +101,6 @@ const Promozioni: React.FC<{}> = () => {
 
     //Errore Fetch iniziale (Emoji Error)
     const [err, setErr] = React.useState(false);
-    //Notifica Generale di Error/Info/Success
-    //--- Messaggio di Errore
-    const [error, setError] = React.useState("");
-    //--- Stato del Messaggio se aperto o meno
-    const [errorSB, setErrorSB] = React.useState(false);
-    const closeErrorSB = () => setErrorSB(false);
-    const openErrorSB = (icon: string, message: string) => { setErrorSB(true); setDymIcon(icon); setError(message) };
-    // --- Richiamando e settando uno di questi valori definisce il colore e l'icona in utilizzo dal pop-up
-    const [dymIcon, setDymIcon] = React.useState<string>("warning");
-    const renderErrorSB = (
-        <MDSnackbar
-            color={dymIcon}
-            icon={dymIcon}
-            title="Focelda Dashboard"
-            content={error}
-            dateTime="1 sec ago"
-            open={errorSB}
-            onClose={closeErrorSB}
-            close={closeErrorSB}
-            bgWhite
-        />
-    );
 
     const tour = useSectionTour({
         id: "nex_v2_promozioni",
@@ -217,11 +194,11 @@ const Promozioni: React.FC<{}> = () => {
 
     const FiltersData = React.useCallback(() => {
         setFiltersLoad(true);
-        FiltersDataAPI({ userContext, abortController, setFiltersData, setFiltersLoad, openErrorSB });
+        FiltersDataAPI({ userContext, abortController, setFiltersData, setFiltersLoad });
     }, []);
 
     const DwdExcel = () => {
-        DwdExcelAPI(userContext, abortController, filtersInTable, openErrorSB);
+        DwdExcelAPI(userContext, abortController, filtersInTable);
     };
 
 
@@ -245,13 +222,11 @@ const Promozioni: React.FC<{}> = () => {
                         setData={setData}
                         results={data.length}
                     />
-                    {renderErrorSB}
                 </Card>
 
                 </Fade>
                     : <SkeletonTableLoad />}
             </React.Fragment> : <GeneralError img={ErrorIMG} />}
-            {renderErrorSB}
             <Tooltip id="general-obiettivi-stocks-tooltip" place="bottom" style={{
                 maxWidth: "15vw", minWidth: 150, fontSize: '0.87rem', zIndex: 9999,
                 textAlign: 'center'

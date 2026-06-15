@@ -1,5 +1,4 @@
 import React from "react";
-import FDIconButton from "components/FDIconButton";
 import { TableVirtualized } from "components/Virtualized/table";
 import { LuFileText } from "react-icons/lu";
 import type {
@@ -8,6 +7,7 @@ import type {
     PurchasesSortDirection,
     PurchasesSortField,
 } from "../types";
+import { FDIconButton } from "components/UI/buttons/FDIconButton";
 
 const PdfIcon = LuFileText as React.FC<{ size?: number; className?: string }>;
 
@@ -72,17 +72,15 @@ export default function PurchasesTable(props: PurchasesTableProps) {
                     row?.invoice?.available ? (
                         <div className="w-full h-full flex items-center justify-center">
                             <FDIconButton
+                                icon={<PdfIcon />}
                                 size="small"
-                                iconOnly
                                 onClick={(e: React.MouseEvent) => {
                                     e.stopPropagation();
                                     onOpenInvoice(row);
                                 }}
                                 data-tooltip-id="purchases-tooltip"
                                 data-tooltip-content="Apri PDF fattura"
-                            >
-                                <PdfIcon />
-                            </FDIconButton>
+                            />
                         </div>
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500">-</div>
@@ -97,17 +95,15 @@ export default function PurchasesTable(props: PurchasesTableProps) {
                     row?.deliveryNote?.available ? (
                         <div className="w-full h-full flex items-center justify-center">
                             <FDIconButton
+                                icon={<PdfIcon />}
                                 size="small"
-                                iconOnly
                                 onClick={(e: React.MouseEvent) => {
                                     e.stopPropagation();
                                     onOpenDeliveryNote(row);
                                 }}
                                 data-tooltip-id="purchases-tooltip"
                                 data-tooltip-content="Apri PDF bolla"
-                            >
-                                <PdfIcon />
-                            </FDIconButton>
+                            />
                         </div>
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500">-</div>

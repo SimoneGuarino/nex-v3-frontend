@@ -14,9 +14,9 @@ interface SearchParam_{
     com: object,
 }
 
-export function SearchAPI({userContext, abortController, setData, searchParam, setLoadState, openErrorSB} : 
+export function SearchAPI({userContext, abortController, setData, searchParam, setLoadState} : 
     {userContext: UserContext, abortController: any, setData: (prev : any) => void; searchParam: SearchParam_;
-        setLoadState: (prev: boolean) => void; openErrorSB: (icon: string, message: string) => void;
+        setLoadState: (prev: boolean) => void;
     }): void {
     if (userContext.details === undefined) { return; }
     FetchData(`${import.meta.env.VITE_API_CUSTOMERSFIDO}srh-dta`, 'POST', {

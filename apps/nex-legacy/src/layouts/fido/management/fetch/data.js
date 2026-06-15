@@ -1,7 +1,7 @@
 import { enqueueSnackbar } from 'components/MessageBox';
 import { FetchData } from '../../../../examples/Fetch';
 
-export function DataAPI(userContext, abortController, setData, setLoadState, openErrorSB) {
+export function DataAPI(userContext, abortController, setData, setLoadState) {
     if(userContext.details === undefined){return;}
     FetchData(import.meta.env.VITE_API_CUSTOMERSFIDO + 'rd-fdo', 'POST', {
         tk: userContext.token,

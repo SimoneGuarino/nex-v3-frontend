@@ -9,8 +9,7 @@ interface UserContext {
     token: string;
 }
 
-export function DwdExcelAPI(userContext: UserContext, abortController: any, 
-openErrorSB: (icons: string, message: string) => void): void {
+export function DwdExcelAPI(userContext: UserContext, abortController: any): void {
     if (userContext.details === undefined) { return; }
     FetchData(`${import.meta.env.VITE_API_CUSTOMERSFIDO}req/gt-excel`, 'POST', {
         tk: userContext.token,

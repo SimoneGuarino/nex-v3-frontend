@@ -32,7 +32,6 @@ interface FiltersBarProps {
 
     setData: (prev: any) => void;
     setLoadState: (prev: boolean) => void;
-    openErrorSB: (icon: string, message: string) => void;
 }
 
 export const FiltersBar: React.FC<FiltersBarProps> = ({
@@ -41,7 +40,6 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
     euroTotal = 0,
     setData,
     setLoadState,
-    openErrorSB,
 }) => {
     const { preferences } = useNexTheme();
     const darkMode = preferences.mode === "dark";
@@ -99,7 +97,6 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             abortController,
             setData: setSelectsData,
             setLoadState,
-            openErrorSB,
         });
     };
 
@@ -128,12 +125,11 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             setData,
             searchParam,
             setLoadState,
-            openErrorSB,
         });
     };
 
     const DwdExcel = () => {
-        DwdExcelAPI(userContext, abortController, openErrorSB);
+        DwdExcelAPI(userContext, abortController);
     };
 
     // helpers per costruire le options (mantengo value = indice; '' = Nessuno)

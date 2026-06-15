@@ -26,6 +26,7 @@ interface PromptInputProps {
     onSend: ({ input }: { input: string }) => void;
     ChangeLoadStatus: ({ from, bool }: { from: string; bool: boolean }) => void;
     HandleChangeTalkMode?: () => void; // Aggiunto per gestire la modalità di conversazione vocale
+    embedded?: boolean; // Se true, ancora l'input dentro un pannello pagina invece che al viewport
 }
 /**
  * PromptInput componente che gestisce l'input dell'utente per inviare messaggi all'AI.
@@ -37,7 +38,7 @@ interface PromptInputProps {
  * @param { function } HandleChangeTalkMode - Funzione per gestire la modalità di conversazione vocale.
  * @returns { JSX.Element } - Il componente di input per l'utente.
  */
-const PromptInput: React.FC<PromptInputProps> = ({ loadStatus, talkMode, abortController, onSend, ChangeLoadStatus, HandleChangeTalkMode }) => {
+const PromptInput: React.FC<PromptInputProps> = ({ loadStatus, talkMode, abortController, onSend, ChangeLoadStatus, HandleChangeTalkMode, embedded = false }) => {
     const { conversation, setConversation, setHistory } = useContext(AIContext);
 
     const [input, setInput] = useState("");
@@ -97,7 +98,7 @@ const PromptInput: React.FC<PromptInputProps> = ({ loadStatus, talkMode, abortCo
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.6 }}
-            className="fixed bottom-4 flex flex-col justify-center z-10 px-4 sm:px-8 dark:text-white text-black items-center w-[-webkit-fill-available]">
+            className={`${embedded ? "absolute bottom-4 left-0 right-0" : "fixed bottom-4"} flex flex-col justify-center z-10 px-4 sm:px-8 dark:text-white text-black items-center w-[-webkit-fill-available]`}>
             {!talkMode ?
                 <div
                     className="bg-white/10 backdrop-blur-md rounded-2xl px-4 py-3 flex items-center shadow-lg w-full max-w-3xl relative border border-gray-200 dark:border-neutral-600">
