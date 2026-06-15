@@ -16,6 +16,12 @@ type FDIconButtonRounded = "xs" | "sm" | "md" | "lg" | "full";
 
 type CommonProps = {
     icon: React.ReactNode;
+    badge?: {
+        count: React.ReactNode;
+        max?: number;
+        color?: "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning";
+        showZero?: boolean;
+    }
 
     variant?: FDIconButtonVariant;
     size?: FDIconButtonSize;
@@ -85,7 +91,7 @@ const variantClasses: Record<FDIconButtonVariant, string> = {
     general:
         "bg-gray-200 dark:bg-neutral-800 hover:bg-gray-300 dark:hover:bg-neutral-700",
     primary:
-        "bg-blue-600 text-white hover:bg-blue-700 dark:bg-red-500/50 dark:hover:bg-red-600/70",
+        "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500/60 dark:hover:bg-blue-600",
     secondary:
         "bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600",
     danger:
@@ -167,6 +173,7 @@ const FDIconButtonInner = forwardRef<HTMLButtonElement, FDIconButtonProps>(
             rounded = "full",
             dataTour,
             asMotion = true,
+            badge,
             ...rest
         } = props;
 
@@ -181,7 +188,8 @@ const FDIconButtonInner = forwardRef<HTMLButtonElement, FDIconButtonProps>(
             variantTextClass[variant],
             variantClasses[variant],
             isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
-            className
+            className,
+            badge ? "relative" : ""
         );
 
         const commonDomProps = {
@@ -202,6 +210,26 @@ const FDIconButtonInner = forwardRef<HTMLButtonElement, FDIconButtonProps>(
         ) : (
             icon
         );
+
+        const badgeRander = ((badge && !loading) && (badge.showZero || badge.count)) ? (
+            <span
+                className={clsx(
+                    "absolute -top-1 -right-1 px-1.5 text-xs font-bold rounded-full",
+                    badge.color === "default" ? "bg-gray-300 text-gray-800" :
+                        badge.color === "primary" ? "bg-blue-600 text-white" :
+                            badge.color === "secondary" ? "bg-gray-600 text-white" :
+                                badge.color === "error" ? "bg-red-600 text-white" :
+                                    badge.color === "info" ? "bg-cyan-600 text-white" :
+                                        badge.color === "success" ? "bg-green-600 text-white" :
+                                            badge.color === "warning" ? "bg-yellow-500 text-white" :
+                                                "bg-gray-300 text-gray-800"
+                )}
+            >
+                {badge.count && (badge.max || 999) && typeof badge.count === "number" && badge.count > (badge.max || 999)
+                    ? `${(badge.max || 999)}+`
+                    : badge.count}
+            </span>
+        ) : null;
 
         if (!asMotion) {
             const nativeRest = rest as NativeButtonProps;
@@ -227,6 +255,7 @@ const FDIconButtonInner = forwardRef<HTMLButtonElement, FDIconButtonProps>(
                 {...motionRest}
             >
                 {content}
+                {badgeRander}
             </motion.button>
         );
     }

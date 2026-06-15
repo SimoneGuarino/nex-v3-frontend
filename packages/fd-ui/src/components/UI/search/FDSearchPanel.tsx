@@ -1,3 +1,4 @@
+//src\components\UI\search\FDSearchPanel.tsx
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MdSearch, MdClose, MdKeyboardArrowUp, MdKeyboardArrowDown } from "react-icons/md";
@@ -27,9 +28,11 @@ const IoEllipsisVerticalIcon = IoEllipsisVertical as React.FC<{ size?: number; c
     documents: "docs",
     rubrica: "rubrica", // TODO: quando creerai gli step rubrica, userai questi data-tour
     listiniPromo: "listiniPromo",
-};
+    quotazioni: "quotazioni",
+};*/
+
 const SEARCHPANEL_TOUR_NAMES = ["panel", "close", "active"] as const;
-type SearchPanelTourName = (typeof SEARCHPANEL_TOUR_NAMES)[number];*/
+type SearchPanelTourName = (typeof SEARCHPANEL_TOUR_NAMES)[number];
 
 // --------- Types
 export type SearchItemId = string | number;
@@ -202,8 +205,12 @@ const FDSearchPanel = <T,>({
     tourIsOpen = false,
 }: FDSearchPanelProps<T>) => {
     //const tour = useTour();
-
-    const isTourOpen = false;//tourIsOpen || tour.isOpen;
+    const dt = {
+        panel: "search-panel",
+        close: "search-panel-close",
+        active: "search-panel-active",
+    } as const;
+    const isTourOpen = false //tourIsOpen || tour.isOpen;
 
     // genera data-tour in base al tour attivo:
     // documents => "docs-filters-..."
@@ -353,7 +360,7 @@ const FDSearchPanel = <T,>({
                                 <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800">
                                     <div className="flex items-center gap-2">
                                         <FDInput
-                                            //data-tour={dt.panel}
+                                            data-tour={dt.panel}
                                             fullWidth
                                             size="lg"
                                             leftIcon={<MdSearchIcon />}
@@ -366,9 +373,7 @@ const FDSearchPanel = <T,>({
                                             aria-label="Search"
                                         />
 
-                                        <span 
-                                            //data-tour={dt.close}
-                                        >
+                                        <span data-tour={dt.close}>
                                             <FDIconButton
                                                 variant="text"
                                                 size="medium"
@@ -381,9 +386,7 @@ const FDSearchPanel = <T,>({
 
                                     {/* Chips filtri applicati */}
                                     {appliedFilters.length > 0 && (
-                                        <div className="mt-4 space-y-1" 
-                                        //data-tour={dt.active}
-                                        >
+                                        <div className="mt-4 space-y-1" data-tour={dt.active}>
                                             <p className="text-xs text-neutral-500">Sto cercando per...</p>
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 {appliedFilters.map((f) => (

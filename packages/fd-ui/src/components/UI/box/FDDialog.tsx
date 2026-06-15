@@ -9,7 +9,7 @@ import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { createPortal } from "react-dom";
 import FDButton, { type FDColor } from "../buttons/FDButton";
 
-export type FDDialogSize = "xs" | "sm" | "md" | "lg" | "xl" | "full";
+export type FDDialogSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full";
 
 export interface FDDialogProps {
     /** Controlla l'apertura del dialog */
@@ -44,6 +44,12 @@ export interface FDDialogProps {
     customActions?: React.ReactNode;
     /** Classe CSS aggiuntiva per il paper */
     className?: string;
+    /**Overflow interno del children */
+    overflow?: boolean;
+    /**tag per tour system. PRENDE IL DIALOG INTERO */
+    dataTour?: string;
+    /**tag per tour system. PRENDE IL PULSANTE DI CONFERMA */
+    confirmDataTour?: string;
 }
 
 const sizeMap: Record<FDDialogSize, string> = {
@@ -52,6 +58,8 @@ const sizeMap: Record<FDDialogSize, string> = {
     md: "max-w-md",
     lg: "max-w-lg",
     xl: "max-w-xl",
+    "2xl": "max-w-2xl",
+    "3xl": "max-w-3xl",
     full: "max-w-full mx-4",
 };
 
@@ -83,6 +91,9 @@ export default function FDDialog({
     titleIcon, //icona nell'header
     customActions, //sostituisce il footer con azioni personalizzate (vuole un react node {})
     className = "", //ulteriori classi css
+    overflow = true, //overflow interno del contenuto
+    dataTour, //tag per tour system. PRENDE IL DIALOG INTERO
+    confirmDataTour, //tag per tour system. PRENDE IL PULSANTE DI CONFERMA
 }: FDDialogProps) {
     const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -144,19 +155,20 @@ export default function FDDialog({
                         `}
                         variants={dialogVariants}
                         onClick={(e) => e.stopPropagation()}
+                        data-tour={dataTour}
                     >
                         {/* Header */}
                         {title && (
-                            <div className="flex items-center gap-2 px-5 py-4 border-b border-neutral-200 dark:border-neutral-700">
+                            <div className="flex items-center gap-2 px-5 py-4 border-b border-neutral-200 dark:border-neutral-700 w-full">
                                 {titleIcon}
-                                <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                                <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 w-full">
                                     {title}
                                 </h2>
                             </div>
                         )}
 
                         {/* Content */}
-                        <div className="flex-1 overflow-y-auto px-5 py-4 text-neutral-700 dark:text-neutral-300">
+                        <div className={`flex-1 ${overflow ? "overflow-y-auto" : "overflow-y-hidden"} px-5 py-4 text-neutral-700 dark:text-neutral-300`}>
                             {children}
                         </div>
 
@@ -171,7 +183,7 @@ export default function FDDialog({
                                             </FDButton>
                                         )}
                                         {onConfirm && (
-                                            <FDButton variant="solid" color={color} onClick={onConfirm} loading={loading}>
+                                            <FDButton variant="solid" color={color} onClick={onConfirm} loading={loading} dataTour={confirmDataTour}>
                                                 {confirmText}
                                             </FDButton>
                                         )}

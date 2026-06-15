@@ -27,18 +27,18 @@ export interface FDBoxProps extends Omit<HTMLMotionProps<"div">, "color"> {
 
 /** mapping palette → tailwind */
 const palette = {
-    primary: { bg: "bg-blue-600", soft: "bg-blue-50", ring: "blue-500", textOnSolid: "text-white" },
+    primary: { bg: "bg-blue-600", soft: "bg-blue-200", ring: "blue-500", textOnSolid: "text-white" },
     secondary: { bg: "bg-violet-600", soft: "bg-violet-50", ring: "violet-500", textOnSolid: "text-white" },
     info: { bg: "bg-sky-600", soft: "bg-sky-200", ring: "sky-500", textOnSolid: "text-white" },
     success: { bg: "bg-emerald-600", soft: "bg-emerald-50", ring: "emerald-500", textOnSolid: "text-white" },
-    warning: { bg: "bg-amber-500", soft: "bg-amber-50", ring: "amber-500", textOnSolid: "text-black" },
+    warning: { bg: "bg-amber-500", soft: "bg-amber-100", ring: "amber-500", textOnSolid: "text-black" },
     error: { bg: "bg-rose-600", soft: "bg-rose-50", ring: "rose-500", textOnSolid: "text-white" },
     light: { bg: "bg-white dark:bg-neutral-800", soft: "bg-white", ring: "neutral-300", textOnSolid: "text-black dark:text-gray-200" },
     dark: { bg: "bg-neutral-900", soft: "bg-neutral-800", ring: "neutral-700", textOnSolid: "text-white/90" },
     purple: { bg: "bg-purple-600", soft: "bg-purple-50", ring: "purple-500", textOnSolid: "text-white" },
     lightPurple: { bg: "bg-fuchsia-400", soft: "bg-fuchsia-50", ring: "fuchsia-400", textOnSolid: "text-black" },
     teal: { bg: "bg-teal-500/80", soft: "bg-teal-50 dark:bg-teal-500/60", ring: "teal-500", textOnSolid: "text-white" },
-    neutral: { bg: "bg-neutral-200 dark:bg-neutral-900", soft: "bg-neutral-100 dark:bg-neutral-800", ring: "neutral-300", textOnSolid: "text-black dark:text-gray-200" },
+    neutral: { bg: "bg-neutral-200 dark:bg-neutral-900", soft: "bg-neutral-200 dark:bg-neutral-800/60", ring: "neutral-300 dark:border-neutral-700", textOnSolid: "text-black dark:text-gray-200" },
 } as const;
 
 const radiusMap: Record<FDRadius, string> = {
@@ -72,8 +72,8 @@ function variantClasses(variant: FDVariant, color: FDColor, gradientFrom?: strin
 
         case "soft":
             return clsx(
-                `${c.soft} text-neutral-900`,
-                border ? "border" : ""
+                `${c.soft} text-neutral-900 ${color === "neutral" ? "dark:text-white" : ""}`,
+                border ? `border border-${c.ring}` : ""
             );
 
         case "outline":
@@ -84,7 +84,10 @@ function variantClasses(variant: FDVariant, color: FDColor, gradientFrom?: strin
             );
 
         case "ghost":
-            return clsx("bg-transparent", c.textOnSolid);
+            return clsx(
+                "bg-transparent",
+                border ? `border border-${c.ring}` : "",
+                c.textOnSolid);
 
         case "gradient":
             return clsx(

@@ -52,7 +52,7 @@ export interface FDSharePanelProps {
     args: {
         API_USERS: string;
     };
-
+    
     /** Funzione di ricerca utenti (server-side) */
     fetchUsers: FetchUsersFn;
 
@@ -142,7 +142,7 @@ export default function FDSharePanel({
     allowMulti = true,
     defaultMessageHtml = "",
     isActive = true,
-    args,
+    args
 }: FDSharePanelProps) {
     const [query, setQuery] = useState("");
     const debounced = useDebounced(query, 300);
@@ -321,7 +321,7 @@ export default function FDSharePanel({
                                                 const real = view.start + idx;
                                                 const sel = !!selected.find(s => s._id === u._id);
                                                 return (
-                                                    <UserRow key={`${u._id}-${real}`} u={u} selected={sel} onToggle={() => toggle(u)} args={args} />
+                                                    <UserRow key={`${u._id}-${real}`} u={u} selected={sel} onToggle={() => toggle(u)} args={args}/>
                                                 );
                                             })}
                                             {/* spacer inferiore */}

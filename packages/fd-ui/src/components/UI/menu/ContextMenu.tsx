@@ -33,6 +33,7 @@ type MenuButton = {
     title: string;
     icon?: React.ReactNode;
     hide?: boolean;
+    disabled?: boolean;
     onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
     childrenMenu?: { component: React.ReactNode }[];
     separator?: boolean;
@@ -203,13 +204,13 @@ function computeMainPosition(params: {
     const desiredPlacement =
         placement === "auto"
             ? autoChoosePlacement(
-                  triggerRect,
-                  menuW,
-                  menuH,
-                  viewportWidth,
-                  viewportHeight,
-                  offset
-              )
+                triggerRect,
+                menuW,
+                menuH,
+                viewportWidth,
+                viewportHeight,
+                offset
+            )
             : placement;
 
     const baseDir = baseOf(desiredPlacement) as PlacementBase;
@@ -650,16 +651,21 @@ export function ContextMenu({
                                     }}
                                     whileTap={{ scale: 0.98, transition: { duration: 0.06 } }}
                                     role="menuitem"
+                                    disabled={button.disabled}
                                     className={[
                                         button.className,
                                         "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm",
-                                        button.action === undefined || button.action
-                                            ? "cursor-pointer hover:bg-[#2e2e2e] focus:bg-[#2e2e2e] focus:outline-none"
-                                            : "",
+                                        button.disabled
+                                            ? "cursor-not-allowed opacity-55"
+                                            : button.action === undefined || button.action
+                                                ? "cursor-pointer hover:bg-[#2e2e2e] focus:bg-[#2e2e2e] focus:outline-none"
+                                                : "",
                                     ].join(" ")}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        
+
+                                        if (button.disabled) return;
+
                                         if (button.childrenMenu?.length) {
                                             setActiveChildIndex((prev) =>
                                                 prev === idx ? null : idx
@@ -672,16 +678,16 @@ export function ContextMenu({
                                         }
 
                                         button.onClick?.(e);
-                                        
+
                                     }}
                                     {...(button["data-tour"]
                                         ? { "data-tour": button["data-tour"] }
                                         : {})}
                                 >
                                     {button.icon}
-                                    <span className="truncate text-inherit">
+                                    {button.title && <span className="truncate text-inherit">
                                         {button.title}
-                                    </span>
+                                    </span>}
                                 </motion.button>
 
                                 {button.separator && (

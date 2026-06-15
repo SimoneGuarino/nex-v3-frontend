@@ -5,7 +5,7 @@ import { motion, type HTMLMotionProps, type Variants } from "framer-motion";
 // ——————————————————————————————————————————————————————————
 // TYPES
 // ——————————————————————————————————————————————————————————
-export type FDVariant = "solid" | "contained" | "soft" | "outline" | "outlined" | "ghost" | "gradient" | "underline" | "text";
+export type FDVariant = "solid" | "contained" | "soft" | "outline" | "outlined" | "ghost" | "gradient" | "underline" | "text" | "textHover";
 type DefaultSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
 export type FDRadius = "none" | DefaultSize | "full";
 export type FDSize = "small" | "medium" | "large" | DefaultSize;
@@ -260,7 +260,12 @@ function getVariantClasses(
         case "ghost":
         case "text":
             return clsx("bg-transparent text-inherit", color === "error" ? c.textOnOutline : c.textOnSolid);
-
+        case "textHover":
+            return clsx(
+                "bg-transparent text-inherit",
+                color === "error" ? c.textOnOutline : c.textOnSolid,
+                !asMotion ? c?.onHover : "whileHover:bg-opacity-10"
+            );
         case "gradient":
             // NB: gradientFrom/To devono essere classi tailwind valide (es. "from-blue-500")
             return clsx(

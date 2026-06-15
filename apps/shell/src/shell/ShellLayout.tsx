@@ -1,7 +1,8 @@
-import React from "react";
+import React, { MutableRefObject, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { MICROFRONTENDS, resolveActiveMicrofrontend, type ShellChromeMode } from "../config/microfrontends";
 import {
+    getAnchorRectFromElement,
     toggleGlobalPanel,
 } from "@nex/shared-platform";
 import {
@@ -9,8 +10,21 @@ import {
     useNotificationUnreadCount,
     useRealtimeConnection,
     useRealtimeMaintenanceMode,
-    useRealtimeSession,
+    // useRealtimeSession,
 } from "@nex/realtime-store";
+import { FDIconButton } from "@nex/fd-ui";
+
+import nexLogo from "../assets/login/logo_nex_transp.webp";
+import nexLogoWhite from "../assets/login/logo_nex_transp_white.webp";
+
+import { AiOutlineMessage } from "react-icons/ai";
+import { IoNotificationsOutline } from "react-icons/io5";
+import { UserInfo } from "../panels/components/userInfo";
+import { useNexTheme } from "@nex/theme-system";
+
+const MessageIcon = AiOutlineMessage as React.FC<{ size?: number }>;
+const NotificationIcon = IoNotificationsOutline as React.FC<{ size?: number }>;
+
 
 type Props = {
     children: React.ReactNode;
@@ -54,8 +68,23 @@ function StatusPill({ online, label }: { online: boolean; label: string }) {
     );
 }
 
-function HeaderAction({ label, count, onClick }: { label: string; count?: number; onClick: () => void }) {
+function HeaderAction({ label, count, icon, onClick }: { label: string; count?: number; icon: React.ReactNode; onClick: (e: React.MouseEvent<HTMLButtonElement>) => void }) {
     return (
+        <FDIconButton
+            icon={icon}
+            badge={{
+                count,
+                max: 99,
+                color: "error",
+            }}
+            variant="text"
+            dataTooltipId="btn-sidenav-icon-tooltip"
+            dataTooltipContent="Notifiche"
+            onClick={onClick} // prima usava handleOpenMenu
+            className="h-fit"
+        />
+    )
+    /*(
         <button
             type="button"
             onClick={onClick}
@@ -78,7 +107,7 @@ function HeaderAction({ label, count, onClick }: { label: string; count?: number
                 </span>
             ) : null}
         </button>
-    );
+    )*/;
 }
 
 function ShellHeader({ chromeMode }: { chromeMode: ShellChromeMode }) {
@@ -86,17 +115,24 @@ function ShellHeader({ chromeMode }: { chromeMode: ShellChromeMode }) {
     const maintenanceMode = useRealtimeMaintenanceMode();
     const notificationUnreadCount = useNotificationUnreadCount();
     const chatUnreadCount = useChatUnreadCount();
-    const session = useRealtimeSession();
+    const { preferences } = useNexTheme();
+    // const session = useRealtimeSession();
+    const [userMenu, setUserMenu] = useState<boolean>(false);
+    const userMenuRef = useRef<HTMLDivElement>(null) as MutableRefObject<HTMLDivElement | null>; // Riferimento per il menu contestuale dei messaggi fissati
 
     if (chromeMode === "hidden") return null;
 
-    return (
+    const darkMode = preferences.mode === "dark";
+
+    return (<>
         <header className="sticky w-full top-0 py-2 z-1 flex justify-between items-center pl-4
             border-b overflow-hidden min-h-[4rem] 
             border-gray-200
             dark:border-stone-800 dark:bg-stone-900"
         >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <img src={darkMode ? nexLogoWhite : nexLogo} alt="Nex Logo" className={` w-full max-w-[100px] select-none`} />
+
                 <StatusPill online={connection.user} label="User socket" />
                 <StatusPill online={connection.chat} label="Chat socket" />
                 <StatusPill online={connection.admin} label="Admin socket" />
@@ -107,12 +143,22 @@ function ShellHeader({ chromeMode }: { chromeMode: ShellChromeMode }) {
                 ) : null}
             </div>
 
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                <HeaderAction label="Notifiche" count={notificationUnreadCount} onClick={() => toggleGlobalPanel("notifications", { source: "shell-header" })} />
-                <HeaderAction label="Chat" count={chatUnreadCount} onClick={() => toggleGlobalPanel("chat", { source: "shell-header" })} />
-                <HeaderAction label={`Utente${session?.details?.nome ? ` · ${session.details.nome}` : ""}`} onClick={() => toggleGlobalPanel("profile", { source: "shell-header" })} />
+            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                <HeaderAction label="Chat" count={chatUnreadCount} icon={<MessageIcon size={22} />} onClick={() => toggleGlobalPanel("chat", { source: "shell-header" })} />
+                <HeaderAction label="Notifiche" icon={<NotificationIcon size={22} />} count={notificationUnreadCount}
+                    onClick={(event: React.MouseEvent<HTMLButtonElement>) => toggleGlobalPanel("notifications", {
+                        source: "shell-header",
+                        placement: "bottom-end",
+                        anchorRect: getAnchorRectFromElement(event.currentTarget),
+                        offset: 10,
+                        modal: false,
+                    }) /*() => toggleGlobalPanel("notifications", { source: "shell-header" })*/} />
+                    <span className="h-8 mx-4 bg-gray-300 dark:bg-neutral-700 block w-[1px] rounded-md" />
+                <UserInfo menuRef={userMenuRef} open={() => setUserMenu(true)} status={userMenu} />
+                {/*<HeaderAction label={`Utente${session?.details?.nome ? ` · ${session.details.nome}` : ""}`} onClick={() => toggleGlobalPanel("profile", { source: "shell-header" })} />*/}
             </div>
         </header>
+    </>
     );
 }
 
@@ -121,7 +167,7 @@ export default function ShellLayout({ children }: Props) {
     const activeMicrofrontend = resolveActiveMicrofrontend(location as any);
     const chromeMode = activeMicrofrontend?.chrome ?? "minimal";
     const showSidebar = chromeMode === "full";
-    const showHeader = chromeMode !== "hidden";
+    // const showHeader = chromeMode !== "hidden";
 
     if (chromeMode === "hidden") {
         return (
@@ -132,7 +178,7 @@ export default function ShellLayout({ children }: Props) {
     }
 
     return (
-        <div style={{ /*display: "grid", gridTemplateColumns: showSidebar ? "260px 1fr" : "1fr",*/ width: "100%", height: "100%" }}>
+        <div style={{ width: "100%", height: "100%" }}>
             {showSidebar ? (
                 <aside style={{ background: "#111827", borderRight: "1px solid rgba(148,163,184,0.15)", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>NEX Shell</div>

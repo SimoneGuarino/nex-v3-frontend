@@ -324,9 +324,10 @@ export const FDSelect = memo(function FDSelect<T = string>({
     /** Ref root per rilevare click esterni senza alterare i commenti precedenti */
     const rootRef = useRef<HTMLDivElement>(null);
 
-    //const tour = useContext(TourCtx)
-    const tourIsOpen = false; //!!tour?.isOpen;
-    const activeStepSelector = ""; //tour?.activeStepSelector;
+    /** const tour = useContext(TourCtx)
+    const tourIsOpen = !!tour?.isOpen;
+    const activeStepSelector = tour?.activeStepSelector;*/
+    const tour = null, tourIsOpen = false, activeStepSelector = "0";
 
     const forceMenuOpenForTour =
         !!dataTourMenu &&
@@ -802,8 +803,9 @@ export const FDSelect = memo(function FDSelect<T = string>({
                         </div>
                         <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
                             {clearable && hasValue && !disabled && (
-                                <button
-                                    type="button"
+                                <span
+                                    role="button"
+                                    tabIndex={-1}
                                     onMouseDown={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
@@ -813,11 +815,11 @@ export const FDSelect = memo(function FDSelect<T = string>({
                                         e.stopPropagation();
                                         clear();
                                     }}
-                                    className="hover:text-neutral-700 dark:hover:text-neutral-200"
+                                    className="inline-flex hover:text-neutral-700 dark:hover:text-neutral-200"
                                     aria-label="Pulisci"
                                 >
                                     <MdCloseIcon />
-                                </button>
+                                </span>
                             )}
                             <MdExpandMoreIcon className={`transition ${open ? "rotate-180" : ""}`} />
                         </div>

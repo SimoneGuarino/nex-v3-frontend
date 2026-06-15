@@ -37,7 +37,6 @@ import {
 
 import { Chat } from "./components/chat";
 import { useGeneralDataContext } from "context/GeneralDataContext";
-import { CheckAdminPermissions } from "utils/index";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import { UserInfo } from "./components/userInfo";
 import { ChangeSessionGroupContext } from "classes/log-out";
