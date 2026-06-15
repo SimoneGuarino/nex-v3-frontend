@@ -6,7 +6,7 @@
  */
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { enqueueSnackbar } from "components/MessageBox";
 import { CheckAdminPermissions } from "utils/checkAdminPermissions";
 import { UserContext } from "context/UserContext";

@@ -4,7 +4,7 @@ import { useUserContext } from 'context/UserContext';
 // Componenets
 import DashboardLayout from 'examples/LayoutContainers/DashboardLayout';
 import TesisForm from './components/Form';
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 import InfoPanel from './components/InfoPanel';
 
 export function InserimentoFBOF() {

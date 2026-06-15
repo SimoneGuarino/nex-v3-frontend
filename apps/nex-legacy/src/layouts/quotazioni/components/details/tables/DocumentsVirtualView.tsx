@@ -1,7 +1,7 @@
 import React, {
     memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from "react";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import SkeletonLoader from "../../SkeletonLoader";
 import { useMeasure } from "layouts/quotazioni/hook/useMeasure";
 import { useVirtualWindow } from "layouts/quotazioni/hook/useVirtualWindow";

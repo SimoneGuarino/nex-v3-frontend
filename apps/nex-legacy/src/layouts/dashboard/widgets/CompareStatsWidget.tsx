@@ -6,7 +6,7 @@ import {
 // Se nel tuo progetto esiste:
 import { UserContext } from "context/UserContext"; // <-- usa il tuo
 import { ProductsToEditAPI } from "../fetchData/CompareData";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { useNavigate } from "react-router-dom";
 
 const FiTrendingUpIcon = FiTrendingUp as React.FC<{ className?: string }>;

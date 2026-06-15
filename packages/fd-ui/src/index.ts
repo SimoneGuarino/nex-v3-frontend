@@ -1,13 +1,18 @@
 export { default as FDBackdrop } from "./components/UI/box/FDBackdrop";
-export { default as FDBox } from "./components/UI/box/FDBox";
+export { default as FDBox, FDBoxProps } from "./components/UI/box/FDBox";
 export { default as FDDialog } from "./components/UI/box/FDDialog";
+
 export { default as FDSkeleton } from "./components/UI/box/FDSkeleton";
+export { FDSkeletonLayout } from "./components/UI/box/FDSkeleton";
+export { FDSkeletonPresets } from "./components/UI/box/FDSkeleton";
+export { FDSkeletonSwitch } from "./components/UI/box/FDSkeleton";
+
 export { default as FDButton } from "./components/UI/buttons/FDButton";
 export { default as FDIconButton } from "./components/UI/buttons/FDIconButton";
 export { default as ColorSwitch } from "./components/UI/colors/ColorSwitch";
 export { default as FDDate } from "./components/UI/input/FDDate";
 export { default as FDInput } from "./components/UI/input/FDInput";
-export { default as FDSelect } from "./components/UI/input/FDSelect";
+export { default as FDSelect, type FDSelectOption } from "./components/UI/input/FDSelect";
 export { default as FDTextArea } from "./components/UI/input/FDTextArea";
 export { default as FDSwitch } from "./components/UI/input/FDSwitch";
 export { default as MarkdownEditor } from "./components/UI/input/MarkdownEditor";

@@ -18,7 +18,7 @@ import { Tooltip } from "react-tooltip";
 
 // components
 import Loader from "../../../Loader";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 
 // fetch data
 import { FiltersDataAPI } from "./fetchData/filtersData";

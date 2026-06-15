@@ -1,4 +1,4 @@
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDButton from "components/UI/buttons/FDButton";
 
 import { IoSearch } from "react-icons/io5";

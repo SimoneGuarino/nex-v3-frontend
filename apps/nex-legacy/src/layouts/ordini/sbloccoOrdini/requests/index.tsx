@@ -17,7 +17,7 @@ import { TipiFido } from './components/blocks/tipiFido';
 import { enqueueSnackbar } from 'components/MessageBox';
 import { CustomersOrdersTable } from './customersOrdersTable';
 import { useGeneralDataContext } from 'context/GeneralDataContext';
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 import { UserState } from 'types/UserContext';
 import { useTour } from "tour/TourProvider";
 import FDIconButton from 'components/UI/buttons/FDIconButton';

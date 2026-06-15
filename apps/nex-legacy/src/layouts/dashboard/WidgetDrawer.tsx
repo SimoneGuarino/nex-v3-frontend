@@ -2,8 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiX, FiRefreshCcw, } from "react-icons/fi";
 import { Pattern } from "./types/types";
-import FDButton from "components/UI/buttons/FDButton";
-import { FDBackdrop } from "components/UI/box/FDBackdrop";
+import { FDBackdrop, FDButton } from "@nex/fd-ui";
 
 const FiXIcon = FiX as React.FC<{ className?: string }>;
 const FiRefreshCcwIcon = FiRefreshCcw as React.FC<{ className?: string }>;

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import { IoMdDownload } from "react-icons/io";
 import { IoClose } from "react-icons/io5";

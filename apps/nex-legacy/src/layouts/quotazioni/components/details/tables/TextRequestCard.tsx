@@ -2,15 +2,15 @@ import React from "react";
 import { motion } from "framer-motion";
 import { FiEdit3 } from "react-icons/fi";
 import { NumberToEuro, TruncateText } from "utils";
-import { CartProductDTO, TextRequestCartDTO } from "layouts/quotazioni/types/qts_product";
+import { TextRequestCartDTO } from "layouts/quotazioni/types/qts_product";
 import {
     productStateTransitions,
     RigaStato,
     stateProductLabels,
     stateProductOptionsPalette,
 } from "layouts/quotazioni/types/quotations";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import { clsx } from "components/UI/box/FDBox";
+import { FDIconButton } from "@nex/fd-ui";
+import { clsx } from "clsx";
 import { CapitalizeFirstLetter } from "utils/string/capitalize";
 
 const FiEdit3Icon = FiEdit3 as React.FC<{ size?: number; className?: string }>;

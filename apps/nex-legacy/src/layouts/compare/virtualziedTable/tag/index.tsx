@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo } from "react";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import {
     HiOutlineChatBubbleLeftEllipsis,
     HiOutlineCube,

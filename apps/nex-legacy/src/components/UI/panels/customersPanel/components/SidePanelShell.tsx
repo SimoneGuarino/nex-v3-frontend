@@ -1,8 +1,9 @@
 import React from "react";
-import FDBox, { type FDBoxProps, clsx } from "components/UI/box/FDBox";
+import { FDBox, type FDBoxProps } from "@nex/fd-ui";
 import { motion, type Variants } from "framer-motion";
 import { FiX } from "react-icons/fi";
 import FDIconButton from "components/UI/buttons/FDIconButton";
+import clsx from 'clsx';
 
 const slideFromRightVariants: Variants = {
     hidden: {

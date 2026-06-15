@@ -1,6 +1,5 @@
-import React, { memo, useMemo } from "react";
-import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
-import { FDSkeleton } from "components/UI/box/FDSkeleton";
+import { memo, useMemo } from "react";
+import { FDSkeleton, FDSelect, type FDSelectOption } from "@nex/fd-ui";
 
 export type CompareFilterOption = {
     value: string;

@@ -12,7 +12,7 @@ import {
 import { addDays, format, parseISO, subYears } from "date-fns";
 import FDButton from "components/UI/buttons/FDButton";
 import { IoArrowBackCircleOutline } from "react-icons/io5";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { ContextMenu } from "components/UI/menu/ContextMenu";
 import { IoMdMore } from "react-icons/io";
 import FDIconButton from "components/UI/buttons/FDIconButton";

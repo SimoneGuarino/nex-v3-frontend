@@ -16,7 +16,7 @@ import { Checkbox } from '@mui/material';
 import { icon_info } from 'config/icons';
 import FDIconButton from 'components/UI/buttons/FDIconButton';
 import { UserAvatar } from 'examples/Navbars/components/userInfo';
-import { clsx } from 'components/UI/box/FDBox';
+import { clsx } from 'clsx';
 
 
 // ——————————————————————————————————————————————————————————

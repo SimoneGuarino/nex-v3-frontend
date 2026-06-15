@@ -2,7 +2,7 @@
 import React from "react";
 import type { ReleaseNote } from "../fetchdata/getReleaseNotes"; // path ok per il tuo repo
 import { m } from "framer-motion";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { MdOutlineKeyboardArrowRight } from "react-icons/md";
 
 const ArrowRightIcon = MdOutlineKeyboardArrowRight as React.FC<React.SVGProps<SVGSVGElement>>;

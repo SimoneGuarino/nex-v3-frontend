@@ -7,7 +7,7 @@
  */
 import React from "react";
 import { TextField, InputAdornment } from "@mui/material";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDButton from "components/UI/buttons/FDButton";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import { useSurfaceTokens } from "../hooks/use-surface-tokens";

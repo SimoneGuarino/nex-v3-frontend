@@ -1,6 +1,6 @@
 import { useState } from "react";
 //UI
-import FDDialog from "components/UI/box/FDDialog";
+import { FDDialog } from "@nex/fd-ui";
 import MarkdownEditor from "components/UI/input/MarkdownEditor";
 import { enqueueSnackbar } from "components/MessageBox";
 import FDInput from "components/UI/input/FDInput";

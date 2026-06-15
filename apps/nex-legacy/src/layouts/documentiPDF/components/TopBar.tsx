@@ -1,7 +1,7 @@
 import React from 'react';
 //components
 import FDButton from 'components/UI/buttons/FDButton';
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 import FDIconButton from 'components/UI/buttons/FDIconButton';
 //icons
 import { MdSearch, MdDownload, MdFilterList, MdSort, MdShare, MdClose, MdLink } from 'react-icons/md';

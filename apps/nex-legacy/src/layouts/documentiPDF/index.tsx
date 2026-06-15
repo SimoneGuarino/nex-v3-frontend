@@ -35,7 +35,7 @@ import { LuView } from "react-icons/lu";
 //tour
 import { useSectionTour } from 'tour/useSectionTour';
 import { Role } from 'tour/types';
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 import FDButton from 'components/UI/buttons/FDButton';
 
 const MdCheckIcon = MdCheck as React.FC<{ size?: number; className?: string }>;

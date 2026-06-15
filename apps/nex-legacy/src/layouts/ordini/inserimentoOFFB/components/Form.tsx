@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, ChangeEvent } from 'react';
 import FDButton from 'components/UI/buttons/FDButton';
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 import FDInput from 'components/UI/input/FDInput';
 import FDSelect, { type FDSelectOption } from 'components/UI/input/FDSelect';
 import { useUserContext } from 'context/UserContext';

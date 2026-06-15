@@ -2,7 +2,7 @@ import { memo } from "react";
 import { ScopeTab } from "../../hook/useDetailsQuotation";
 
 //components UI
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDButton from "components/UI/buttons/FDButton";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 

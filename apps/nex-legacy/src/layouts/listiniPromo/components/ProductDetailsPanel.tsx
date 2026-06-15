@@ -1,7 +1,7 @@
 // src/layouts/listiniPromo/components/ProductDetailsPanel.tsx
 import React, { MutableRefObject } from "react";
 import { motion } from "framer-motion";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDButton from "components/UI/buttons/FDButton";
 import { IoSearch } from "react-icons/io5";
 import { MdFilterList, MdDownload } from "react-icons/md";

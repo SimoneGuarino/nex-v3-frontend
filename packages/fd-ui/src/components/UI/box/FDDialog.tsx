@@ -1,4 +1,3 @@
-// src/components/UI/box/FDDialog.tsx
 /**
  * descrizione: Dialog riutilizzabile con titolo, contenuto personalizzato e azioni.
  * props:       open, onClose, title, confirmText, cancelText, onConfirm, loading, color, children, size, hideCancel, hideActions.

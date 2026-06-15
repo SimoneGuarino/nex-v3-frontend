@@ -12,7 +12,7 @@ import { NOTE_SCOPE_OPTIONS, SORT_PRESET_OPTIONS } from "../constants";
 import type { NotesScopeFilter, NotesSummary, SortPresetValue } from "../types";
 import FDInput from "components/UI/input/FDInput";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
-import { FDSkeletonLayout, FDSkeletonPresets, FDSkeletonSwitch } from "components/UI/box/FDSkeleton";
+import { FDSkeletonPresets, FDSkeletonSwitch } from "@nex/fd-ui";
 
 type CustomerNotesHeaderProps = {
     rowsCount: number;

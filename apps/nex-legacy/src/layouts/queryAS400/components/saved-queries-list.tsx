@@ -31,7 +31,7 @@
 
 import React from "react";
 import { Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Skeleton } from "@mui/material";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import { MdPlayArrow, MdEdit, MdDelete } from "react-icons/md";
 import type { IconType } from "react-icons";

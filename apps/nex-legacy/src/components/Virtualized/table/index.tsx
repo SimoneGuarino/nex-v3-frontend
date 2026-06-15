@@ -20,7 +20,7 @@ import { MainTheme } from 'assets/settingsTheme';
 import { RetriveColumnsAPI, RetriveColumnConfig } from './fetchData/retriveColumns';
 import { HeaderSettings } from './types/headerSettings';
 import { BodySettings, variantBody } from './types/bodySettings';
-import { clsx } from 'components/UI/box/FDBox';
+import { clsx } from 'clsx';
 import { useNexTheme } from '@nex/theme-system';
 
 function parseStyleObject(value: unknown): Record<string, any> | undefined {

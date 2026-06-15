@@ -6,7 +6,7 @@ import type { CartProductDTO, ProductDoc, TextRequestCartDTO } from "../types/qt
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import HeaderBar from "../components/details/headerBar";
 import { Tooltip } from "react-tooltip";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import QuoteProgressCard from "../components/details/cards/quoteProgress";
 import CustomersCard from "../components/details/cards/customers";
 import QuotationDetailsCard from "../components/details/cards/quotation";
@@ -26,8 +26,9 @@ import TextRequestCard from "../components/details/tables/TextRequestCard";
 import { CustomersPanel } from "components/UI/panels/customersPanel";
 import ContextMenu from "components/UI/menu/ContextMenu";
 import Filters from "../components/details/filters";
-import { FDButton } from "components/UI/buttons/FDButton";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+
+import { FDButton, FDIconButton, FDSkeletonLayout, FDSkeletonPresets, FDSkeletonSwitch } from "@nex/fd-ui";
+
 import QuotazioneLock from "../components/details/lock";
 import { ClosureDraft, QuotazioneDTOExtended } from "../types/closure";
 import { useQuotationClosureGate } from "../hook/useQuotationClosureGate";
@@ -44,9 +45,7 @@ import { DuplicateQuotationModal } from "../components/details/DuplicateQuotatio
 import QuotationCard from "../components/details/tables/QuotationCard";
 import { enqueueSnackbar } from "components/MessageBox";
 import placeholder from 'assets/images/placeholder/av5c8336583e291842624.webp';
-import { CheckRole } from "utils/checkRole";
 import { OkLinksSidePanel } from "../components/OkLinksSidePanel";
-import { FDSkeletonLayout, FDSkeletonPresets, FDSkeletonSwitch } from "components/UI/box/FDSkeleton";
 import { useExitTourMockDetails } from "../tour/useExitTourMockDetails";
 import {
     computeQuotazioniDetailsTourUiFlags,

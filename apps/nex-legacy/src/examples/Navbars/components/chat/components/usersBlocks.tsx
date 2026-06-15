@@ -7,7 +7,7 @@ import MDTypography from "components/MDTypography";
 import { LoadScreen } from "components/Load";
 import { useGeneralDataContext } from "context/GeneralDataContext";
 import { enqueueSnackbar } from "components/MessageBox";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { UserAvatar } from "../../userInfo";
 
 interface User {

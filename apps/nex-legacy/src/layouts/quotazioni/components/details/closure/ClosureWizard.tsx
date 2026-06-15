@@ -13,7 +13,7 @@ import { FDButton } from "components/UI/buttons/FDButton";
 import { FDSelect } from "components/UI/input/FDSelect";
 import { FDInput } from "components/UI/input/FDInput";
 import FDIconButton from "components/UI/buttons/FDIconButton";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { computeTourClosureWizardOrchestration } from "layouts/quotazioni/tour/runtime";
 import { useTour } from "tour/TourProvider";
 

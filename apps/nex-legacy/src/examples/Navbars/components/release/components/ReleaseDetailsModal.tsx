@@ -1,5 +1,3 @@
-// release/components/ReleaseDetailsModal.tsx
-/* eslint-disable @typescript-eslint/no-var-requires */
 import React from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, LazyMotion, domAnimation } from "framer-motion";
@@ -9,11 +7,8 @@ import { useUserContext } from "context/UserContext";
 import { enqueueSnackbar } from "components/MessageBox";
 
 // components
-import FDBox from "components/UI/box/FDBox";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDBox, FDIconButton, FDButton, FDBackdrop } from "@nex/fd-ui";
 import { Tag } from "components/Tag/Tag";
-import { FDBackdrop } from "components/UI/box/FDBackdrop";
 
 // icons
 import { IoCloseSharp } from "react-icons/io5";
@@ -234,7 +229,7 @@ const ReleaseDetailsModal: React.FC<{
     loading?: boolean;
 }> = ({ open, note, onClose, onVisibilityUpdated, loading = false }) => {
     const [userState] = useUserContext();
-    const isDev = (userState?.details?.ruolo || "").toLowerCase().trim() === "dev";
+    const isDev = (userState?.details?.ruolo || "").toString().toLowerCase().trim() === "dev";
 
     const [saving, setSaving] = React.useState(false);
     const abortRef = React.useRef<AbortController | null>(null);

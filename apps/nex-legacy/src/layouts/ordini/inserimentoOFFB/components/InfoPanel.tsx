@@ -1,4 +1,4 @@
-import FDBox from "components/UI/box/FDBox"
+import { FDBox } from "@nex/fd-ui";
 import FDIconButton from "components/UI/buttons/FDIconButton"
 import { useState } from "react"
 //icons

@@ -10,7 +10,7 @@ import {
     icon_doubleCheck, icon_emoji, icon_file, icon_info,
     icon_search
 } from "config/icons"
-import { useMaterialUIController } from "context/index"
+
 import React, { Suspense } from "react"
 import MDButton from "components/MDButton"
 import SimpleEmojiPicker from "components/EmojiPicker"
@@ -30,7 +30,7 @@ import { SearchUsersAPI } from "./fetchData/search"
 import { UsersBlocks } from "./components/usersBlocks"
 import { LoadScreen } from "components/Load"
 import { Message } from "./components/message"
-import FDBox from "components/UI/box/FDBox"
+import { FDBox } from "@nex/fd-ui";
 import { UserAvatar } from "../userInfo"
 import { useTour } from "tour/TourProvider";
 import { useNexTheme } from "@nex/theme-system"

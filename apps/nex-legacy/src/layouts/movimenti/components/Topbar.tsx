@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 
 import { enqueueSnackbar } from "components/MessageBox";
 
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDButton from "components/UI/buttons/FDButton";
 import { ContextMenu } from "components/UI/menu/ContextMenu";
 

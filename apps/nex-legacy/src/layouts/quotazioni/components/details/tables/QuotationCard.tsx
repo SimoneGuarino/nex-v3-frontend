@@ -4,8 +4,8 @@ import { FiAlertCircle, FiChevronDown } from "react-icons/fi";
 import { IoEllipsisVertical } from "react-icons/io5";
 
 import { NumberToEuro, TruncateText } from "utils";
-import { clsx } from "components/UI/box/FDBox";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { clsx } from "clsx";
+import { FDIconButton } from "@nex/fd-ui";
 
 import {
     productStateTransitions,

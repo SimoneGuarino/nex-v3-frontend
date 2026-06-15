@@ -1,22 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { FDBackdrop } from "components/UI/box/FDBackdrop";
-import FDBox, { clsx } from "components/UI/box/FDBox";
+import { FDBackdrop, FDBox, FDSelect, FDInput, FDIconButton, FDButton, FDTextArea, FDDate, FDSwitch} from "@nex/fd-ui";
+import { clsx } from "clsx";
 import { mepaTypes, OnCreateRequestType, quotationTypes } from "../pages";
-import FDSelect from "components/UI/input/FDSelect";
 import { CustomerQuickDetailsDTO } from "layouts/quotazioni/types/customers";
-//components
-import FDInput from "components/UI/input/FDInput";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import FDButton from "components/UI/buttons/FDButton";
-import FDTextArea from "components/UI/input/FDTextArea";
-import FDDate from "components/UI/input/FDDate";
+
 //icons
 import { MdClose } from "react-icons/md";
 import { CiSquareInfo } from "react-icons/ci";
 import { SearchCustomersAPI } from "../fetchdata/get/searchCustomers";
 import { formatISODate, toLocalDateTimeInputValue } from "utils/date/getDate";
-import FDSwitch from "components/UI/input/FDSwitch";
 import { useTour } from "tour/TourProvider";
 import { useAuthz } from "authz/useAuthz";
 

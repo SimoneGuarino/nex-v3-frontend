@@ -27,7 +27,7 @@ import { useGeneralDataContext } from "context/GeneralDataContext";
 import { DivideName } from "utils/divideName";
 import { enqueueSnackbar } from "components/MessageBox";
 import { StringAvatar } from "utils/stringToColor";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDButton from "components/UI/buttons/FDButton";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 

@@ -10,7 +10,7 @@ import {
     YAxis,
 } from "recharts";
 import { FDSelect, type FDSelectOption } from "components/UI/input/FDSelect";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 
 
 // ——————————————————————————————————————————————————————————

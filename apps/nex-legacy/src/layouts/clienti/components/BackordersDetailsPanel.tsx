@@ -2,7 +2,7 @@
 import React from "react";
 import { TableVirtualized } from "components/Virtualized/table";
 import { getData as getBackordersDetailsData } from "../fetchData/backorders/detailsData";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import { IoCloseOutline } from "react-icons/io5";
 

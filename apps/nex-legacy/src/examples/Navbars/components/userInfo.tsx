@@ -5,22 +5,11 @@ import { UserContext } from "context/UserContext";
 
 import "../style.scss";
 import { BsStars } from "react-icons/bs";
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 
 import defaultAvatar from "assets/images/blank-profile-picture-973460_960_720.webp";
 import { ContextMenu } from 'components/UI/menu/ContextMenu';
 
-/*const getInitials = (name: string) => {
-    const parts = name.trim().split(/\s+/).slice(0, 2);
-    return parts.map((p) => p[0]?.toUpperCase() || "").join("");
-};
-
-const stringToHsl = (str: string) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    const h = Math.abs(hash) % 360;
-    return `hsl(${h} 70% 40%)`;
-};*/
 
 const CoverWithAvatar: React.FC<{ coverSrc?: string | null; src?: string | null; nome?: string; cognome?: string; bio?: string }> =
     ({ coverSrc, src, nome, cognome, bio }) => {

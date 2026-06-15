@@ -5,7 +5,7 @@ import { CheckAdminPermissions } from "utils/checkAdminPermissions";
 import { OnlineUsers as OnlineUsersType, useGeneralDataContext } from "context/GeneralDataContext";
 
 import MDTypography from "components/MDTypography";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { UserAvatar } from "../userInfo";
 
 

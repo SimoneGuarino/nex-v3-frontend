@@ -1,10 +1,9 @@
-// src/components/UI/panels/customerNotes/components/dialogs/CustomerNotesDeleteDialogs.tsx
 /**
  * descrizione: Dialog di conferma per eliminazione nota o singolo messaggio storico.
  * compito:     mostrare il riepilogo minimo prima di azioni distruttive.
  */
 import React from "react";
-import FDDialog from "components/UI/box/FDDialog";
+import { FDDialog } from "@nex/fd-ui";
 import type { DeleteChangeState, DeleteNoteState } from "../../types";
 import { truncateText } from "../../utils";
 

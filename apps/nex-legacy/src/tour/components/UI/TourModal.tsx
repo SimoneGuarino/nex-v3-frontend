@@ -1,15 +1,14 @@
 import React, { memo } from "react";
-import FDBox from "components/UI/box/FDBox";
-import FDButton from "components/UI/buttons/FDButton";
 import { enqueueSnackbar } from "components/MessageBox";
-import { FDBackdrop } from "components/UI/box/FDBackdrop";
+
+import { FDButton, FDBackdrop, FDBox} from "@nex/fd-ui";
+
 import OnboardingBG from "assets/images/tour/user_onboarding_loading.webp";
 import locationIMG from "assets/images/tour/firstOpen_location.webp";
 
 import nexLogoWhite from "assets/images/login/logo_nex_transp.webp";
 import { MdClose } from "react-icons/md"; // o le tue icone
 import FDIconButton from "components/UI/buttons/FDIconButton";
-import { SaveCookieWithAge } from "examples/Navbars";
 
 const MdCloseIcon = MdClose as React.FC<{ size?: number; className?: string }>;
 

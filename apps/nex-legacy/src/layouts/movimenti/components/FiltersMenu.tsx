@@ -1,8 +1,5 @@
 "use client";
-import FDDate from "components/UI/input/FDDate";
-import FDSelect from "components/UI/input/FDSelect";
-import FDButton from "components/UI/buttons/FDButton";
-import { FDSkeletonLayout, FDSkeletonSwitch } from "components/UI/box/FDSkeleton";
+import { FDDate, FDSelect, FDButton, FDSkeletonLayout, FDSkeletonSwitch } from "@nex/fd-ui";
 
 import { LuTriangleAlert } from "react-icons/lu";
 

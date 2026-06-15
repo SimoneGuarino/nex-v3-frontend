@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { FDInput } from "components/UI/input/FDInput";
 import { FiLink2 } from "react-icons/fi";
 

@@ -4,7 +4,7 @@ import FDSelect, {
     type FDSelectOption,
 } from "components/UI/input/FDSelect";
 import FDIconButton from "components/UI/buttons/FDIconButton";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDDate, { type FDDateSingleValue } from "components/UI/input/FDDate";
 import { icon_filter, icon_search } from "config/icons";
 import { ContextMenu } from "components/UI/menu/ContextMenu";

@@ -1,15 +1,13 @@
 import React, { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
-import FDBox, { clsx } from "components/UI/box/FDBox";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import { FDSkeletonPresets, FDSkeletonLayout } from "components/UI/box/FDSkeleton";
+import { clsx } from "clsx";
+import { FDIconButton, FDBox, FDBackdrop, FDSkeletonPresets, FDSkeletonLayout } from "@nex/fd-ui";
 import { SidePanelShell } from "components/UI/panels/customersPanel/components/SidePanelShell";
 
 import { FaLink, FaFileInvoice, FaShoppingCart } from "react-icons/fa";
 import { HiOutlineSparkles } from "react-icons/hi2";
 import { FiRefreshCw } from "react-icons/fi";
-import { FDBackdrop } from "components/UI/box/FDBackdrop";
 import { useTour } from "tour/TourProvider";
 import { useUserContext } from "context/UserContext";
 

@@ -1,20 +1,17 @@
-//src\components\Virtualized\table\headerVirtualized\index.tsx
 import React, { useEffect, useState, memo, useCallback, useRef } from 'react';
 // #Internal Components
 import { Filters } from './filters';
-import InfoMenu from '../infoPoupUpMenu';
 // #External Components
-import Stack from '@mui/material/Stack';
 import HeaderFiled from './headerFIled';
 // --@Mui icons
 import { useMaterialUIController } from 'context/index';
-import { Card, Tooltip as MuiTooltip } from '@mui/material';
+import { Tooltip as MuiTooltip } from '@mui/material';
 import { ContextMenu } from 'components/UI/menu/ContextMenu';
 
 import { IoArrowUpCircleOutline } from "react-icons/io5";
 import { BsFillExclamationTriangleFill } from 'react-icons/bs';
 import { HeaderSettings } from '../types/headerSettings';
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 
 const IoArrowUpCircleOutlineIcon = IoArrowUpCircleOutline as React.FC<{ size?: number; className?: string }>;
 

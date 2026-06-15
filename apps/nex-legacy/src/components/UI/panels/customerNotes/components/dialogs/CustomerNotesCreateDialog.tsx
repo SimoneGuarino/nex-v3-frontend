@@ -4,10 +4,7 @@
  * compito:     raccoglie cliente/tipologia/testo e delega salvataggio al manager.
  */
 import React from "react";
-import FDDialog from "components/UI/box/FDDialog";
-import FDButton from "components/UI/buttons/FDButton";
-import FDSelect, { type FDSelectOption } from "components/UI/input/FDSelect";
-import FDTextArea from "components/UI/input/FDTextArea";
+import { FDDialog, FDButton, FDSelect, FDTextArea, type FDSelectOption} from "@nex/fd-ui";
 import { asDigitString, normalizeText } from "../../utils";
 
 type CustomerNotesCreateDialogProps = {

@@ -19,7 +19,7 @@ import { IoCloudDownloadOutline } from "react-icons/io5";
 import { CiFileOn } from "react-icons/ci";
 import { ImFilesEmpty } from "react-icons/im";
 //components
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { useNexTheme } from "@nex/theme-system";
 
 const IoCloudDownloadOutlineIcon = IoCloudDownloadOutline as React.FC<{ size?: number }>;

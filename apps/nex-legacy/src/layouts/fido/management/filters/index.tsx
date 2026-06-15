@@ -15,7 +15,7 @@ import { MainTheme } from 'assets/settingsTheme';
 import { DwdExcelAPI } from '../fetch/excel';
 import { useTour } from "tour/TourProvider";
 
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 import FDSelect, { FDSelectOption } from 'components/UI/input/FDSelect';
 import FDDate, { FDDateRangeValue } from 'components/UI/input/FDDate';
 import FDIconButton from 'components/UI/buttons/FDIconButton';

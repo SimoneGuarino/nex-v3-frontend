@@ -1,5 +1,5 @@
 import React from "react";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDButton from "components/UI/buttons/FDButton";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import { RiResetRightFill } from "react-icons/ri";

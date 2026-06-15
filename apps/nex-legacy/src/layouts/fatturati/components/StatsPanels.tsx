@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { format } from "date-fns";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import type { AdminSeriesResponse } from "../fetchdata/admin/series";
 import type { BreakdownTotals } from "./charts/BarChart";
 import type { LineChartPublicStats } from "./charts/LineChart";

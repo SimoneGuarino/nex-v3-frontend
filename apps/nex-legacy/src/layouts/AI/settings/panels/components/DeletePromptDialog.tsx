@@ -1,4 +1,4 @@
-import FDDialog from "components/UI/box/FDDialog";
+import { FDDialog } from "@nex/fd-ui";
 
 export default function DeletePromptDialog({
     open,

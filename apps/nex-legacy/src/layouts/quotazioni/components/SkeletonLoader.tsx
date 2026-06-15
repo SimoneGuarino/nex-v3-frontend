@@ -1,4 +1,4 @@
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 
 interface SkeletonLoaderProps {
     count?: number;

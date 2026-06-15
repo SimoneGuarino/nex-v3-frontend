@@ -2,7 +2,7 @@ import { memo } from "react";
 import { useNavigate } from "react-router-dom";
 //components UI
 import FDIconButton from "components/UI/buttons/FDIconButton";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 //icons
 import { IoReturnUpBackSharp, IoReload } from "react-icons/io5";
 import { AiOutlineDelete } from "react-icons/ai";

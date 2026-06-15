@@ -1,5 +1,5 @@
 import React from "react";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import { FDButton } from "components/UI/buttons/FDButton";
 import { FDDate } from "components/UI/input/FDDate";

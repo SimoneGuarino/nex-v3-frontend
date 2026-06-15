@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { motion, useSpring, useTransform } from "framer-motion";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { FiExternalLink } from "react-icons/fi";
 import { HiOutlineDocumentText } from "react-icons/hi2";
 

@@ -4,7 +4,7 @@
  * props:       open, title? (titolo della query), onClose, onConfirm, loading?.
  * dipendenze:  FDDialog.
  */
-import FDDialog from "components/UI/box/FDDialog";
+import { FDDialog } from "@nex/fd-ui";
 
 export default function DeleteQueryDialog({
     open,

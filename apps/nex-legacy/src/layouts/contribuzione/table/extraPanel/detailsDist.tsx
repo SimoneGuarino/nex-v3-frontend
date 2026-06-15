@@ -4,11 +4,9 @@ import React from 'react';
 import { PickLowest } from '../../../../utils';
 
 import ConvertModule from '../../../../classes/convert';
-import { FDBackdrop } from 'components/UI/box/FDBackdrop';
-import FDBox from 'components/UI/box/FDBox';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
-const Convert = new ConvertModule();
+import { FDBackdrop, FDBox, FDIconButton } from '@nex/fd-ui';
 
+const Convert = new ConvertModule();
 
 
 interface Distributor {
@@ -16,7 +14,6 @@ interface Distributor {
     PrezzoListino: number;
     Disponibili: number;
 }
-
 
 
 interface DistBlockProps {

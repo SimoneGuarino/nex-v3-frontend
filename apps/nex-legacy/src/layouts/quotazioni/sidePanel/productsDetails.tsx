@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { FDBackdrop } from "components/UI/box/FDBackdrop";
-import FDBox from "components/UI/box/FDBox";
+import { FDBackdrop, FDButton, FDSelect, type FDSelectOption, FDIconButton, FDDate} from "@nex/fd-ui";
+import { FDBox } from "@nex/fd-ui";
 
 import { SidePanelShell } from "./SidePanelShell";
 import type {
@@ -34,10 +34,6 @@ import { GoInfo, GoPlus } from "react-icons/go";
 import { LuSend } from "react-icons/lu";
 
 import { ProductDetailsReporting } from "examples/productDetails/ProductDetailsReporting";
-import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
-import FDButton from "components/UI/buttons/FDButton";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import FDDate from "components/UI/input/FDDate";
 import { useExpiryCountdown } from "../hook/useQuotationClosureGate";
 import { UserState } from "types/UserContext";
 import { formatISODate, toLocalDateTimeInputValue } from "utils/date/getDate";

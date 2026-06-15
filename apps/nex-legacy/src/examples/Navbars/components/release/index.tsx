@@ -16,11 +16,10 @@ import { useUserContext } from "context/UserContext";
 import { icon_back } from "config/icons";
 import ReleaseCard from "./components/ReleaseCard";
 import ReleaseDetailsModal from "./components/ReleaseDetailsModal";
-import FDBox from "components/UI/box/FDBox";
-import { FDBackdrop } from "components/UI/box/FDBackdrop";
+
+import { FDBox, FDBackdrop, FDButton, FDIconButton } from "@nex/fd-ui";
+
 import { LazyMotion, domAnimation, m } from "framer-motion";
-import FDButton from "components/UI/buttons/FDButton";
-import FDIconButton from "components/UI/buttons/FDIconButton";
 //icons components
 import { IoCloseSharp, IoNewspaperOutline } from "react-icons/io5";
 import { useNexTheme } from "@nex/theme-system";

@@ -1,7 +1,7 @@
 //src\layouts\promozioni\extraBar\filtersBar.tsx
 import { icon_download, icon_search } from "config/icons";
 import React from "react";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
 import FDInput from "components/UI/input/FDInput";

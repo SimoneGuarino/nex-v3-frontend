@@ -1,6 +1,6 @@
 ﻿import { motion } from "framer-motion";
-import { clsx } from "components/UI/box/FDBox";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { clsx } from "clsx";
+import { FDIconButton } from "@nex/fd-ui";
 import LineChart from "./charts/LineChart";
 // icons
 import { FaRegChartBar } from "react-icons/fa";

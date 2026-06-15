@@ -1,6 +1,6 @@
 import React from 'react';
 
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '../../../';
 
 import defaultAvatar from "../../../assets/images/blank-profile-picture-973460_960_720.webp";
 import { ContextMenu } from 'components/UI/menu/ContextMenu';

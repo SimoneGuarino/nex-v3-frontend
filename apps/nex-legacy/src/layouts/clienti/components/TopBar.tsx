@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDButton from "components/UI/buttons/FDButton";
 import { IoSearch, IoPersonSharp } from "react-icons/io5";
 import { MdFilterList, MdDownload } from "react-icons/md";

@@ -1,6 +1,6 @@
 import React from "react";
-import { clsx } from "components/UI/box/FDBox";
-import FDButton from "components/UI/buttons/FDButton";
+import { clsx } from "clsx";
+import { FDButton } from "@nex/fd-ui";
 import { IoDocumentOutline } from "react-icons/io5";
 import { IoMdDownload } from "react-icons/io";
 import {

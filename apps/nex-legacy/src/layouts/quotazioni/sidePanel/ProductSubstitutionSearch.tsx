@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { MdDone } from "react-icons/md";
 import { FiChevronRight } from "react-icons/fi";
 import { CartProductDTO } from "../types/qts_product";

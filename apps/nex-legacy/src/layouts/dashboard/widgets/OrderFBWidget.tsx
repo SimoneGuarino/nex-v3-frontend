@@ -2,7 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { FiClock, FiXCircle, FiRefreshCcw, FiAlertTriangle } from "react-icons/fi";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { UserContext } from "context/UserContext";
 
 // 🔌 usa lo stesso stile di integrazione usato in index_v1.tsx

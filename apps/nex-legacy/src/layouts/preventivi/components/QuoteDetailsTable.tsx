@@ -3,10 +3,11 @@ import { MdDownload } from "react-icons/md";
 import { TableVirtualized } from "components/Virtualized/table";
 import { downloadCsvFromRows } from "utils/exportCsv";
 import type { QuoteDetailRow, QuoteDetailsResponse } from "../types";
-import FDButton from "components/UI/buttons/FDButton";
+
 import { SidePanelShell } from "components/UI/panels/customersPanel/components/SidePanelShell";
-import { FDSkeletonLayout, FDSkeletonSwitch } from "components/UI/box/FDSkeleton";
-import { clsx } from "components/UI/box/FDBox";
+import { FDButton, FDSkeletonLayout, FDSkeletonSwitch } from "@nex/fd-ui";
+
+import { clsx } from "clsx";
 
 const DownloadIcon = MdDownload as React.FC<{ size?: number; className?: string }>;
 const DETAILS_PAGE_SIZE = 50;

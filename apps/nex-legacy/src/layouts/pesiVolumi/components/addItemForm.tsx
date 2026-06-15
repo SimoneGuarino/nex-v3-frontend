@@ -3,7 +3,7 @@ import React from 'react';
 import { SearchItemAPI } from '../fetchData/SearchItem';
 import { enqueueSnackbar } from 'components/MessageBox';
 import FDInput from 'components/UI/input/FDInput';
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 import FDIconButton from 'components/UI/buttons/FDIconButton';
 import FDButton from 'components/UI/buttons/FDButton';
 import { useTour } from "tour/TourProvider";

@@ -1,5 +1,5 @@
 import React from "react";
-import FDDialog from "components/UI/box/FDDialog";
+import { FDDialog } from "@nex/fd-ui";
 import { TableVirtualized } from "components/Virtualized/table";
 import { getCustomerAddresses, type CustomerAddressItem } from "../fetchData/getCustomerAddresses";
 

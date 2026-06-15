@@ -1,8 +1,7 @@
 import { DragEvent, MutableRefObject, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FiCheckCircle, FiCpu, FiFileText, FiRefreshCw, FiShield, FiStar, FiUploadCloud, FiZap } from "react-icons/fi";
-import { FDBackdrop } from "components/UI/box/FDBackdrop";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDBackdrop, FDButton} from "@nex/fd-ui";
 import { SidePanelShell } from "components/UI/panels/SidePanelShell";
 import { enqueueSnackbar } from "components/MessageBox";
 import { createMepaTenderDraft, finalizeMepaTenderWorkspace, runMepaTenderFormPrefillAgent, uploadMepaTenderDocuments } from "../fetchData/mepaAi";

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDButton from "components/UI/buttons/FDButton";
 import { MdDownload, MdFilterList } from "react-icons/md";
 import type { PurchasesFiltersResponse, PurchasesQuery, PurchasesSummaryResponse } from "../types";

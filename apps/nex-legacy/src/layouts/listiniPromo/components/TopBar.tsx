@@ -2,7 +2,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import FDButton from "components/UI/buttons/FDButton";

@@ -1,9 +1,8 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { FiAlertTriangle, FiCheckCircle, FiCpu, FiFileText, FiPlus, FiRefreshCw, FiSearch, FiTarget, FiX } from "react-icons/fi";
-import FDSelect from "components/UI/input/FDSelect";
-import FDInput from "components/UI/input/FDInput";
-import { FDBackdrop } from "components/UI/box/FDBackdrop";
+import { FDSelect, FDInput, FDBackdrop} from "@nex/fd-ui";
+
 import { SidePanelShell } from "components/UI/panels/SidePanelShell";
 import {
     SectionActionButton,

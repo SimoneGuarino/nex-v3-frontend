@@ -1,5 +1,5 @@
 import React from "react";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { UserAvatar } from "examples/Navbars/components/userInfo";
 import { Customer } from "layouts/quotazioni/types/customers";
 import { CustomerQuickDetailsDTO } from "layouts/quotazioni/types/customers";

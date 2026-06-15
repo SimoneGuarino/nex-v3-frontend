@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/components/CustomerNotesGroups.tsx
 /**
  * descrizione: Render della lista note raggruppata per cliente.
  * compito:     mostrare metadati nota e azioni contestuali (discussione/eliminazione).
@@ -22,7 +21,7 @@ import {
     truncateText,
 
 } from "../utils";
-import { FDSkeletonLayout, FDSkeletonPresets, FDSkeletonSwitch } from "components/UI/box/FDSkeleton";
+import { FDSkeletonLayout, FDSkeletonPresets, FDSkeletonSwitch } from "@nex/fd-ui";
 
 type CustomerNotesGroupsProps = {
     loadingInitial: boolean;

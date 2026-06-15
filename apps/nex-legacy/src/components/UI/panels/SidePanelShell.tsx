@@ -1,12 +1,9 @@
 import React from "react";
-import clsx from "clsx";
-import {FDBox, type FDBoxProps } from "@nex/fd-ui";
+import FDBox, { type FDBoxProps, clsx } from "components/UI/box/FDBox";
 import { motion, type Variants } from "framer-motion";
 import { FiX } from "react-icons/fi";
+import FDIconButton from "components/UI/buttons/FDIconButton";
 
-const FiXIcon = FiX as React.FC<{ className?: string }>;
-
-// Variants del guscio
 const slideFromRightVariants: Variants = {
     hidden: {
         x: "100%",
@@ -44,7 +41,6 @@ const slideFromRightVariants: Variants = {
     },
 };
 
-// Variants contenuto interno (fade/blur)
 const contentVariants: Variants = {
     front: {
         opacity: 1,
@@ -60,30 +56,41 @@ const contentVariants: Variants = {
 
 export interface SidePanelShellProps extends Omit<FDBoxProps, "title"> {
     title?: React.ReactNode;
+    headerActions?: React.ReactNode;
     footer?: React.ReactNode;
     onClose?: () => void;
-    /** data-tour opzionale per il bottone di chiusura (X). */
-    closeButtonDataTour?: string;
-    /** Se true disabilita la X del pannello. */
+    /**
+     * Disabilita il pulsante di chiusura (X) in base alle regole del tour.
+     */
     closeDisabled?: boolean;
-    /** Slot opzionale per azioni/info a destra nell'header (prima del pulsante close). */
-    headerRight?: React.ReactNode;
+    /**
+     * Overlay locale sul body del pannello: blocca le interazioni interne
+     * senza impattare la topbar o il resto della pagina.
+     */
+    lockBodyInteractions?: boolean;
     /** "visible" → pannello in primo piano, "background" → pannello rimpicciolito */
     animateVariant?: "visible" | "background";
-    /** Stato del contenuto interno per il fade */
     contentState?: "front" | "background";
+    bodyScrollable?: boolean;
+    bodyClassName?: string;
     children: React.ReactNode;
 }
 
+/**
+ * Shell riusabile dei pannelli laterali (primario e secondario).
+ * Centralizza animazioni, header, body scrollabile e footer opzionale.
+ */
 export const SidePanelShell: React.FC<SidePanelShellProps> = ({
     title,
+    headerActions,
     onClose,
-    closeButtonDataTour,
     closeDisabled = false,
-    headerRight,
+    lockBodyInteractions = false,
     animateVariant = "visible",
     contentState = "front",
     footer,
+    bodyScrollable = true,
+    bodyClassName,
     className,
     children,
     ...rest
@@ -114,7 +121,6 @@ export const SidePanelShell: React.FC<SidePanelShellProps> = ({
             )}
             {...rest}
         >
-            {/* HEADER */}
             <header className="flex items-center justify-between px-5 py-4 border-b border-white/10 dark:border-neutral-800/80">
                 <div className="min-w-0">
                     {title && (
@@ -125,40 +131,38 @@ export const SidePanelShell: React.FC<SidePanelShellProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {headerRight}
+                    {headerActions}
                     {onClose && (
-                        <button
-                            type="button"
+                        <FDIconButton
+                            dataTour="scheda-cliente-close"
+                            icon={FiX({})}
                             onClick={onClose}
-                            disabled={closeDisabled}
-                            data-tour={closeButtonDataTour}
-                            className={[
-                                "inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/5 bg-white/70 text-neutral-600 shadow-sm transition dark:border-white/10 dark:bg-neutral-900/70 dark:text-neutral-300",
-                                closeDisabled
-                                    ? "cursor-not-allowed opacity-50"
-                                    : "hover:bg-white hover:text-neutral-900 dark:hover:bg-neutral-900",
-                            ].join(" ")}
-                            aria-label="Chiudi pannello"
-                        >
-                            <FiXIcon className="h-4 w-4" />
-                        </button>
+                            disabled={!onClose || closeDisabled}
+                        />
                     )}
                 </div>
             </header>
 
-            {/* BODY */}
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className={clsx("relative flex-1 px-5 py-4", bodyScrollable ? "overflow-y-auto" : "overflow-hidden", bodyClassName)} >
                 <motion.div
                     initial={false}
                     animate={contentState}
                     variants={contentVariants}
-                    className="h-full"
+                    className={clsx(
+                        "h-full",
+                        /**
+                         * Lock "soft" del contenuto:
+                         * - blocca click/tap sui controlli interni della scheda cliente;
+                         * - non mette un overlay assoluto sopra il body, quindi lo scroll
+                         *   verticale resta disponibile anche con viewport più piccoli.
+                         */
+                        lockBodyInteractions && "pointer-events-none",
+                    )}
                 >
                     {children}
                 </motion.div>
             </div>
 
-            {/* FOOTER */}
             {footer && footer}
         </FDBox>
     );

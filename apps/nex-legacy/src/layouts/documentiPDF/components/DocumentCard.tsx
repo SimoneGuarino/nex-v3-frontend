@@ -1,7 +1,7 @@
 import React, { memo, useCallback } from 'react';
 import { MdStarBorder, MdStar } from 'react-icons/md';
 import type { DocumentItemMapped } from '../types';
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 import FDIconButton from 'components/UI/buttons/FDIconButton';
 import { DocPreview } from './document/DocPreview';
 import { IoEllipsisVertical } from "react-icons/io5";

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { clsx } from "components/UI/box/FDBox";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { clsx } from "clsx";
+import { FDIconButton } from "@nex/fd-ui";
 import { useMemo, useState } from "react";
 import BarChart from "./charts/BarChart";
 //icons

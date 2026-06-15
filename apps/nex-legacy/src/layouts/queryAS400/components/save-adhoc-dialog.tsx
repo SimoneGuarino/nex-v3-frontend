@@ -4,7 +4,7 @@
  * dipendenze:  FDDialog, useSurfaceTokens per i token (pill e code).
  */
 import React from "react";
-import FDDialog from "components/UI/box/FDDialog";
+import { FDDialog } from "@nex/fd-ui";
 import { useSurfaceTokens } from "../hooks/use-surface-tokens";
 
 type RoleOption = { id: number; ruolo: string };

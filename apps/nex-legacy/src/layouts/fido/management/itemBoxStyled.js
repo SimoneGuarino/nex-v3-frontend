@@ -9,7 +9,7 @@ import { MainTheme } from 'assets/settingsTheme';
 import { icon_chrono, icon_forum, icon_time } from 'config/icons';
 import { useGeneralDataContext } from 'context/GeneralDataContext';
 import { ConvertToItalianDate } from 'utils/italianDate';
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 
 import ConvertModule from "classes/convert.js";
 import { useNexTheme } from '@nex/theme-system';

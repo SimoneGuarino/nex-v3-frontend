@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 import { useMaterialUIController, setLayout } from "context/index";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 
 export interface DashboardLayoutProps {
     children: React.ReactNode;

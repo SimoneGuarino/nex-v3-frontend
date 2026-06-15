@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import FDBox from "components/UI/box/FDBox";
-import FDInput from "components/UI/input/FDInput";
 import { MdClose, MdSearch, MdPersonAddAlt1, MdDone, MdFilePresent } from "react-icons/md";
-import { FDBackdrop } from "components/UI/box/FDBackdrop";
-import FDIconButton from "../buttons/FDIconButton";
-import FDButton from "../buttons/FDButton";
+
+import { FDBox, FDInput, FDIconButton, FDButton, FDBackdrop } from "@nex/fd-ui";
+
 import RichTextEditor from "../input/RichTextEditor";
 import { UserAvatar } from "examples/Navbars/components/userInfo";
 

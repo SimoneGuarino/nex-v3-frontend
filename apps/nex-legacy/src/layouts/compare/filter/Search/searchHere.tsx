@@ -21,7 +21,7 @@ import { Button, InputBase } from "@mui/material";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import theme from "assets/theme";
 import { enqueueSnackbar } from "components/MessageBox";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { useNexTheme } from "@nex/theme-system";
 
 type SearchHereProps = {

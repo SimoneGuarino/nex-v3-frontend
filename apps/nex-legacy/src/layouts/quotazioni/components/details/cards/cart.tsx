@@ -1,7 +1,6 @@
 ﻿import React from "react";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import FDButton from "components/UI/buttons/FDButton";
-import FDBox, { clsx } from "components/UI/box/FDBox";
+import { FDIconButton, FDButton, FDBox, FDSkeletonLayout, FDSkeletonSwitch } from "@nex/fd-ui";
+import { clsx } from "clsx";
 import cartEmpty from 'assets/images/emptyCart/shopping-cart-with-boxes-concept-illustration_114360-18772-noBg.png';
 import { CartProductDTO, TextRequestCartDTO } from "layouts/quotazioni/types/qts_product";
 import placeholder from 'assets/images/placeholder/av5c8336583e291842624.webp';
@@ -13,7 +12,6 @@ import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { TruncateText } from "utils";
 import { QuotazioneDTO } from "layouts/quotazioni/types/quotations";
-import { FDSkeletonLayout, FDSkeletonSwitch } from "components/UI/box/FDSkeleton";
 
 const MdCloseIcon = MdClose as React.FC<{ size?: number; className?: string }>;
 const BSCartCheck = BsCartCheck as React.FC<{ size?: number; className?: string }>;

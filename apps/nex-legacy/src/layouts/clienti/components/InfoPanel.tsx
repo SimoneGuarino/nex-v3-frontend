@@ -1,6 +1,6 @@
 import React from "react";
 import { NumberToEuro } from "utils/numberToEuro";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import { useNexTheme } from "@nex/theme-system";
 
 

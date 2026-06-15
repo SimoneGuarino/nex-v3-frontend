@@ -9,7 +9,7 @@ import { enqueueSnackbar } from 'components/MessageBox';
 import { DivideName } from 'utils/divideName';
 import { icon_forum, icon_note } from 'config/icons';
 import { useTour } from "tour/TourProvider";
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 import { useNexTheme } from '@nex/theme-system';
 import FDIconButton from 'components/UI/buttons/FDIconButton';
 

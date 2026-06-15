@@ -13,7 +13,7 @@ import FDInput from "components/UI/input/FDInput";
 import { m } from "framer-motion";
 import { useUserContext } from "context/UserContext";
 import { Tag } from "components/Tag/Tag";
-import FDBox from "components/UI/box/FDBox";
+import { FDBox } from "@nex/fd-ui";
 import FDIconButton from "components/UI/buttons/FDIconButton";
 import { ProfileDetailAPI } from "../fetchData/ProfileDetail";
 import { enqueueSnackbar } from "components/MessageBox";

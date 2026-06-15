@@ -4,7 +4,7 @@ import React from 'react';
 import MinLoader from '../../../minLoader';
 import theme from 'assets/theme';
 import FDIconButton from 'components/UI/buttons/FDIconButton';
-import FDBox from 'components/UI/box/FDBox';
+import { FDBox } from '@nex/fd-ui';
 import { useTour } from "tour/TourProvider";
 import { useNexTheme } from '@nex/theme-system';
 
