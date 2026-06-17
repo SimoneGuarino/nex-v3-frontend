@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 //UI
-import FDButton from "components/UI/buttons/FDButton";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton, FDButton, FDInput } from "@nex/fd-ui";
 //componenti
 import { Markdown } from "layouts/AI/chat/module/markdown";
 import { GetBsgAPI, CreateBsgAPI, UpdateBsgAPI } from "../fetchData/BsgList";
@@ -14,7 +13,6 @@ import { IoChevronForwardOutline, IoChevronDownOutline, IoRefreshOutline } from 
 import { HiOutlineDocumentText } from "react-icons/hi";
 import { MdEdit } from "react-icons/md";
 import { FaPlus } from "react-icons/fa";
-import FDInput from "components/UI/input/FDInput";
 
 const ChevronRightIcon = IoChevronForwardOutline as React.FC<{ size?: number }>;
 const ChevronDownIcon = IoChevronDownOutline as React.FC<{ size?: number }>;

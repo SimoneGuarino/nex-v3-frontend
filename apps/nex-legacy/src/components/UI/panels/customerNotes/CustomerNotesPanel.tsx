@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/CustomerNotesPanel.tsx
 /**
  * descrizione: Shell standalone del pannello note cliente.
  * compito:     gestisce overlay/esc/backdrop e delega la logica operativa a CustomerNotesManager.
@@ -6,7 +5,7 @@
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useUserContext } from "context/UserContext";
-import { SidePanelShell } from "../customersPanel/components/SidePanelShell";
+import { SidePanelShell } from "@nex/fd-ui";
 import { CustomerNotesPanelContent } from "./components/CustomerNotesPanelContent";
 import { CustomerNotesPanelFooter } from "./components/CustomerNotesPanelFooter";
 import { CustomerNotesPanelTitle } from "./components/CustomerNotesPanelTitle";

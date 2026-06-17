@@ -5,7 +5,7 @@ import { ChronoAPI } from '../../fetchData/chronoData';
 import { GroupedVirtualized } from 'components/Virtualized/grouped';
 import { Tag } from 'components/Tag/Tag';
 import { statusList, StatusToColor } from '../../../statusToColor';
-import theme from 'assets/theme';
+
 import { NumberToEuro } from 'utils/numberToEuro';
 import { FiltersBar } from './filters';
 import { MainTheme } from 'assets/settingsTheme';
@@ -18,7 +18,7 @@ import { enqueueSnackbar } from 'components/MessageBox';
 import { UserState } from 'types/UserContext';
 import { useTour } from "tour/TourProvider";
 import { useNexTheme } from '@nex/theme-system';
-import { FDIconButton } from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from '@nex/fd-ui';
 
 
 // ——————————————————————————————————————————————————————————

@@ -2,8 +2,7 @@ import React, { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { clsx } from "clsx";
-import { FDIconButton, FDBox, FDBackdrop, FDSkeletonPresets, FDSkeletonLayout } from "@nex/fd-ui";
-import { SidePanelShell } from "components/UI/panels/customersPanel/components/SidePanelShell";
+import { FDIconButton, FDBox, FDBackdrop, FDSkeletonPresets, FDSkeletonLayout, SidePanelShell } from "@nex/fd-ui";
 
 import { FaLink, FaFileInvoice, FaShoppingCart } from "react-icons/fa";
 import { HiOutlineSparkles } from "react-icons/hi2";

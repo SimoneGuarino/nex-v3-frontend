@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { FDBox } from "@nex/fd-ui";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDBox, FDButton, FDSelect, ContextMenu } from "@nex/fd-ui";
+
 import { IoSearch, IoPersonSharp } from "react-icons/io5";
 import { MdFilterList, MdDownload } from "react-icons/md";
 
@@ -12,8 +12,6 @@ import { getFilters, FidoFiltersOptions } from "../fetchData/getFilters";
 import FiltersMenu from "./FiltersMenu";
 
 import type { ViewId, CommonFilters, CustomerOption } from "../types/view";
-import { ContextMenu } from "components/UI/menu/ContextMenu";
-import FDSelect from "components/UI/input/FDSelect";
 import { ChangeLoadStatusArgs, LoadStatus } from "../types/load";
 import { useTour } from "tour/TourProvider";
 import { useNexTheme } from "@nex/theme-system";

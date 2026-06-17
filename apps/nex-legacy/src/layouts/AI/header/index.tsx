@@ -1,12 +1,11 @@
 import { Tag } from "components/Tag/Tag";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton, FDButton } from "@nex/fd-ui";
 import React, { useContext } from "react";
 import { IoExpandOutline, IoContractOutline, IoCloseSharp, IoCloudyOutline } from "react-icons/io5";
 import { AiOutlineLock } from "react-icons/ai";
 import { LuPanelLeft, LuSettings } from "react-icons/lu";
 import { AIContext } from "context/AIContext";
 import { FiChevronDown } from "react-icons/fi";
-import FDButton from "components/UI/buttons/FDButton";
 
 const CloseIcon = IoCloseSharp as React.FC<{ size?: number }>;
 const LockIcon = AiOutlineLock as React.FC<{ size?: number }>;

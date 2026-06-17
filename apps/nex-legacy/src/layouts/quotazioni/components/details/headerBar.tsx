@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { useNavigate } from "react-router-dom";
 //components UI
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 import { FDBox } from "@nex/fd-ui";
 //icons
 import { IoReturnUpBackSharp, IoReload } from "react-icons/io5";

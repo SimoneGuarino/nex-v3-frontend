@@ -1,9 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 //UI
-import FDButton from "components/UI/buttons/FDButton";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import { ContextMenu } from "components/UI/menu/ContextMenu";
+import { FDIconButton, FDButton, ContextMenu } from "@nex/fd-ui";
 //context
 import { useUserContext } from "context/UserContext";
 //icons

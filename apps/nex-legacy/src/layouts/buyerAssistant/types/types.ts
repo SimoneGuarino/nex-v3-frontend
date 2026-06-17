@@ -1,4 +1,4 @@
-import { FDSelectOption } from "components/UI/input/FDSelect";
+import { FDSelectOption } from "@nex/fd-ui";
 
 export type Famiglia = { famiglia: string; descrizioneFamiglia?: string };
 

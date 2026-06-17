@@ -1,13 +1,11 @@
-// src/layouts/stocks/payments/filters/index.tsx
 import React from "react";
 import { Skeleton } from "@mui/material";
 import { CheckAdminPermissions } from "utils/checkAdminPermissions";
 import { useGeneralDataContext } from "context/GeneralDataContext";
 import { MainTheme } from "assets/settingsTheme";
-import FDButton from "components/UI/buttons/FDButton";
-import FDDate from "components/UI/input/FDDate";
-import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
-import FDInput from "components/UI/input/FDInput";
+
+import { FDButton, FDDate, FDSelect, type FDSelectOption, FDInput } from "@nex/fd-ui";
+
 import { icon_search } from "config/icons";
 import type { UserChoose, Customer } from "../types";
 

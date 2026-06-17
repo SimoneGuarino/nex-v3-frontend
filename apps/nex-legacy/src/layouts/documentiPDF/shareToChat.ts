@@ -1,8 +1,9 @@
 // shareToChat.ts
 import { getChatSocket } from '@nex/realtime-core';
 const chatSocket = getChatSocket();
-import { ActionsOnRemoteBlocksAPI } from "examples/Navbars/components/chat/fetchData/actionsOnRemoteBlocks";
-import { ShareDoc } from 'components/UI/share/FDSharePanel';
+
+import { type ShareDoc } from '@nex/fd-ui';
+
 import { enqueueSnackbar } from 'components/MessageBox';
 import { ChatBlock } from 'context/GeneralDataContext';
 import { Dispatch, SetStateAction } from 'react';

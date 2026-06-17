@@ -6,7 +6,7 @@ import { icon_close, icon_info } from 'config/icons';
 import LoadingButton from '@mui/lab/LoadingButton';
 import MinLoader from '../../../../minLoader';
 import { MainTheme } from 'assets/settingsTheme';
-import RichTextEditor from 'components/UI/input/RichTextEditor';
+import { RichTextEditor } from '@nex/fd-ui';
 
 
 interface NoteProps {

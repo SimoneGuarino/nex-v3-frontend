@@ -1,4 +1,3 @@
-//src\layouts\pesiVolumi\index.tsx
 import React, { useRef, useState } from 'react';
 
 import { useUserContext } from "../../context/UserContext";
@@ -21,19 +20,17 @@ import theme from 'assets/theme';
 import noDataWEBP from 'assets/images/noCategoryAssignedBg.webp';
 import { TableVirtualized } from 'components/Virtualized/table';
 import { downloadCsvFromRows } from 'utils/exportCsv';
-import { ContextMenu } from 'components/UI/menu/ContextMenu';
-import FDButton from 'components/UI/buttons/FDButton';
-import { MdFileDownload } from "react-icons/md";
+
+import { FDButton, ContextMenu, type FilterChip } from '@nex/fd-ui';
+
 import { ExportWeightsVolumesCSV } from './fetchData/exportData';
 import { TagP } from './components/tagPanel';
-import { FilterChip } from 'components/UI/search/FDSearchPanel';
 
 //tour
 import { useSectionTour } from 'tour/useSectionTour';
 import { useTour } from "tour/TourProvider";
 import { Role } from 'tour/types';
 
-const DownloadIcon = MdFileDownload as React.FC<{ size?: number, className?: string }>;
 
 /* ===== tipi locali minimi (solo per questo file) ===== */
 

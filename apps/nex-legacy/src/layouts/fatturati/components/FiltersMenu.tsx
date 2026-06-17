@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FDSelect, type FDSelectOption } from "components/UI/input/FDSelect";
+import { FDSelect, type FDSelectOption, FDButton } from "@nex/fd-ui";
 import { FilterListAsOptionsAPI } from "../fetchdata/filterlist";
 import { useUserContext } from "context/UserContext";
 
 import { GetCategoriesAPI } from "../fetchdata/getCategories";
 import type { BrandFiltersOut } from "./BrandsPanel";
-import FDButton from "components/UI/buttons/FDButton";
 import { CustomerOption } from "types/customers";
 import { SearchCustomersAPI } from "../fetchdata/customers/serchCustomers";
 import { enqueueSnackbar } from "components/MessageBox";

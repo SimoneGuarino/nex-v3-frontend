@@ -1,4 +1,4 @@
-import { ColorOption } from "components/UI/colors/ColorSwitch";
+import { ColorOption } from "@nex/fd-ui";
 import React, { useState, createContext, Dispatch, SetStateAction, ReactNode, useEffect, useRef } from "react";
 
 

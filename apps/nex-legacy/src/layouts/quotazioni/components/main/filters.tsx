@@ -1,8 +1,6 @@
 import React, { memo } from "react";
-import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
-import FDDate from "components/UI/input/FDDate";
+import { FDSelect, FDSelectOption, FDDate, FDInput} from "@nex/fd-ui";
 import { filterStateOptions, filterTypeOptions } from "layouts/quotazioni/types/quotations";
-import FDInput from "components/UI/input/FDInput";
 import { useUserContext } from "context/UserContext";
 import { useTour } from "tour/TourProvider";
 

@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import { FDBox } from "@nex/fd-ui";
-import { FDInput } from "components/UI/input/FDInput";
+import { FDBox, FDInput } from "@nex/fd-ui";
 import { FiLink2 } from "react-icons/fi";
 
 const FiLink2Icon = FiLink2 as React.FC<{ size?: number; className?: string }>;

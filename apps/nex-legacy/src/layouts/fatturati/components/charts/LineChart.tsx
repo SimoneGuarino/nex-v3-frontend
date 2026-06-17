@@ -10,12 +10,11 @@ import {
     YAxis,
 } from "recharts";
 import { addDays, format, parseISO, subYears } from "date-fns";
-import FDButton from "components/UI/buttons/FDButton";
 import { IoArrowBackCircleOutline } from "react-icons/io5";
-import { FDBox } from "@nex/fd-ui";
-import { ContextMenu } from "components/UI/menu/ContextMenu";
+
+import { FDBox, ContextMenu, FDIconButton, FDButton } from "@nex/fd-ui";
+
 import { IoMdMore } from "react-icons/io";
-import FDIconButton from "components/UI/buttons/FDIconButton";
 import { Granularity } from "layouts/fatturati/fetchdata/admin/series";
 import { useTour } from "tour/TourProvider";
 import { useUserContext } from "context/UserContext";

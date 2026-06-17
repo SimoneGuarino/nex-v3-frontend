@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { UserContext } from "context/UserContext";
 import { AIContext } from "context/AIContext";
 import { CiViewTable } from "react-icons/ci";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDButton } from "@nex/fd-ui";
 import { IoStatsChartOutline, IoCartOutline } from "react-icons/io5";
 
 const TableIcon = CiViewTable as React.FC<{ size?: number }>;

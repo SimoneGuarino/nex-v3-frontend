@@ -1,6 +1,6 @@
 import React, { memo, useState } from 'react';
 import { ProductDoc } from 'layouts/quotazioni/types/qts_product';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 import placeholder from 'assets/images/placeholder/av5c8336583e291842624.webp';
 import { CopyToClipboard, TruncateText } from 'utils';
 import { BsCartPlus } from "react-icons/bs";

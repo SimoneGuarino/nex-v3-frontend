@@ -1,5 +1,5 @@
 import React from "react";
-import FDButton, { FDButtonProps } from "components/UI/buttons/FDButton";
+import {FDButton, type FDButtonProps } from "@nex/fd-ui";
 
 const baseClassName =
     "inline-flex items-center gap-2 rounded-full px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-[11px] text-neutral-800 dark:text-neutral-200 shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 transition disabled:opacity-50 disabled:cursor-not-allowed";

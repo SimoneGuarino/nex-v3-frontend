@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo, useState } from "react";
-import FDSearchPanel, {
-    type SearchItem,
-    writeRecent,
-} from "components/UI/search/FDSearchPanel";
+
+import { writeRecent } from "utils";
+import { FDSearchPanel, type SearchItem } from "@nex/fd-ui"
+
 import type { MicrosettoriItem } from "../../fetchdatas/getMicrosettoriData";
 import { MdCategory } from "react-icons/md";
 

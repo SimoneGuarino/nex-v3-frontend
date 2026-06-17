@@ -3,7 +3,7 @@ import React from "react";
 import { TableVirtualized } from "components/Virtualized/table";
 import { getData as getBackordersDetailsData } from "../fetchData/backorders/detailsData";
 import { FDBox } from "@nex/fd-ui";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 import { IoCloseOutline } from "react-icons/io5";
 
 

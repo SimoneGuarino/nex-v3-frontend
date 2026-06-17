@@ -3,10 +3,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Message } from "context/AIContext";
 import RichMessage from "./RichMessage";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton, type ColorOption } from "@nex/fd-ui";
+
 import { IoEllipsisVertical } from "react-icons/io5";
 import { AiOutlineDown, AiOutlineUp } from "react-icons/ai";
-import { ColorOption } from "components/UI/colors/ColorSwitch";
 
 const OutlineDown = AiOutlineDown as React.FC<{ size?: number }>;
 const OutlineUp = AiOutlineUp as React.FC<{ size?: number }>;

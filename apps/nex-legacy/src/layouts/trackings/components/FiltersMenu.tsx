@@ -1,10 +1,6 @@
 import { useCallback, useMemo } from "react";
 
-import FDButton from "components/UI/buttons/FDButton";
-import FDDate from "components/UI/input/FDDate";
-import FDInput from "components/UI/input/FDInput";
-import FDSelect from "components/UI/input/FDSelect";
-import ContextMenu from "components/UI/menu/ContextMenu";
+import { FDButton, FDDate, FDInput, FDSelect, ContextMenu} from "@nex/fd-ui";
 
 import { IoFilter } from "react-icons/io5";
 import { GetDate } from "utils";

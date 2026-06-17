@@ -15,7 +15,7 @@ import { icon_send } from 'config/icons';
 import { CheckAdminPermissions } from 'utils/checkAdminPermissions';
 import { useGeneralDataContext } from 'context/GeneralDataContext';
 import { Autocomplete, TextField } from '@mui/material';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 
 
 interface Agent {

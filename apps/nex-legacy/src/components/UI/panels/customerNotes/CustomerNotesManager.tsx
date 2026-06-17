@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/CustomerNotesManager.tsx
 /**
  * descrizione: Componente orchestratore del modulo note cliente.
  * compito:     collega hook di dominio, componenti visuali e dialog di azione.

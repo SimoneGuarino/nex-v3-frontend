@@ -1,10 +1,7 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
-import FDDate from "components/UI/input/FDDate";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDSelect, FDSelectOption, FDDate, FDInput, FDIconButton } from "@nex/fd-ui";
 import { IoCloseSharp } from "react-icons/io5";
 import { SerchCustomersAPI } from "../fetchData/serchCustomers";
-import FDInput from "components/UI/input/FDInput";
 
 const CloseIcon = IoCloseSharp as React.FC<{ size?: number; className?: string }>;
 const filterTypeOptions = ["Fattura", "Bolla", "Cliente"] as const;

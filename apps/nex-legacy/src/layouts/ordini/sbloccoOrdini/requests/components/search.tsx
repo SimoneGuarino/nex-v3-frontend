@@ -10,7 +10,7 @@ import Popper, { PopperProps } from '@mui/material/Popper';
 
 import { MdSearch } from 'react-icons/md';
 import { IoReturnDownBack } from "react-icons/io5";
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 
 const MdSearchIcon = MdSearch as React.FC<{ size?: number; className?: string }>;
 const IoReturnDownBackIcon = IoReturnDownBack as React.FC<{ size?: number; className?: string }>;

@@ -18,7 +18,7 @@ import { Tooltip } from "react-tooltip";
 
 // components
 import Loader from "../../../Loader";
-import { FDBox } from "@nex/fd-ui";
+import { FDBox, FDButton, ContextMenu } from "@nex/fd-ui";
 
 // fetch data
 import { FiltersDataAPI } from "./fetchData/filtersData";
@@ -35,14 +35,12 @@ import { IoSearch } from "react-icons/io5";
 import { TableVirtualized } from "components/Virtualized/table";
 
 /* Context menu + pannello filtri */
-import { ContextMenu } from "components/UI/menu/ContextMenu";
 import { FiltersPanel, type Customer } from "./filters/index";
 import type { UserChoose } from "./types";
 
 // tour
 import { useSectionTour } from "tour/useSectionTour";
 import { Role } from "tour/types";
-import FDButton from "components/UI/buttons/FDButton";
 import { enqueueSnackbar } from "components/MessageBox";
 
 

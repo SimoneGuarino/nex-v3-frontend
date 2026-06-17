@@ -3,7 +3,7 @@ import React from "react";
 import { Message } from "context/AIContext";
 
 import { motion, AnimatePresence } from "framer-motion";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 //icons
 import * as FaIcons from "react-icons/ai";
 import { IoReloadOutline, IoCopyOutline } from "react-icons/io5";

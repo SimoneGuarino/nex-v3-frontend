@@ -5,7 +5,7 @@ import MDTypography from "components/MDTypography";
 
 import LoadingButton from '@mui/lab/LoadingButton';
 import { icon_close, icon_reportProblem, icon_delete } from 'config/icons';
-import RichTextEditor from 'components/UI/input/RichTextEditor';
+import { RichTextEditor } from '@nex/fd-ui';
 
 
 

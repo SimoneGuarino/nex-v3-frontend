@@ -1,6 +1,6 @@
-// src/layouts/listiniPromo/components/AdvancedSearch.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import FDSearchPanel, { type SearchItem } from "components/UI/search/FDSearchPanel";
+import { FDSearchPanel, type SearchItem} from "@nex/fd-ui";
+
 import { fetchPromoSearch, type PromoSearchResultItem } from "../fetchdatas/promos/searchData";
 import type { PromoPeriod } from "../fetchdatas/promos/detailsData";
 

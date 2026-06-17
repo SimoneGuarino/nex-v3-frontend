@@ -1,8 +1,6 @@
-// src/layouts/pesiVolumi/tag.tsx
 import { icon_filter } from '../../../config/icons';
 import React, { useRef, useState } from 'react';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
-import { ContextMenu } from 'components/UI/menu/ContextMenu';
+import { FDIconButton, ContextMenu } from "@nex/fd-ui";
 import { TagP } from './tagPanel';
 
 interface TagProps {

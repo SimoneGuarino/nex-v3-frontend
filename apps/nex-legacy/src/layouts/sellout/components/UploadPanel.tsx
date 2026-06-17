@@ -1,7 +1,5 @@
-//src\layouts\sellout\components\uploadPanel.tsx
-
-import React, { Dispatch, SetStateAction } from "react"; import { FDBox } from "@nex/fd-ui";
-import FDButton from "components/UI/buttons/FDButton";
+import React, { Dispatch, SetStateAction } from "react"; 
+import { FDBox, FDButton } from "@nex/fd-ui";
 import { AttachmentsForm } from "components/Upload";
 import { type SelloutFile } from "layouts/sellout/fetchdata/list";
 

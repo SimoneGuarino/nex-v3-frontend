@@ -10,7 +10,7 @@ import MenuItem from '@mui/material/MenuItem';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { Button, Divider } from '@mui/material';
 import { MainTheme } from 'assets/settingsTheme';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 
 
 function Settings({ columns, visibleColumns, setVisibleColumns, toggleColumnVisibility }) {

@@ -2,9 +2,7 @@ import * as React from "react";
 import { useMemo, useCallback } from "react";
 
 // UI
-import FDButton from "components/UI/buttons/FDButton";
-import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
-import FDInput from "components/UI/input/FDInput";
+import { FDButton, FDSelect, type FDSelectOption, FDInput} from "@nex/fd-ui";
 
 // fetchdata
 import { NoPromoMysqlFilters } from "../fetchData/filters";

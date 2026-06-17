@@ -1,7 +1,7 @@
 //src\layouts\sellout\components\ControlButtons.tsx
 
 import React from "react";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 import { IoCheckmark } from "react-icons/io5";
 import { HiOutlineXMark } from "react-icons/hi2";
 import { MdUpload } from "react-icons/md";

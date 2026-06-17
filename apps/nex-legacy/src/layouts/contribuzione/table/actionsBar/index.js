@@ -12,7 +12,7 @@ import { icon_multiFunction } from 'config/icons';
 import { CheckAdminPermissions } from 'utils/checkAdminPermissions';
 import { MainTheme } from 'assets/settingsTheme';
 import { useNexTheme } from '@nex/theme-system';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 
 
 export function ActionsBar({ selectedFile, MakeEmptySelection, numFileSelected,

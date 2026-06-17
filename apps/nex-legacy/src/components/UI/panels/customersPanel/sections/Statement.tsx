@@ -1,5 +1,5 @@
 import React from "react";
-import FDSwitch from "components/UI/input/FDSwitch";
+import { FDSwitch } from "@nex/fd-ui";
 import { enqueueSnackbar } from "components/MessageBox";
 import { FetchFileData } from "examples/Fetch/FetchFileDataV2";
 import { FaDownload, FaPlus } from "react-icons/fa";
@@ -688,7 +688,7 @@ export const Statement: React.FC<{
                                 </SectionPill>
                                 {typeof onOpenDetails === "function" && (
                                     <SectionActionButton
-                                        onClick={(event) => {
+                                        onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
                                             event.stopPropagation();
                                             onOpenDetails?.();
                                         }}

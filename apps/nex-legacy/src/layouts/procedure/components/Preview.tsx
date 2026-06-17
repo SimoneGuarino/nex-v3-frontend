@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { FDBox } from "@nex/fd-ui";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 import { IoMdDownload } from "react-icons/io";
 import { IoClose } from "react-icons/io5";
 import type { ProcedureFileInfo } from "../fetchdata/list";

@@ -1,4 +1,3 @@
-// src/layouts/clienti/views/registry.ts
 import { ViewDefinition } from "../types/view";
 import { FidoView, FidoFilters } from "./FidoView";
 import { AnagraficaView } from "./AnagraficaView";

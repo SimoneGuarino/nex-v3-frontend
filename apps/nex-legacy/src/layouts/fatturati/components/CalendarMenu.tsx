@@ -1,8 +1,6 @@
 import React, { useMemo } from "react";
-import FDDate, { type FDDateRangeValue } from "components/UI/input/FDDate";
-import { FDSelect, type FDSelectOption } from "components/UI/input/FDSelect";
+import { FDSelect, type FDSelectOption, FDButton, FDDate, type FDDateRangeValue} from "@nex/fd-ui";
 import type { CompareMode } from "../fetchdata/admin/series";
-import FDButton from "components/UI/buttons/FDButton";
 import { useTour } from "tour/TourProvider";
 
 

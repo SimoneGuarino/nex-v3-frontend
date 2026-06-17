@@ -24,9 +24,8 @@ import { PersistedCustomPattern, Pattern, SlotDef, SlotId, WidgetDef, WidgetId }
 
 import WidgetDrawer from "./WidgetDrawer";
 import CalendarWidget from "./widgets/CalendarWidget";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton, FDButton } from "@nex/fd-ui";
 import { Tooltip } from "react-tooltip";
-import FDButton from "components/UI/buttons/FDButton";
 import NotesWidget from "./widgets/NotesWidget";
 import FidiStatusWidget from "./widgets/FidiStatusWidget";
 import WelcomeBackWidget from "./widgets/WelcomeBackWidget";
@@ -36,7 +35,6 @@ import { parseRolesEnv } from "utils/data/getNestedProperty";
 import OrderFBWidget from "./widgets/OrderFBWidget";
 import { useSectionTour } from "tour/useSectionTour";
 import { Role } from "tour/types";
-import LatestRelease from "examples/Navbars/components/release/LatestRelease";
 import ReleaseNotesWidget from "./widgets/ReleaseNotesWidget";
 
 

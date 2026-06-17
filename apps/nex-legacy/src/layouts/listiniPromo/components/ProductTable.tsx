@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { TableVirtualized } from "components/Virtualized/table";
-import FDButton from "components/UI/buttons/FDButton";
-import FDSelect, { type FDSelectOption } from "components/UI/input/FDSelect";
+import { FDButton, FDSelect, type FDSelectOption} from "@nex/fd-ui";
 import type { PromotionProduct, WarehouseAvailability } from "../fetchdatas/promos/detailsData";
 
 

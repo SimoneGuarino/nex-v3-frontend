@@ -7,7 +7,7 @@ import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { MainTheme } from "assets/settingsTheme";
 import { useNexTheme } from "@nex/theme-system";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 
 // Tipi per il tema passato a ChooseColor
 type ThemeKey = string | null | undefined;

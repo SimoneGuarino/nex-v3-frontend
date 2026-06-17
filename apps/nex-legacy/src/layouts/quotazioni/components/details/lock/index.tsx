@@ -1,8 +1,9 @@
-import FDButton from "components/UI/buttons/FDButton";
 import React, { useMemo, useState } from "react";
 import { CAPS } from "authz/caps";
 import { useAuthz } from "authz/useAuthz";
-import FDTextArea from "components/UI/input/FDTextArea";
+
+import { FDButton, FDTextArea} from "@nex/fd-ui";
+
 
 type QuoteType = "BID_PASSIVO" | string;
 

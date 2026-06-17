@@ -37,13 +37,11 @@ import {
 
 import { Chat } from "./components/chat";
 import { useGeneralDataContext } from "context/GeneralDataContext";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton, FDButton, ContextMenu } from "@nex/fd-ui";
 import { UserInfo } from "./components/userInfo";
 import { ChangeSessionGroupContext } from "classes/log-out";
 import { OnlineUsers } from "examples/Navbars/components/usersOnline";
-import FDButton from "components/UI/buttons/FDButton";
 import { AIContext } from "context/AIContext";
-import { ContextMenu } from "components/UI/menu/ContextMenu";
 import { useNavigate } from "react-router-dom";
 import ReleaseNotesPanel from "./components/release/index";
 import clsx from "clsx";

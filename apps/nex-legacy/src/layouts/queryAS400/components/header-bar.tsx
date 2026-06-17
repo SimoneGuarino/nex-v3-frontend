@@ -7,9 +7,7 @@
  */
 import React from "react";
 import { TextField, InputAdornment } from "@mui/material";
-import { FDBox } from "@nex/fd-ui";
-import FDButton from "components/UI/buttons/FDButton";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton, FDButton, FDBox } from "@nex/fd-ui";
 import { useSurfaceTokens } from "../hooks/use-surface-tokens";
 import { MdRefresh, MdSearch } from "react-icons/md";
 import type { IconType } from "react-icons";

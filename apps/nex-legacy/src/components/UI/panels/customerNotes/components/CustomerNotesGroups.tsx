@@ -3,8 +3,6 @@
  * compito:     mostrare metadati nota e azioni contestuali (discussione/eliminazione).
  */
 import React from "react";
-import FDButton from "components/UI/buttons/FDButton";
-import FDIconButton from "components/UI/buttons/FDIconButton";
 import { MdDelete } from "react-icons/md";
 import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
 import type { ImpaginationState, NotesGroup } from "../types";
@@ -21,7 +19,7 @@ import {
     truncateText,
 
 } from "../utils";
-import { FDSkeletonLayout, FDSkeletonPresets, FDSkeletonSwitch } from "@nex/fd-ui";
+import { FDSkeletonLayout, FDSkeletonPresets, FDSkeletonSwitch, FDButton, FDIconButton } from "@nex/fd-ui";
 
 type CustomerNotesGroupsProps = {
     loadingInitial: boolean;

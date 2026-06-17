@@ -5,7 +5,6 @@ import type { CartProductDTO, ProductDoc, TextRequestCartDTO } from "layouts/quo
 import type { CustomerFullPayload } from "components/UI/panels/customersPanel/types";
 import type { QuotationOkLinkItemDTO } from "layouts/quotazioni/fetchdata/get/getQuotationOkLinks";
 import type { Role } from "tour/types";
-import { getRolesMappedByIndex } from "utils/ruoli/index";
 import { Cap, CAPS } from "authz/caps";
 
 // --------------------------------------------------

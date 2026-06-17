@@ -1,13 +1,11 @@
 import React from 'react';
 
 import { FDBox } from '../../../';
-
-import defaultAvatar from "../../../assets/images/blank-profile-picture-973460_960_720.webp";
-import { ContextMenu } from 'components/UI/menu/ContextMenu';
+import { ContextMenu } from '../menu/ContextMenu';
 
 
-const CoverWithAvatar: React.FC<{ coverSrc?: string | null; src?: string | null; nome?: string; cognome?: string; bio?: string; args: { API_USERS: string } }> =
-    ({ coverSrc, src, nome, cognome, bio, args }) => {
+const CoverWithAvatar: React.FC<{ coverSrc?: string | null; defaultAvatarSrc?: string | null; src?: string | null; nome?: string; cognome?: string; bio?: string; args: { API_USERS: string } }> =
+    ({ coverSrc, defaultAvatarSrc, src, nome, cognome, bio, args }) => {
         return <div className="w-full h-40 flex flex-col relative mb-4">
             <FDBox
                 className="relative h-full w-62 absolute -left-1 -top-1 rounded-2xl"
@@ -25,8 +23,7 @@ const CoverWithAvatar: React.FC<{ coverSrc?: string | null; src?: string | null;
                 />
                 <div className="w-full self-end justify-items-center absolute -bottom-5">
                     <div className="rounded-full w-14 h-14 overflow-hidden">
-                        <img src={src ?
-                            `${args.API_USERS}${src}` : defaultAvatar} />
+                        {args.API_USERS ? <img src={`${args.API_USERS}${src}`} /> : defaultAvatarSrc ? <img src={defaultAvatarSrc} /> : <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-blue-500" />}
                     </div>
                 </div>
             </FDBox>
@@ -38,7 +35,11 @@ const CoverWithAvatar: React.FC<{ coverSrc?: string | null; src?: string | null;
     }
 
 export const UserAvatar: React.FC<{
-    src?: string | null; className?: string; textSize?: 'xs' | 'md' | 'lg'; cover?: {
+    src?: string | null; 
+    defaultAvatarSrc?: string;
+    className?: string; 
+    textSize?: 'xs' | 'md' | 'lg'; 
+    cover?: {
         src: string | undefined | null;
         active: boolean;
     };
@@ -47,14 +48,14 @@ export const UserAvatar: React.FC<{
         API_USERS: string;
     }
 }> =
-    ({ src, name, cognome, className, textSize = 'md', size = 10, cover, bio, args }) => {
+    ({ src, defaultAvatarSrc, name, cognome, className, textSize = 'md', size = 10, cover, bio, args }) => {
         const [userMenu, setUserMenu] = React.useState(false);
         const userMenuRef = React.useRef<HTMLDivElement>(null);
         const contextMenuUSER = [
             {
                 title: '',
                 className: '!p-0 !w-60',
-                icon: <CoverWithAvatar src={src} coverSrc={cover?.src} nome={name} cognome={cognome} bio={bio} args={args} />,
+                icon: <CoverWithAvatar src={src} defaultAvatarSrc={defaultAvatarSrc} coverSrc={cover?.src} nome={name} cognome={cognome} bio={bio} args={args} />,
                 action: false
             }
         ];

@@ -6,7 +6,7 @@ import { SerchCustomersAPI } from '../fetchData/serchCustomers';
 import { MdPersonOutline } from "react-icons/md";
 import { DownloadFilesAPI } from '../fetchData/download';
 import { FormatDate } from 'utils/date/getDate';
-import { writeRecent } from 'components/UI/search/FDSearchPanel';
+import { writeRecent } from "utils/index";
 import { GetCorrelatedAPI } from '../fetchData/getCorrelated';
 
 // ——————————————————————————————————————————————————————————

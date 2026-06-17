@@ -8,7 +8,7 @@ import locationIMG from "assets/images/tour/firstOpen_location.webp";
 
 import nexLogoWhite from "assets/images/login/logo_nex_transp.webp";
 import { MdClose } from "react-icons/md"; // o le tue icone
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 
 const MdCloseIcon = MdClose as React.FC<{ size?: number; className?: string }>;
 

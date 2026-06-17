@@ -28,7 +28,7 @@ import TopBar from "./components/TopBar";
 import { useUserContext } from "context/UserContext";
 
 import { Tooltip } from "react-tooltip";
-import type { FDSelectOption } from "components/UI/input/FDSelect";
+import { type FDSelectOption } from "@nex/fd-ui";
 
 import { CheckAdminPermissions } from "utils/checkAdminPermissions";
 

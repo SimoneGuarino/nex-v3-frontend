@@ -1,12 +1,11 @@
 import React, { useMemo } from "react";
 import { format } from "date-fns";
-import { FDBox } from "@nex/fd-ui";
+import { FDBox, FDButton } from "@nex/fd-ui";
 import type { AdminSeriesResponse } from "../fetchdata/admin/series";
 import type { BreakdownTotals } from "./charts/BarChart";
 import type { LineChartPublicStats } from "./charts/LineChart";
 import { TfiStatsDown, TfiStatsUp } from "react-icons/tfi";
 import { BiHide, BiShow } from "react-icons/bi";
-import FDButton from "components/UI/buttons/FDButton";
 import { useTour } from "tour/TourProvider";
 
 const StatsDown = TfiStatsDown as React.FC<{ size?: number; className?: string }>;

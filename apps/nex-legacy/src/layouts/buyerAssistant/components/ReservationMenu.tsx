@@ -1,8 +1,6 @@
 import * as React from "react";
 // UI
-import FDButton from "components/UI/buttons/FDButton";
-import FDDate from "components/UI/input/FDDate";
-import FDSelect, { FDSelectOption, FDSelectValue } from "components/UI/input/FDSelect";
+import { FDButton, FDDate, FDSelect, type FDSelectOption, FDSelectValue} from "@nex/fd-ui";
 // icons
 import { IoCalendarOutline } from "react-icons/io5";
 import { RiResetLeftFill } from "react-icons/ri";

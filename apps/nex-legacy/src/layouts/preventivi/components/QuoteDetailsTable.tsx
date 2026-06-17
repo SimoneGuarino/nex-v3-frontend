@@ -4,8 +4,7 @@ import { TableVirtualized } from "components/Virtualized/table";
 import { downloadCsvFromRows } from "utils/exportCsv";
 import type { QuoteDetailRow, QuoteDetailsResponse } from "../types";
 
-import { SidePanelShell } from "components/UI/panels/customersPanel/components/SidePanelShell";
-import { FDButton, FDSkeletonLayout, FDSkeletonSwitch } from "@nex/fd-ui";
+import { FDButton, FDSkeletonLayout, FDSkeletonSwitch, SidePanelShell } from "@nex/fd-ui";
 
 import { clsx } from "clsx";
 

@@ -1,12 +1,8 @@
-// src/layouts/listiniPromo/components/TopBar.tsx
 import React from "react";
 import { motion } from "framer-motion";
 
-import { FDBox } from "@nex/fd-ui";
-import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import FDButton from "components/UI/buttons/FDButton";
-import FDDate from "components/UI/input/FDDate";
+import { FDIconButton, FDButton, FDDate, FDSelect, FDSelectOption, FDBox } from "@nex/fd-ui";
+
 import { IoSearch } from "react-icons/io5";
 
 import type { PromoPeriod } from "../fetchdatas/promos/detailsData";

@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/types.ts
 /**
  * descrizione: Contratti tipizzati del modulo note cliente.
  * include:     payload UI, stati dialog, tipi sorting/filtering e props dei componenti principali.

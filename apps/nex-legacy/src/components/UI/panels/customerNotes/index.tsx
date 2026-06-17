@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/index.tsx
 /**
  * descrizione: Barrel del modulo note cliente.
  * espone:      pannello standalone, manager, view integrata, hook e tipi condivisi.

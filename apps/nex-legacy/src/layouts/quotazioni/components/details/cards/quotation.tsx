@@ -1,8 +1,5 @@
 import React from "react";
-import { FDBox } from "@nex/fd-ui";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import { FDButton } from "components/UI/buttons/FDButton";
-import { FDDate } from "components/UI/input/FDDate";
+import { FDBox, FDIconButton, FDButton, FDDate } from "@nex/fd-ui";
 import { QuotazioneDTO, STATE_COLOR_STYLES } from "layouts/quotazioni/types/quotations";
 import { motion, AnimatePresence } from "framer-motion";
 

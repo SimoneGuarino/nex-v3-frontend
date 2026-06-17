@@ -1,15 +1,13 @@
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckAdminPermissions } from "utils";
 import { useNavigate } from "react-router-dom";
 
-import ContextMenu from "components/UI/menu/ContextMenu";
+import { ContextMenu, type FDSelectOption, type FilterChip } from "@nex/fd-ui";
+
 import { useQuotation } from "../hook/useQuotation";
 import { Tooltip } from "react-tooltip";
 import Filters from "../components/main/filters";
 import TopBar from "../components/main/topBar";
-import { FilterChip } from "components/UI/search/FDSearchPanel";
-import type { FDSelectOption } from "components/UI/input/FDSelect";
 import { useGeneralDataContext } from "context/GeneralDataContext";
 
 import { TfiTime } from "react-icons/tfi";

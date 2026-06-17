@@ -2,11 +2,7 @@ import React, { memo } from 'react';
 
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
-import IconButton from '@mui/material/IconButton';
-
-import Badge from '@mui/material/Badge';
-import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from '@nex/fd-ui';
 
 
 // ——————————————————————————————————————————————————————————

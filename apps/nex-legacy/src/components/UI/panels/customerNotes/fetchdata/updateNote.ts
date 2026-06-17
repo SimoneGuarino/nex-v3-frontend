@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/fetchdata/updateNote.ts
 /**
  * descrizione: Client API per aggiungere modifiche alla discussione nota cliente.
  * dipendenze:  `FetchData`, `enqueueSnackbar`.

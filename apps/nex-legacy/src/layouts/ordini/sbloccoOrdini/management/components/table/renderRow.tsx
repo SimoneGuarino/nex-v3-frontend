@@ -11,7 +11,7 @@ import { icon_forum, icon_note } from 'config/icons';
 import { useTour } from "tour/TourProvider";
 import { FDBox } from '@nex/fd-ui';
 import { useNexTheme } from '@nex/theme-system';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 
 // ——————————————————————————————————————————————————————————
 // INTERFACES

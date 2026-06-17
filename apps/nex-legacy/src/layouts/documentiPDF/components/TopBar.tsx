@@ -1,8 +1,7 @@
 import React from 'react';
 //components
-import FDButton from 'components/UI/buttons/FDButton';
-import { FDBox } from '@nex/fd-ui';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDBox, FDButton, FDIconButton, type FilterChip } from '@nex/fd-ui';
+
 //icons
 import { MdSearch, MdDownload, MdFilterList, MdSort, MdShare, MdClose, MdLink } from 'react-icons/md';
 import { IoGridOutline } from "react-icons/io5";
@@ -15,7 +14,7 @@ import { MdEmail } from 'react-icons/md';
 
 //types
 import type { DocumentItemMapped, GroupBy, ScopeTab, SortBy } from '../types';
-import { FilterChip } from 'components/UI/search/FDSearchPanel';
+
 
 const MdSearchIcon = MdSearch as React.FC<{ size?: number; className?: string }>;
 const MdFilterListIcon = MdFilterList as React.FC<{ size?: number; className?: string }>;

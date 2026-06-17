@@ -1,8 +1,7 @@
 import { useCallback, useMemo } from "react";
 import type { SetStateAction } from "react";
 
-import FDButton from "components/UI/buttons/FDButton";
-import ContextMenu from "components/UI/menu/ContextMenu";
+import { FDButton, ContextMenu } from "@nex/fd-ui";
 import { TableVirtualized } from "components/Virtualized/table";
 
 import { IoCopy } from "react-icons/io5";

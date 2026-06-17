@@ -3,8 +3,8 @@ import { useRef, useState, useMemo } from "react";
 import { useUserContext } from "context/UserContext";
 import { useGeneralDataContext } from "context/GeneralDataContext";
 // UI
-import FDButton from "components/UI/buttons/FDButton";
-import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
+import { FDButton, FDSelect, type FDSelectOption } from "@nex/fd-ui";
+
 // Icons
 import { IoCalendarOutline } from "react-icons/io5";
 import { RiResetLeftFill } from "react-icons/ri";

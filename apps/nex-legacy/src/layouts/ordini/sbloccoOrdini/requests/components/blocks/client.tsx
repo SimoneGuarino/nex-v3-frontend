@@ -9,7 +9,9 @@ import { statusList } from 'layouts/ordini/sbloccoOrdini/statusToColor';
 import { Tag } from 'components/Tag/Tag';
 import { MainTheme } from 'assets/settingsTheme';
 import MDTypography from 'components/MDTypography';
-import FDButton from 'components/UI/buttons/FDButton';
+
+import { FDButton } from '@nex/fd-ui';
+
 import { VscRequestChanges } from "react-icons/vsc";
 import { useTour } from "tour/TourProvider";
 import { useNexTheme } from '@nex/theme-system';

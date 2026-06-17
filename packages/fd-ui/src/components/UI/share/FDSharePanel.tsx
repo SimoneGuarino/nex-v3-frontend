@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { FDBox, FDBackdrop, FDIconButton, FDButton, FDInput} from "../../../";
+import { FDBox, FDBackdrop, FDIconButton, FDButton, FDInput } from "../../../";
 import { MdClose, MdSearch, MdPersonAddAlt1, MdDone, MdFilePresent } from "react-icons/md";
 import RichTextEditor from "../input/RichTextEditor";
 import { UserAvatar } from "./userInfo";
@@ -48,7 +48,7 @@ export interface FDSharePanelProps {
     args: {
         API_USERS: string;
     };
-    
+
     /** Funzione di ricerca utenti (server-side) */
     fetchUsers: FetchUsersFn;
 
@@ -60,6 +60,10 @@ export interface FDSharePanelProps {
     placeholderSearch?: string;
     allowMulti?: boolean; // default true
     defaultMessageHtml?: string;
+    /**
+     * Avatar di default da usare se l'utente non ha avatar (es. immagine generica)
+     */
+    defaultAvatar?: string;
 
     //tour
     isActive?: boolean;
@@ -91,10 +95,10 @@ function useWindowing<T>(items: T[], rowH = 56, viewport = 320, scrollTop = 0, o
 }
 
 /** Chip utente selezionato */
-function UserChip({ u, onRemove, args }: { u: ShareTarget; onRemove: () => void; args: { API_USERS: string } }) {
+function UserChip({ u, defaultAvatar, onRemove, args }: { u: ShareTarget; defaultAvatar?: string; onRemove: () => void; args: { API_USERS: string } }) {
     return (
         <div className="flex items-center gap-2 rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-1 text-xs">
-            <UserAvatar src={u.immagini?.avatar} name={u.nome}
+            <UserAvatar src={u.immagini?.avatar} defaultAvatarSrc={defaultAvatar} name={u.nome} 
                 cognome={u.cognome} size={8} cover={{ src: u.immagini?.cover, active: true }} bio={u.biografia} args={args} />
             <span className="max-w-[160px] truncate">{u.nome} {u.cognome}</span>
             <button onClick={onRemove} className="rounded-full hover:bg-neutral-200/80 dark:hover:bg-neutral-700 p-1">
@@ -106,8 +110,8 @@ function UserChip({ u, onRemove, args }: { u: ShareTarget; onRemove: () => void;
 
 /** Riga utente in elenco */
 function UserRow({
-    u, selected, onToggle, args
-}: { u: ShareTarget; selected: boolean; onToggle: () => void; args: { API_USERS: string } }) {
+    u, selected, onToggle, args, defaultAvatar
+}: { u: ShareTarget; selected: boolean; onToggle: () => void; args: { API_USERS: string }; defaultAvatar?: string }) {
     return (
         <button
             type="button"
@@ -115,7 +119,7 @@ function UserRow({
             className={`w-full flex items-center gap-3 px-3 ${selected ? "bg-neutral-100 dark:bg-neutral-800" : "hover:bg-neutral-50 dark:hover:bg-neutral-800/70"} transition-colors`}
             style={{ height: 56 }}
         >
-            <UserAvatar src={u.immagini?.avatar} name={u.nome} textSize="xs"
+            <UserAvatar src={u.immagini?.avatar} defaultAvatarSrc={defaultAvatar} name={u.nome} textSize="xs"
                 cognome={u.cognome} size={8} cover={{ src: u.immagini?.cover, active: true }} bio={u.biografia} args={args} />
             <div className="flex-1 text-left">
                 <div className="text-sm">{u.nome} {u.cognome}</div>
@@ -137,6 +141,7 @@ export default function FDSharePanel({
     placeholderSearch = "Cerca persone",
     allowMulti = true,
     defaultMessageHtml = "",
+    defaultAvatar,
     isActive = true,
     args
 }: FDSharePanelProps) {
@@ -317,7 +322,7 @@ export default function FDSharePanel({
                                                 const real = view.start + idx;
                                                 const sel = !!selected.find(s => s._id === u._id);
                                                 return (
-                                                    <UserRow key={`${u._id}-${real}`} u={u} selected={sel} onToggle={() => toggle(u)} args={args}/>
+                                                    <UserRow key={`${u._id}-${real}`} u={u} selected={sel} onToggle={() => toggle(u)} args={args} defaultAvatar={defaultAvatar} />
                                                 );
                                             })}
                                             {/* spacer inferiore */}

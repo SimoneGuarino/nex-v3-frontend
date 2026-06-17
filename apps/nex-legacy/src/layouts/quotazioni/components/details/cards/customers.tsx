@@ -1,18 +1,15 @@
 import React from "react";
-import { FDBox } from "@nex/fd-ui";
+import { FDBox, FDButton, FDSelect, FDIconButton } from "@nex/fd-ui";
 import { UserAvatar } from "examples/Navbars/components/userInfo";
 import { Customer } from "layouts/quotazioni/types/customers";
 import { CustomerQuickDetailsDTO } from "layouts/quotazioni/types/customers";
 import { motion, AnimatePresence } from "framer-motion";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import FDSelect from "components/UI/input/FDSelect";
 import { SearchCustomersAPI } from "layouts/quotazioni/fetchdata/get/searchCustomers";
 
 import { FaRegBuilding } from "react-icons/fa";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { HiOutlineMail } from "react-icons/hi";
 import { HiOutlinePhone, HiOutlineCheckCircle, HiOutlineXCircle } from "react-icons/hi2";
-import FDButton from "components/UI/buttons/FDButton";
 
 const FaRegBuildingIcon = FaRegBuilding as React.FC<{ size?: number; className?: string }>;
 const FiChevronDownIcon = FiChevronDown as React.FC<{ size?: number; className?: string }>;

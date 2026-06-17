@@ -1,8 +1,7 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { FiEdit3, FiPlus, FiTrash2 } from "react-icons/fi";
-import { useState } from "react";
-import FDSelect from "components/UI/input/FDSelect";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDSelect, FDButton } from "@nex/fd-ui";
 import { WiStars } from "react-icons/wi";
 import { useUserContext } from "context/UserContext";
 import { useTour } from "tour/TourProvider";

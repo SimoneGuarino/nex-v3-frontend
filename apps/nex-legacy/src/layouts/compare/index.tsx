@@ -47,9 +47,10 @@ import CircularWithValueLabel from "./virtualziedTable/CircularWithValueLabel";
 import { TagFilter } from "./virtualziedTable/tag";
 import { SendFilters } from "./virtualziedTable/fetchData/sendFilters";
 import { DownloadDistFileAPI } from "./virtualziedTable/fetchData/distListExport";
-import { ContextMenu } from "components/UI/menu/ContextMenu";
 import { AiOutlineInfoCircle } from "react-icons/ai";
-import { FDBox } from "@nex/fd-ui";
+
+import { FDBox, ContextMenu } from "@nex/fd-ui";
+
 import { useSectionTour } from "tour/useSectionTour";
 import { Role } from "tour/types";
 import { Variation } from "./virtualziedTable/distVariations";

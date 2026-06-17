@@ -23,10 +23,8 @@ import { parseAgentResponse } from "./utils/parseAgentResponse";
 import { emitSelectedModelChange, onRequestSelectedModel, onSelectedModelChange } from "./utils/modelEvents";
 import { validateEditableTitle } from "./utils/title";
 //UI
-import { ContextMenu } from "components/UI/menu/ContextMenu";
-import ColorSwitch, { ColorOption } from "components/UI/colors/ColorSwitch";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-//icons
+import { ContextMenu, FDIconButton, ColorSwitch, ColorOption } from "@nex/fd-ui";
+
 import { LuPaintBucket } from "react-icons/lu";
 import { IoCloseSharp, IoCloudOutline } from "react-icons/io5";
 import { AiOutlineEdit } from "react-icons/ai";

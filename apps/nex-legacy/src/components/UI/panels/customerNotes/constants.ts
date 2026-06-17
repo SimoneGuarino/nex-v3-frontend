@@ -1,9 +1,8 @@
-// src/components/UI/panels/customerNotes/constants.ts
 /**
  * descrizione: Costanti UI del modulo note cliente.
  * include:     opzioni ordinamento, filtri scope e fallback tipologia nota.
  */
-import type { FDSelectOption } from "components/UI/input/FDSelect";
+import { type FDSelectOption } from "@nex/fd-ui";
 import type { NotesScopeFilter, SortPresetValue } from "./types";
 
 /** Preset di ordinamento inviati al backend tramite `parseSortPreset`. */

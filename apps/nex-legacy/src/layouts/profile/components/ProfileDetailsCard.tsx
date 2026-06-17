@@ -9,12 +9,12 @@ import SaveRounded from "@mui/icons-material/SaveRounded";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
-import FDInput from "components/UI/input/FDInput";
 import { m } from "framer-motion";
 import { useUserContext } from "context/UserContext";
 import { Tag } from "components/Tag/Tag";
-import { FDBox } from "@nex/fd-ui";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+
+import { FDBox, FDInput, FDIconButton } from "@nex/fd-ui";
+
 import { ProfileDetailAPI } from "../fetchData/ProfileDetail";
 import { enqueueSnackbar } from "components/MessageBox";
 

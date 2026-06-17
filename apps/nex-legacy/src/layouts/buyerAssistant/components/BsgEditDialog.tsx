@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 //UI
-import { FDDialog } from "@nex/fd-ui";
-import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
-import MarkdownEditor from "components/UI/input/MarkdownEditor";
+import { FDDialog, FDSelect, type FDSelectOption, MarkdownEditor } from "@nex/fd-ui";
 import { enqueueSnackbar } from "components/MessageBox";
 import { BsgItem } from "../types/types";
 

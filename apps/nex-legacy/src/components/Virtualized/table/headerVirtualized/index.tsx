@@ -6,12 +6,11 @@ import HeaderFiled from './headerFIled';
 // --@Mui icons
 import { useMaterialUIController } from 'context/index';
 import { Tooltip as MuiTooltip } from '@mui/material';
-import { ContextMenu } from 'components/UI/menu/ContextMenu';
 
 import { IoArrowUpCircleOutline } from "react-icons/io5";
 import { BsFillExclamationTriangleFill } from 'react-icons/bs';
 import { HeaderSettings } from '../types/headerSettings';
-import { FDBox } from '@nex/fd-ui';
+import { ContextMenu, FDBox } from '@nex/fd-ui';
 
 const IoArrowUpCircleOutlineIcon = IoArrowUpCircleOutline as React.FC<{ size?: number; className?: string }>;
 

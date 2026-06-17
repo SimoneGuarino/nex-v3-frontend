@@ -1,8 +1,7 @@
-//src\components\Virtualized\table\headerVirtualized\headerFIled.tsx
 import React, { memo, useState } from 'react';
 
 import Stack from '@mui/material/Stack';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from '@nex/fd-ui';
 import { IoArrowUpCircleOutline } from "react-icons/io5";
 import { MdOutlineSort } from "react-icons/md";
 

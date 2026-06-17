@@ -10,7 +10,7 @@ import { Tooltip } from "react-tooltip";
 import { getData } from "./fetch/getData";
 import { icon_filter, icon_search, icon_update } from 'config/icons';
 
-import FDButton from "components/UI/buttons/FDButton";
+import { FDButton } from "@nex/fd-ui";
 import MDTypography from "components/MDTypography";
 
 /* importa FDButton dove preferisci tu */

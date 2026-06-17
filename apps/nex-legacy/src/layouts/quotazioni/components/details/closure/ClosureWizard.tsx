@@ -9,11 +9,8 @@ import {
     QuotazioneDTOExtended,
 } from "layouts/quotazioni/types/closure";
 
-import { FDButton } from "components/UI/buttons/FDButton";
-import { FDSelect } from "components/UI/input/FDSelect";
-import { FDInput } from "components/UI/input/FDInput";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import { FDBox } from "@nex/fd-ui";
+import { FDButton, FDSelect, FDInput, FDIconButton, FDBox } from "@nex/fd-ui";
+
 import { computeTourClosureWizardOrchestration } from "layouts/quotazioni/tour/runtime";
 import { useTour } from "tour/TourProvider";
 

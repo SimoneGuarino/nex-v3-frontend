@@ -1,7 +1,6 @@
 import React from "react";
 import { FidiAPI } from "../fetchData/Fidi";
-import FDButton from "components/UI/buttons/FDButton";
-import { FDBox } from "@nex/fd-ui";
+import { FDBox, FDButton } from "@nex/fd-ui";
 import { useUserContext } from "context/UserContext";
 
 type FidoStatus = "in lavorazione" | "in attesa" | "approvata" | "rifiutata";

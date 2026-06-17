@@ -4,7 +4,7 @@ import { Message } from "context/AIContext";
 
 import InteractionFooter from "./InteractionFooter";
 import RichMessage from "./RichMessage";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 
 import { IoArrowDownOutline } from "react-icons/io5";
 import { PiBrainBold } from "react-icons/pi";

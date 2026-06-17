@@ -17,8 +17,7 @@ import {
     OutlinedInput,
     FormHelperText,
 } from "@mui/material";
-import FDButton from "components/UI/buttons/FDButton";
-import { FDDialog } from "@nex/fd-ui";
+import { FDDialog, FDButton } from "@nex/fd-ui";
 import { useSurfaceTokens } from "../hooks/use-surface-tokens";
 import type { QueryAS400 } from "../types";
 import { MdSave } from "react-icons/md";

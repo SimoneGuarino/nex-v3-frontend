@@ -20,7 +20,7 @@ import MDTypography from "components/MDTypography";
 import Filter from "layouts/compare/filter";
 
 import { SearchDataContextLike } from "layouts/compare";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDButton } from "@nex/fd-ui";
 import { useNexTheme } from "@nex/theme-system";
 
 const SearchIcon = IoSearch as React.FC<{ size?: number; className?: string }>;

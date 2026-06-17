@@ -1,10 +1,8 @@
 import React from "react";
-import { FDBox } from "@nex/fd-ui";
-import FDButton from "components/UI/buttons/FDButton";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDBox, FDButton, FDIconButton } from "@nex/fd-ui";
+
 import { RiResetRightFill } from "react-icons/ri";
 import { MdSearch } from "react-icons/md";
-import { useTour } from "tour/TourProvider";
 
 const SearchIcon = MdSearch as React.FC<{ size?: number; className?: string }>;
 const ResetIcon = RiResetRightFill as React.FC<{ size?: number; className?: string }>;

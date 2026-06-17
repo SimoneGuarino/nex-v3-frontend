@@ -3,7 +3,7 @@ import React from "react";
 import { FiTrash2, FiPlus, FiEdit3 } from "react-icons/fi";
 import type { SlotDef, SlotId, SlotGeom } from "./types/types";
 import { snapGeom, updateSlotGeom } from "./utils/utils";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDButton } from "@nex/fd-ui";
 import { useIsLgUp } from ".";
 
 const FiPlusIcon = FiPlus as React.FC<{ className?: string }>;

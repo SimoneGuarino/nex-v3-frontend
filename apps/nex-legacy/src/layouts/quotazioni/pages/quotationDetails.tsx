@@ -12,7 +12,9 @@ import CustomersCard from "../components/details/cards/customers";
 import QuotationDetailsCard from "../components/details/cards/quotation";
 import InternalBar from "../components/details/internalBar";
 import { DONE_QUOTATION_STATES, useDetailsQuotation } from "../hook/useDetailsQuotation";
-import FDSearchPanel, { FilterChip, SearchItem } from "components/UI/search/FDSearchPanel";
+
+import { ContextMenu, FDSearchPanel, type FilterChip, type SearchItem } from "@nex/fd-ui";
+
 import DocumentsVirtualView from "../components/details/tables/DocumentsVirtualView";
 import ProductCard from "../components/details/tables/ProductCard";
 import CartPanel from "../components/details/cards/cart";
@@ -24,7 +26,6 @@ import { useGeneralDataContext } from "context/GeneralDataContext";
 import { TextRequestForm } from "../components/details/TextRequestForm";
 import TextRequestCard from "../components/details/tables/TextRequestCard";
 import { CustomersPanel } from "components/UI/panels/customersPanel";
-import ContextMenu from "components/UI/menu/ContextMenu";
 import Filters from "../components/details/filters";
 
 import { FDButton, FDIconButton, FDSkeletonLayout, FDSkeletonPresets, FDSkeletonSwitch } from "@nex/fd-ui";

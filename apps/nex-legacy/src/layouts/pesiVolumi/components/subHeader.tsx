@@ -1,8 +1,6 @@
 import React from 'react';
-import FDButton from 'components/UI/buttons/FDButton';
+import { FDButton, FDSelect, type FilterChip } from '@nex/fd-ui';
 import { MdFileDownload, MdFilterList } from "react-icons/md";
-import FDSelect from 'components/UI/input/FDSelect';
-import { FilterChip } from 'components/UI/search/FDSearchPanel';
 
 const DownloadIcon = MdFileDownload as React.FC<{ size?: number, className?: string }>;
 const MdFilterListIcon = MdFilterList as React.FC<{ size?: number; className?: string }>;

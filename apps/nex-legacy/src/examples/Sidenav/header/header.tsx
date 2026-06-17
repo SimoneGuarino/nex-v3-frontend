@@ -6,7 +6,7 @@ import { BsLayoutSidebar } from "react-icons/bs";
 
 import nexLogo from "assets/images/login/logo_nex_transp.webp";
 import nexLogoWhite from "assets/images/login/logo_nex_transp_white.webp";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 import { useNexTheme } from "@nex/theme-system";
 
 const SidebarIcon = BsLayoutSidebar as React.FC<{ size?: number }>;

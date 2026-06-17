@@ -1,4 +1,3 @@
-// src/components/UI/input/MarkdownEditor.tsx
 /**
  * Editor Markdown diretto con toolbar per formattazione.
  * Supporta: grassetto, corsivo, sottolineato, barrato, elenchi (-, *, numerati),

@@ -1,4 +1,3 @@
-// src/components/UI/panels/customersPanel/hooks/useCustomersPanelPaymentsState.ts
 /**
  * descrizione: Stato locale dedicato alla section "payments" del CustomersPanel.
  * compito:     gestisce reload manuale, loading tabella detail e statistiche footer.

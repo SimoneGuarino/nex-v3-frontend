@@ -1,4 +1,3 @@
-// src/components/UI/panels/customersPanel/hooks/useCustomersPanelState.ts
 /**
  * descrizione: Stato base del CustomersPanel (summary + details).
  * compito:     centralizza loading/error, payload section e apertura pannello secondario.

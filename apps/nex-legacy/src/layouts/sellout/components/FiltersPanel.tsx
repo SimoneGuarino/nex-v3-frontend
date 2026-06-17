@@ -1,14 +1,7 @@
-// src/layouts/sellout/components/FiltersPanel.tsx
-import React, { useRef, useState, useMemo, useEffect } from "react";
-import FDSelect, {
-    type FDSelectOption,
-} from "components/UI/input/FDSelect";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import { FDBox } from "@nex/fd-ui";
-import FDDate, { type FDDateSingleValue } from "components/UI/input/FDDate";
-import { icon_filter, icon_search } from "config/icons";
-import { ContextMenu } from "components/UI/menu/ContextMenu";
-import FDButton from "components/UI/buttons/FDButton";
+import { useRef, useState, useMemo, useEffect } from "react";
+
+import { ContextMenu, FDButton, FDDate, type FDDateSingleValue, FDBox, FDSelect, type FDSelectOption } from "@nex/fd-ui";
+
 import { fetchSelloutFilters } from "layouts/sellout/fetchdata/filters";
 import { Tooltip } from "react-tooltip";
 //icons

@@ -1,6 +1,5 @@
 import React from "react";
-import FDButton from "components/UI/buttons/FDButton";
-import FDSelect, { type FDSelectOption } from "components/UI/input/FDSelect";
+import { FDButton, FDSelect, type FDSelectOption } from "@nex/fd-ui";
 import type { AnyRecord, PanelMode } from "../types";
 import {
     cn,

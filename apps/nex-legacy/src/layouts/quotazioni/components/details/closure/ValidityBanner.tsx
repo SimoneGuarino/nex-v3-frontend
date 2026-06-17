@@ -2,7 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuotationClosureGate } from "../../../hook/useQuotationClosureGate";
 import { FiLock, FiClock, FiAlertTriangle } from "react-icons/fi";
-import { FDButton } from "components/UI/buttons/FDButton";
+import { FDButton } from "@nex/fd-ui";
 import { QuotazioneDTOExtended } from "layouts/quotazioni/types/closure";
 import { useTour } from "tour/TourProvider";
 

@@ -1,5 +1,5 @@
 import React from "react";
-import FDSwitch from "components/UI/input/FDSwitch";
+import { FDSwitch } from "@nex/fd-ui";
 import { FaPlus } from "react-icons/fa";
 import {
     SectionActionButton,
@@ -249,7 +249,7 @@ export const Sconti: React.FC<{
 
                             {clickable && (
                                 <SectionActionButton
-                                    onClick={(event) => {
+                                    onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
                                         event.stopPropagation();
                                         onOpenDetails?.();
                                     }}

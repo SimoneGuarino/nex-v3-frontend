@@ -13,10 +13,7 @@ import { MdOutlineArrowForward } from "react-icons/md";
 
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 
-import FDSelect, { type FDSelectOption } from "components/UI/input/FDSelect";
-import { FDBox } from "@nex/fd-ui";
-import FDButton from "components/UI/buttons/FDButton";
-import FDDate from "components/UI/input/FDDate";
+import { FDBox, FDButton, FDDate, FDSelect, type FDSelectOption } from "@nex/fd-ui";
 
 import PromoProductCard from "./components/ProductCards";
 import TopBar from "./components/TopBar";
@@ -41,7 +38,6 @@ import { useUserContext } from "context/UserContext";
 import { useSectionTour } from "tour/useSectionTour";
 import { Role } from "tour/types";
 import { useTour } from "tour/TourProvider";
-import { waitForStableRect } from "tour/utils";
 
 
 const ForwardIcon = MdOutlineArrowForward as React.FC<{

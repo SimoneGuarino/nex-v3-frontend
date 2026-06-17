@@ -4,6 +4,7 @@ import { cn } from "../../helpers/panelUtils";
 type SectionHeaderProps = {
     title: React.ReactNode;
     description?: React.ReactNode;
+    icon?: React.ReactNode;
     rightContent?: React.ReactNode;
     dotClassName?: string;
     showDot?: boolean;
@@ -13,6 +14,7 @@ type SectionHeaderProps = {
 export const SectionHeader: React.FC<SectionHeaderProps> = ({
     title,
     description,
+    icon,
     rightContent,
     dotClassName = "bg-sky-500",
     showDot = true,
@@ -27,6 +29,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
         <div className="min-w-0">
             <div className="flex items-center gap-2">
                 {showDot && <span className={cn("inline-flex h-2 w-2 rounded-full", dotClassName)} />}
+                {icon && <div className="flex-shrink-0">{icon}</div>}
                 <h3 className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-50 truncate">{title}</h3>
             </div>
 

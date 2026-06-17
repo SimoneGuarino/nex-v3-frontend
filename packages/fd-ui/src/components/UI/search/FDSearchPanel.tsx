@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MdSearch, MdClose, MdKeyboardArrowUp, MdKeyboardArrowDown } from "react-icons/md";
 import { IoClose, IoEllipsisVertical } from "react-icons/io5";
 // components
-import { ContextMenu } from "components/UI/menu/ContextMenu";
-import { FDBox, FDBackdrop, FDIconButton, FDInput} from "../../../";
+import { FDBox, FDBackdrop, FDIconButton, FDInput, ContextMenu} from "../../../";
 
 // tour system
 /*import { useTour } from "tour/TourProvider";

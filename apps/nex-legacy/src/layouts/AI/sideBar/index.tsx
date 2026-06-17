@@ -6,8 +6,7 @@ import { AIContext, Conversation } from "context/AIContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 // UI Components
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import FDButton, { FDColor, FDVariant } from "components/UI/buttons/FDButton";
+import { FDIconButton, FDButton, FDColor, FDButtonVariant } from "@nex/fd-ui";
 
 // Icon imports
 import { BiCommentAdd } from "react-icons/bi";
@@ -35,7 +34,7 @@ interface SideBarProps {
 
 interface TabProps {
     label: string;
-    variant?: FDVariant;
+    variant?: FDButtonVariant;
     color?: FDColor;
     icon: React.ReactNode;
     classExtra?: string;

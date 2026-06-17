@@ -32,7 +32,7 @@
 import React from "react";
 import { Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Skeleton } from "@mui/material";
 import { FDBox } from "@nex/fd-ui";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 import { MdPlayArrow, MdEdit, MdDelete } from "react-icons/md";
 import type { IconType } from "react-icons";
 import { useSurfaceTokens } from "../hooks/use-surface-tokens";

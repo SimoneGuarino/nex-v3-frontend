@@ -9,7 +9,7 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import { m, LazyMotion, domAnimation } from "framer-motion";
 import { useUserContext } from "context/UserContext";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 
 import defaultAvatar from "assets/images/blank-profile-picture-973460_960_720.webp";
 

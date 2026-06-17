@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 //UI
-import { FDBox } from "@nex/fd-ui";
-import FDButton from "components/UI/buttons/FDButton"
-import { ContextMenu } from "components/UI/menu/ContextMenu";
-import { FDDialog } from "@nex/fd-ui";
+import { FDBox, FDButton, ContextMenu, FDDialog } from "@nex/fd-ui";
+
 //fetchdatas
 import { GetCategoriesAPI, GetNoPromoMysqlFiltersAPI, NoPromoMysqlFilters } from "../fetchData/filters";
 import { ExportGlossarioAPI } from "../fetchData/exportGlossario";

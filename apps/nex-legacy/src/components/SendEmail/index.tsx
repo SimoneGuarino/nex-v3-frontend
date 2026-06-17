@@ -10,7 +10,7 @@ import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import PDFIcon from 'assets/icons/PDF.webp';
 import { MainTheme } from 'assets/settingsTheme';
 import { icon_close, icon_file } from 'config/icons';
-import RichTextEditor from 'components/UI/input/RichTextEditor';
+import { RichTextEditor } from '@nex/fd-ui';
 import { useNexTheme } from '@nex/theme-system';
 
 type AttachmentKey = string | number;

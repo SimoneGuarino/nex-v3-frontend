@@ -22,7 +22,7 @@ import { EncryptRSA } from "utils/crypt/EncryptRSA";
 import { useTheme, useMediaQuery } from "@mui/material";
 
 import { enqueueSnackbar } from "components/MessageBox/SnackbarProvider/SnackbarProvider";
-import FDInput from "components/UI/input/FDInput";
+import { FDInput } from "@nex/fd-ui";
 
 import { BsLinkedin } from "react-icons/bs";
 import { ImFacebook2 } from "react-icons/im";

@@ -2,15 +2,11 @@ import React, { useCallback, useState } from "react";
 import { format } from "date-fns";
 import { GetDate } from "utils/index";
 
-import { ContextMenu } from "components/UI/menu/ContextMenu";
-import FDInput from "components/UI/input/FDInput";
-import FDDate from "components/UI/input/FDDate";
+import { FDButton, FDSelect, FDInput, FDDate, ContextMenu} from "@nex/fd-ui";
 
 import type { FidoFiltersOptions } from "../fetchData/getFilters";
 
 import { MdOutlinePercent } from "react-icons/md";
-import FDButton from "components/UI/buttons/FDButton";
-import FDSelect from "components/UI/input/FDSelect";
 import { SearchCustomersAPI } from "../fetchData/V2/serchCustomers";
 import { enqueueSnackbar } from "components/MessageBox";
 import { CustomerOption } from "../types/view";

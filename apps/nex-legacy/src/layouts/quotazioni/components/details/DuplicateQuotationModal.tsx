@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { FDBox } from "@nex/fd-ui";
-import { FDButton } from "components/UI/buttons/FDButton";
+import { FDBox, FDButton } from "@nex/fd-ui";
 import { FiAlertTriangle, FiExternalLink } from "react-icons/fi";
 
 const FiAlertTriangleIcon = FiAlertTriangle as React.FC<{ size?: number; className?: string }>;

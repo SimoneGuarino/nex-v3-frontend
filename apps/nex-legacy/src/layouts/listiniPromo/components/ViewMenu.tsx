@@ -2,7 +2,7 @@
 
 import React, { MutableRefObject, useMemo } from "react";
 import { MdGridView, MdViewList, MdCheck } from "react-icons/md";
-import { ContextMenu } from "components/UI/menu/ContextMenu";
+import { ContextMenu } from "@nex/fd-ui";
 
 const MdGridViewIcon = MdGridView as React.FC<{ size?: number; className?: string }>;
 const MdViewListIcon = MdViewList as React.FC<{ size?: number; className?: string }>;

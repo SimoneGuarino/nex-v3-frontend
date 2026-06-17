@@ -1,8 +1,6 @@
 import React from "react";
-import FDButton from "components/UI/buttons/FDButton";
-import FDInput from "components/UI/input/FDInput";
-import FDSelect from "components/UI/input/FDSelect";
-import { ContextMenu } from "components/UI/menu/ContextMenu";
+import { FDButton, FDInput, FDSelect, ContextMenu } from "@nex/fd-ui";
+
 
 type FiltersMenuProps = {
     open: boolean;

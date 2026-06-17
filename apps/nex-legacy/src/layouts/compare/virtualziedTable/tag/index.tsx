@@ -10,7 +10,7 @@ import {
     HiOutlineUser,
     HiOutlineTag,
 } from "react-icons/hi2";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 
 const HiOutlineChatBubbleLeftEllipsisIcon = HiOutlineChatBubbleLeftEllipsis as React.FC<{ size?: number, className?: string }>;
 const HiOutlineCubeIcon = HiOutlineCube as React.FC<{ size?: number, className?: string }>;

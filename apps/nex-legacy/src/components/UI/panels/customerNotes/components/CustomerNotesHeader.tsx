@@ -1,18 +1,14 @@
-// src/components/UI/panels/customerNotes/components/CustomerNotesHeader.tsx
 /**
  * descrizione: Header operativo del manager note.
  * include:     KPI rapidi, filtri locali/server-side e azioni globali.
  */
 import React, { useState } from "react";
-import FDButton from "components/UI/buttons/FDButton";
-import FDSelect from "components/UI/input/FDSelect";
 import { MdRefresh } from "react-icons/md";
 import { IoAddOutline } from "react-icons/io5";
 import { NOTE_SCOPE_OPTIONS, SORT_PRESET_OPTIONS } from "../constants";
 import type { NotesScopeFilter, NotesSummary, SortPresetValue } from "../types";
-import FDInput from "components/UI/input/FDInput";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
-import { FDSkeletonPresets, FDSkeletonSwitch } from "@nex/fd-ui";
+import { FDSkeletonPresets, FDSkeletonSwitch, FDButton, FDSelect, FDInput } from "@nex/fd-ui";
 
 type CustomerNotesHeaderProps = {
     rowsCount: number;

@@ -1,7 +1,7 @@
 import React, { memo, useCallback } from 'react';
 import type { DocumentItemMapped } from '../types';
 import { MdPictureAsPdf, MdStarBorder, MdStar } from 'react-icons/md';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 
 const MdPictureAsPdfIcon = MdPictureAsPdf as React.FC<{ size?: number; className?: string }>;
 const MdStarBorderIcon = MdStarBorder as React.FC<{ size?: number; className?: string }>;

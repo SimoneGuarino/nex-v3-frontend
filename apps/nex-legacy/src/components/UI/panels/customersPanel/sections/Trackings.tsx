@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { IoCopy } from "react-icons/io5";
 import { RxOpenInNewWindow } from "react-icons/rx";
 import { enqueueSnackbar } from "components/MessageBox";
-import ContextMenu from "components/UI/menu/ContextMenu";
+import { ContextMenu } from "@nex/fd-ui";
 import { CopyToClipboard } from "utils/string/copy";
 import type { PanelMode, TrackingPreviewRow, TrackingsDetailsPayload } from "../types";
 import { cn, formatDateMaybe, formatNumberIt, toDisplayText } from "../helpers/panelUtils";

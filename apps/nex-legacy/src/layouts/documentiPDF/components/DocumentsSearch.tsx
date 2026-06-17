@@ -1,6 +1,8 @@
 import React from "react";
 import { DocumentItemMapped } from "../types";
-import FDSearchPanel, { SearchItem, FilterChip } from "components/UI/search/FDSearchPanel";
+
+import { FDSearchPanel, type SearchItem, type FilterChip } from "@nex/fd-ui";
+
 import { MdFilePresent, MdDownload, MdShare, MdStarBorder, MdLink, MdOutlineEmail } from "react-icons/md";
 import { LuView } from "react-icons/lu";
 

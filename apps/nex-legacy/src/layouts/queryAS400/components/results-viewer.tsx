@@ -28,7 +28,7 @@ import {
     TableBody,
 } from "@mui/material";
 import { FDBox } from "@nex/fd-ui";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 import { icon_download } from "config/icons";
 import { useSurfaceTokens } from "../hooks/use-surface-tokens";
 import type { ExecSavedResponse, ExecAdHocResponse } from "../types";

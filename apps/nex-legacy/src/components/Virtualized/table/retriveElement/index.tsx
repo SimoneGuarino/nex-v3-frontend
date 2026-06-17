@@ -14,7 +14,7 @@ import { NumberToEuro } from 'utils/numberToEuro';
 import { MainTheme } from 'assets/settingsTheme';
 import { Checkbox } from '@mui/material';
 import { icon_info } from 'config/icons';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from '@nex/fd-ui';
 import { UserAvatar } from 'examples/Navbars/components/userInfo';
 import { clsx } from 'clsx';
 

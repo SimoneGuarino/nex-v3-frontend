@@ -1,5 +1,5 @@
 import React from "react";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDButton } from "@nex/fd-ui";
 import { GrDocumentPdf } from "react-icons/gr";
 import { IoMapSharp } from "react-icons/io5";
 import { BiNote } from "react-icons/bi";

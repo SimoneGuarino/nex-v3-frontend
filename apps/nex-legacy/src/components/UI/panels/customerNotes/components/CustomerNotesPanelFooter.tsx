@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/components/CustomerNotesPanelFooter.tsx
 /**
  * descrizione: Footer minimale del pannello note.
  * compito:     mostra contesto cliente corrente nel footer della side shell.

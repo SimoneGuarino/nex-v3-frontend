@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/utils.ts
 /**
  * descrizione: Utility di dominio per modulo note cliente.
  * include:     normalizzazione payload, regole ruolo/permessi, mapping discussione/storico.

@@ -1,8 +1,8 @@
-import FDButton from "components/UI/buttons/FDButton";
-import { CustomersPanel } from "components/UI/panels/customersPanel";
-import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import { useState } from "react";
 
+import { FDButton } from "@nex/fd-ui";
+import { CustomersPanel } from "components/UI/panels/customersPanel";
+import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 
 
 export function TestPage() {

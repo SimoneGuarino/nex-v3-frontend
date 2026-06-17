@@ -9,13 +9,14 @@ import TopBar from './components/TopBar';
 import EmptyState from './components/EmptyState';
 import { useDocuments } from './hooks/useDocuments';
 import DashboardLayout from 'examples/LayoutContainers/DashboardLayout';
-import { ContextMenu } from 'components/UI/menu/ContextMenu';
+
+import { ContextMenu, type FilterChip, FDSharePanel, type ShareDoc, type ShareTarget } from '@nex/fd-ui';
+
 import DocumentsVirtualView from './components/DocumentsVirtualView';
 import DocumentCard from './components/DocumentCard';
 import DocumentRow from './components/DocumentRow';
 import DocumentsSearch from './components/DocumentsSearch';
 import FiltersPanelInMenu from './components/Filters';
-import { FilterChip } from 'components/UI/search/FDSearchPanel';
 import LoadingState from './components/LoadingState';
 // icons
 import { MdCheck, MdArrowUpward, MdArrowDownward, MdViewComfy, MdViewCompact, MdGridView, MdViewList, MdPictureAsPdf, MdDownload, MdShare, MdLink, MdOutlineEmail } from 'react-icons/md';
@@ -24,19 +25,18 @@ import { buildPdfUrl } from './lib/openPdf';
 import { downloadPdfSingleAPI } from './lib/downloadDocuments';
 import { downloadPdfBatch } from 'examples/Fetch/FetchFilePDF';
 import { DocumentItemMapped, ScopeTab } from './types';
-import FDSharePanel, { ShareDoc, ShareTarget } from 'components/UI/share/FDSharePanel';
 import { useUserContext } from 'context/UserContext';
 import { SearchUsersAPI } from 'examples/Navbars/components/chat/fetchData/search';
 import { useGeneralDataContext } from 'context/GeneralDataContext';
 import { enqueueSnackbar } from 'components/MessageBox';
 import { ShareEmailAPI } from './fetchData/shareEmail';
 import { LuView } from "react-icons/lu";
+import defaultAvatar from "assets/images/blank-profile-picture-973460_960_720.webp";
 
 //tour
 import { useSectionTour } from 'tour/useSectionTour';
 import { Role } from 'tour/types';
-import { FDBox } from '@nex/fd-ui';
-import FDButton from 'components/UI/buttons/FDButton';
+import { FDBox, FDButton } from '@nex/fd-ui';
 
 const MdCheckIcon = MdCheck as React.FC<{ size?: number; className?: string }>;
 const MdArrowUpwardIcon = MdArrowUpward as React.FC<{ size?: number; className?: string }>;
@@ -1052,6 +1052,10 @@ const DocumentsPage: React.FC = () => {
                 onShare={shareOpen ? onShare : onShareByEmail}
                 title={`Condividi documenti ${shareOpen ? "in chat" : "via email"}`}
                 isActive={!tour.isOpen || shareActive}
+                defaultAvatar={defaultAvatar}
+                args={{
+                    API_USERS: import.meta.env.VITE_API_USERS,
+                }}
             />
         </DashboardLayout>
     );

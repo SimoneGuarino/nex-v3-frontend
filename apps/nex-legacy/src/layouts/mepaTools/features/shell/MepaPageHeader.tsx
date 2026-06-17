@@ -1,6 +1,5 @@
-import React from "react";
 import { FiChevronRight, FiPlus, FiRefreshCw } from "react-icons/fi";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDButton } from "@nex/fd-ui";
 import { StatusPill } from "../../components/StatusPill";
 import { InfoMini } from "../../components/shared/InfoMini";
 import { formatDate } from "../../utils/formatters";

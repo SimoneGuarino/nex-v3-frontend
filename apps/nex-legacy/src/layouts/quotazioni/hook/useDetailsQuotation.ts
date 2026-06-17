@@ -1,7 +1,10 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { enqueueSnackbar } from "components/MessageBox";
-import { SearchItem, writeRecent } from "components/UI/search/FDSearchPanel";
-import { FiltersType, Pagination, ProductDoc, CartProductDTO, SearchResponse, ContropropostaDTO, ProductEventType, ProductEventDTO, TextRequestCartDTO, QuotationeCart, CommercialAlternativeSuggestionDTO } from "layouts/quotazioni/types/qts_product";
+import { FDSelectOption, type SearchItem } from "@nex/fd-ui";
+
+import { writeRecent } from "utils";
+
+import { FiltersType, Pagination, ProductDoc, CartProductDTO, SearchResponse, ContropropostaDTO, ProductEventType, ProductEventDTO, TextRequestCartDTO } from "layouts/quotazioni/types/qts_product";
 import { SearchProductsAPI } from "../fetchdata/get/searchProducts";
 import { CategoryListAPI } from "../fetchdata/get/categoryList";
 import { AddProductsToCartAPI, AddProductsResponse, DeleteProductsToCartAPI, UpdateQtsProductStateAPI, ReassignQtsProductBuyerAPI, CreateTextRequestAPI, CreateCommercialAlternativeSuggestionAPI, DeleteCommercialAlternativeSuggestionAPI } from "../fetchdata/cart/products";
@@ -22,8 +25,7 @@ import { EditQuotationCustomerAPI } from "../fetchdata/post/editQuotationCustome
 import { ClosureDraft } from "../types/closure";
 import { getCartProduct } from "../fetchdata/cart/getCartProduct";
 import { GetQuotationOkLinksAPI } from "../fetchdata/get/getQuotationOkLinks";
-import { CheckAdminPermissions } from "utils";
-import { FDSelectOption } from "components/UI/input/FDSelect";
+
 import {
     buildTourBuyerMockStepCallbacks,
     buildTourCadMockStepCallbacks,

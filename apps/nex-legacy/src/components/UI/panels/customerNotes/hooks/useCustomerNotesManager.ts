@@ -1,10 +1,9 @@
-// src/components/UI/panels/customerNotes/hooks/useCustomerNotesManager.ts
 /**
  * descrizione: Hook orchestratore del dominio "note cliente".
  * include:     fetch lista, filtri locali, create/update/delete, gestione discussione, permessi.
  */
 import React from "react";
-import type { FDSelectOption } from "components/UI/input/FDSelect";
+import { type FDSelectOption } from "@nex/fd-ui";
 import { enqueueSnackbar } from "components/MessageBox";
 import SendLogs from "logs";
 import { SearchCustomersAPI } from "layouts/clienti/fetchData/V2/serchCustomers";

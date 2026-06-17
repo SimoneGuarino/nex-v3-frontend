@@ -1,7 +1,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiChevronLeft, FiChevronRight, FiPlus, FiX } from "react-icons/fi";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 
 const FiChevronLeftIcon = FiChevronLeft as React.FC<{ className?: string }>;
 const FiChevronRightIcon = FiChevronRight as React.FC<{ className?: string }>;

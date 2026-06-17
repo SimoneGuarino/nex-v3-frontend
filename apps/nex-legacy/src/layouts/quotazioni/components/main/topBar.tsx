@@ -1,10 +1,9 @@
-import { FDBox } from "@nex/fd-ui";
-import FDButton from "components/UI/buttons/FDButton";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import FDSearchPanel, { FilterChip, SearchItem } from "components/UI/search/FDSearchPanel";
+import { memo, useCallback, useMemo } from "react";
+
+import { FDIconButton, FDButton, FDBox, FDSearchPanel, type FilterChip, type SearchItem } from "@nex/fd-ui";
+
 import { enqueueSnackbar } from "components/MessageBox";
 import type { QuotazioneDTO, Scope } from "layouts/quotazioni/types/quotations";
-import { memo, useCallback, useMemo } from "react";
 import { MdSearch, MdFilterList } from 'react-icons/md';
 import { IoEyeOutline } from "react-icons/io5";
 

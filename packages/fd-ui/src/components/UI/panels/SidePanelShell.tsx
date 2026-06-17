@@ -1,8 +1,8 @@
 import React from "react";
-import FDBox, { type FDBoxProps, clsx } from "components/UI/box/FDBox";
+import clsx from "clsx";
 import { motion, type Variants } from "framer-motion";
 import { FiX } from "react-icons/fi";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton, FDBox, type FDBoxProps } from "../../../";
 
 const slideFromRightVariants: Variants = {
     hidden: {
@@ -167,3 +167,5 @@ export const SidePanelShell: React.FC<SidePanelShellProps> = ({
         </FDBox>
     );
 };
+
+export default SidePanelShell;

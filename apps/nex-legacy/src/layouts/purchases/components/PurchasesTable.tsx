@@ -7,7 +7,7 @@ import type {
     PurchasesSortDirection,
     PurchasesSortField,
 } from "../types";
-import { FDIconButton } from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 
 const PdfIcon = LuFileText as React.FC<{ size?: number; className?: string }>;
 

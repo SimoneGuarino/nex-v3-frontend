@@ -9,7 +9,7 @@
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MdClose, MdOpenInNew, MdDownload } from "react-icons/md";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 import { FDBox } from "@nex/fd-ui";
 import type { PdfSource } from "../lib/openPdf";
 import { usePdfDocument } from "../hooks/usePdfDocument";

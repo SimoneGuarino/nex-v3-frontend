@@ -1,10 +1,7 @@
-// src/layouts/listiniPromo/components/FiltersMenu.tsx
 import React from "react";
-import FDSelect, { FDSelectOption } from "components/UI/input/FDSelect";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 import { IoCloseSharp } from "react-icons/io5";
-import { ContextMenu } from "components/UI/menu/ContextMenu";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDButton, ContextMenu, FDSelect, FDSelectOption } from "@nex/fd-ui";
 import { useTour } from "tour/TourProvider";
 
 const CloseIcon = IoCloseSharp as React.FC<{ size?: number; className?: string }>;

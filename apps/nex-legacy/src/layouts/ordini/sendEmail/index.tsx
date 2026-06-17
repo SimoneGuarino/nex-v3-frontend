@@ -1,10 +1,8 @@
 import React, { Fragment } from 'react';
 
-
-import LoadingButton from '@mui/lab/LoadingButton';
 import { icon_close, icon_reportProblem, icon_delete } from 'config/icons';
-import RichTextEditor from 'components/UI/input/RichTextEditor';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton, RichTextEditor } from "@nex/fd-ui";
+
 
 interface codTarget {
     nome: string;

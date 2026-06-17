@@ -1,10 +1,8 @@
 import React from 'react';
 import MinLoader from '../../../../minLoader';
-import RichTextEditor from 'components/UI/input/RichTextEditor';
-import FDButton from 'components/UI/buttons/FDButton';
+import { FDButton, RichTextEditor, FDIconButton, FDBox} from '@nex/fd-ui';
+
 import { LuSend } from "react-icons/lu";
-import { FDBox } from '@nex/fd-ui';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
 import { IoCloseOutline } from "react-icons/io5";
 import { useTour } from "tour/TourProvider";
 

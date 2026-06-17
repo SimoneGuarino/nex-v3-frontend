@@ -2,7 +2,7 @@ import React from "react";
 import { TableVirtualized } from "components/Virtualized/table";
 import type { QuoteHeader } from "../types";
 import { FiEye } from "react-icons/fi";
-import { FDIconButton } from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 
 const FiEyeIcon = FiEye as React.FC<{ size?: number; className?: string }>;
 

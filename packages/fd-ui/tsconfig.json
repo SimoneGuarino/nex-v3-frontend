@@ -10,7 +10,7 @@
         "strict": false,
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "baseUrl": "src"
+        "baseUrl": "src",
     },
     "include": [
         "src"

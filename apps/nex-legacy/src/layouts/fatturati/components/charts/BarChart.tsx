@@ -9,8 +9,7 @@ import {
     Tooltip as ReTooltip,
     YAxis,
 } from "recharts";
-import { FDSelect, type FDSelectOption } from "components/UI/input/FDSelect";
-import { FDBox } from "@nex/fd-ui";
+import { FDSelect, type FDSelectOption, FDBox } from "@nex/fd-ui";
 
 
 // ——————————————————————————————————————————————————————————

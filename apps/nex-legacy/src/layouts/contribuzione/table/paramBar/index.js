@@ -14,7 +14,7 @@ import MDTypography from 'components/MDTypography';
 import { icon_quantity } from 'config/icons';
 import { MainTheme } from 'assets/settingsTheme';
 import { useNexTheme } from '@nex/theme-system';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 
 
 export function ParamBar({ paramState, setParamState, distList__, visibleColumns, 

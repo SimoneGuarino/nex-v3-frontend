@@ -5,7 +5,7 @@ import {
     normalizeReleaseNoteDates,
     type ReleaseNote as RN,
 } from "examples/Navbars/components/release/fetchdata/getReleaseNotes";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDButton } from "@nex/fd-ui";
 import ReleaseNotesHero from "./releaseWidgetUtils/ReleaseNotesHero";
 
 /**

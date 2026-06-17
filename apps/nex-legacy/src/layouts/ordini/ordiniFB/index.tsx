@@ -20,7 +20,7 @@ import EmojiError from "emojiError";
 import { DataRetrive } from './fetchData/data';
 import { TableVirtualized } from "components/Virtualized/table";
 import { enqueueSnackbar } from "components/MessageBox";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 
 
 // Struttura generica di una colonna della tabella

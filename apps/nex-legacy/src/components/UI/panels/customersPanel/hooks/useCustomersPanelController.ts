@@ -1,4 +1,3 @@
-// src/components/UI/panels/customersPanel/hooks/useCustomersPanelController.ts
 /**
  * descrizione: Controller del CustomersPanel.
  * compito:     orchestra fetch dati cliente e collega stato base/section al container UI.

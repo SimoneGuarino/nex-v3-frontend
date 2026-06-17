@@ -27,9 +27,8 @@ import { useGeneralDataContext } from "context/GeneralDataContext";
 import { DivideName } from "utils/divideName";
 import { enqueueSnackbar } from "components/MessageBox";
 import { StringAvatar } from "utils/stringToColor";
-import { FDBox } from "@nex/fd-ui";
-import FDButton from "components/UI/buttons/FDButton";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+
+import { FDIconButton, FDButton, FDBox } from "@nex/fd-ui";
 
 import ConvertModule from "classes/convert.js";
 import "../style.css";

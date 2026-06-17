@@ -18,7 +18,7 @@ import { MainTheme } from 'assets/settingsTheme';
 import { icon_chat, icon_note } from 'config/icons';
 import { StringToHTML } from 'utils/stringToHTML';
 import { useNexTheme } from '@nex/theme-system';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 const Convert = new ConvertModule();
 
 const paragraph_secondary_css = {

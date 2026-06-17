@@ -1,11 +1,10 @@
 import React, { forwardRef, memo } from "react";
 import { motion, type HTMLMotionProps, type Variants } from "framer-motion";
-
+import { FDButtonVariant as FDVariant } from "../../palette/palette";
 
 // ——————————————————————————————————————————————————————————
 // TYPES
 // ——————————————————————————————————————————————————————————
-export type FDVariant = "solid" | "contained" | "soft" | "outline" | "outlined" | "ghost" | "gradient" | "underline" | "text" | "textHover";
 type DefaultSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
 export type FDRadius = "none" | DefaultSize | "full";
 export type FDSize = "small" | "medium" | "large" | DefaultSize;

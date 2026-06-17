@@ -1,7 +1,6 @@
 import React, { memo } from "react";
-import FDSelect from "components/UI/input/FDSelect";
 import { FiltersType } from "layouts/quotazioni/types/qts_product";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDButton, FDSelect } from "@nex/fd-ui";
 import { MdSearch } from 'react-icons/md';
 import { useTour } from "tour/TourProvider";
 

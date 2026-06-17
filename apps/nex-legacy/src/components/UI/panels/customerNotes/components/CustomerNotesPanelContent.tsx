@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/components/CustomerNotesPanelContent.tsx
 /**
  * descrizione: Adapter di contenuto per usare il manager dentro altri panel/shell.
  * compito:     validare il customerCode e mostrare fallback UI se non valido.

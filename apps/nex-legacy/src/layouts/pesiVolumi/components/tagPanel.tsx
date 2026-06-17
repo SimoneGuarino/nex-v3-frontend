@@ -1,5 +1,5 @@
 import React from 'react';
-import FDSelect from 'components/UI/input/FDSelect';
+import { FDSelect } from '@nex/fd-ui';
 
 interface TagPProps {
     status: boolean;
@@ -22,21 +22,6 @@ export const TagP: React.FC<TagPProps> = ({
     // ---------- VARIABILI "SAFE" ----------
     const selectedSafe = warehouses_selected ?? [];
     const listSafe = warehouses_list ?? [];
-
-    /*const AddElementToList = (name: string) => {
-        if (!loadingTable) {
-            const index = listSafe.indexOf(name);
-            setWarehouse(() => {
-                if (selectedSafe[0] == name) {
-                    WarehouseChange(null);
-                    return null;
-                } else {
-                    WarehouseChange(index >= 0 ? index : null);
-                    return index >= 0 ? index : null;
-                }
-            });
-        }
-    }*/
 
     const currentValue = selectedSafe?.[0] ?? '';
 

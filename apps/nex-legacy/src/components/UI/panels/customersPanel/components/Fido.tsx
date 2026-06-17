@@ -1,4 +1,3 @@
-// src/components/UI/panels/customersPanel/components/Fido.tsx
 import React from "react";
 
 type AnyRecord = Record<string, any>;

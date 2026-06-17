@@ -1,5 +1,4 @@
-import { FDBox } from "@nex/fd-ui";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDBox, FDButton } from "@nex/fd-ui";
 import React from "react";
 import {
     FiPenTool, FiRotateCcw, FiTrash2, FiDownload, FiShare2

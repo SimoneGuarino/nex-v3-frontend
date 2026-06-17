@@ -8,7 +8,7 @@ import { BsStars } from "react-icons/bs";
 import { FDBox } from '@nex/fd-ui';
 
 import defaultAvatar from "assets/images/blank-profile-picture-973460_960_720.webp";
-import { ContextMenu } from 'components/UI/menu/ContextMenu';
+import { ContextMenu } from '@nex/fd-ui';
 
 
 const CoverWithAvatar: React.FC<{ coverSrc?: string | null; src?: string | null; nome?: string; cognome?: string; bio?: string }> =

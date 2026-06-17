@@ -1,6 +1,6 @@
 import { FileUploadZone } from 'components/Upload/fileUploadZone';
 import { motion, AnimatePresence } from 'framer-motion';
-import FDButton from 'components/UI/buttons/FDButton';
+import { FDButton } from '@nex/fd-ui';
 
 interface ExpirationModalProps {
     isOpen: boolean;

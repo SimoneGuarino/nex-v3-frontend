@@ -5,7 +5,7 @@ import { UserState } from 'types/UserContext';
 
 interface SearchParam {
     stato?: any;
-    com?: object;
+    com?: string;
     dateRange?: {
         da: any;
         a: any;

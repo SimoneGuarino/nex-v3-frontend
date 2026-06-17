@@ -1,6 +1,6 @@
 
-import { FilterChip } from "components/UI/search/FDSearchPanel";
-import { MutableRefObject, useContext, useEffect, useRef, useState } from "react";
+import { type FilterChip } from "@nex/fd-ui";
+import { MutableRefObject, useContext, useRef, useState } from "react";
 import { BrandNode, BrandPrefixNode, FamilyNode, GroupNode, LineNode } from "../types/types";
 import { CheckAdminPermissions } from "utils/checkAdminPermissions";
 import { UserState } from "types/UserContext";

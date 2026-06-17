@@ -29,6 +29,15 @@ export function formatNumberIt(value: any, fallback = "-"): string {
     return numeric.toLocaleString("it-IT");
 }
 
+export function formatDecimalIt(value: any, fallback = "-", maximumFractionDigits = 2): string {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    return numeric.toLocaleString("it-IT", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits,
+    });
+}
+
 export function formatCurrencyIt(value: any, fallback = "-"): string {
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return fallback;
@@ -36,6 +45,15 @@ export function formatCurrencyIt(value: any, fallback = "-"): string {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     })} \u20AC`;
+}
+
+export function formatPercentIt(value: any, fallback = "-"): string {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    return `${numeric.toLocaleString("it-IT", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    })}%`;
 }
 
 export function ensureTrailingSlash(value: string | null | undefined, emptyValue = "/"): string {

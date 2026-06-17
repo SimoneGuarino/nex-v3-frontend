@@ -1,8 +1,6 @@
-// src/layouts/listiniPromo/components/ProductCards.tsx
 import React, { useMemo, useState } from "react";
-import { FDBox } from "@nex/fd-ui";
-import FDButton from "components/UI/buttons/FDButton";
-import FDSelect, { type FDSelectOption } from "components/UI/input/FDSelect";
+import { FDBox, FDButton, FDSelect, type FDSelectOption } from "@nex/fd-ui";
+
 import type { PromotionProduct, WarehouseAvailability } from "../fetchdatas/promos/detailsData";
 import { useTour } from "tour/TourProvider";
 

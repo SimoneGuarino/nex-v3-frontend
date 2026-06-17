@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/components/dialogs/CustomerNotesCreateDialog.tsx
 /**
  * descrizione: Dialog di creazione nuova nota cliente.
  * compito:     raccoglie cliente/tipologia/testo e delega salvataggio al manager.

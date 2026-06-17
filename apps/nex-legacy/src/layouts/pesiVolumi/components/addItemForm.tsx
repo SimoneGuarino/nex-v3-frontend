@@ -2,10 +2,9 @@ import { icon_send } from 'config/icons';
 import React from 'react';
 import { SearchItemAPI } from '../fetchData/SearchItem';
 import { enqueueSnackbar } from 'components/MessageBox';
-import FDInput from 'components/UI/input/FDInput';
-import { FDBox } from '@nex/fd-ui';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
-import FDButton from 'components/UI/buttons/FDButton';
+
+import { FDBox, FDButton, FDIconButton, FDInput } from '@nex/fd-ui';
+
 import { useTour } from "tour/TourProvider";
 
 interface InsertDataProps {

@@ -1,7 +1,7 @@
 // TableRenderer.tsx
 import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { TableData } from "context/AIContext";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 import { GoDownload } from "react-icons/go";
 import { exportToCsv } from "../../utils/csv";
 

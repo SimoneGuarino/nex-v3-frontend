@@ -1,16 +1,12 @@
-// src/components/UI/panels/customerNotes/components/dialogs/CustomerNotesDiscussionDialog.tsx
 /**
  * descrizione: Side panel secondario per thread discussione nota.
  * compito:     visualizza storico, permette nuovi aggiornamenti e cancellazioni permesse.
  */
 import React, { useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import FDButton from "components/UI/buttons/FDButton";
-import FDIconButton from "components/UI/buttons/FDIconButton";
-import FDTextArea from "components/UI/input/FDTextArea";
+import { FDButton, FDIconButton, FDTextArea, SidePanelShell } from "@nex/fd-ui";
 import { MdDelete, MdRefresh } from "react-icons/md";
 import { IoAddOutline, IoChatbubbleEllipsesOutline } from "react-icons/io5";
-import { SidePanelShell } from "../../../customersPanel/components/SidePanelShell";
 import { SectionActionButton } from "../../../customersPanel/components/sectionUi";
 import type { DeleteChangeState, DiscussionState } from "../../types";
 import {

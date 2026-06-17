@@ -13,7 +13,7 @@ import { FDBox } from '@nex/fd-ui';
 
 import ConvertModule from "classes/convert.js";
 import { useNexTheme } from '@nex/theme-system';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 const Convert = new ConvertModule();
 
 

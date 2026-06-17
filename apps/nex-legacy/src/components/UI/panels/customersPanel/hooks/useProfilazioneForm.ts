@@ -1,4 +1,3 @@
-// src/components/UI/panels/customersPanel/hooks/useProfilazioneForm.ts
 /**
  * descrizione: Hook form state della section Profilazione.
  * compito:     normalizza report backend -> valori form e produce payload salvataggio.

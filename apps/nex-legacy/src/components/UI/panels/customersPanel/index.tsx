@@ -2,7 +2,7 @@ import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { saveProfilazione } from "./fetchdata";
-import { SidePanelShell } from "./components/SidePanelShell";
+import { SidePanelShell } from "@nex/fd-ui";
 
 import { CustomersPanelDetailsContent } from "./components/CustomersPanelDetailsContent";
 import { CustomersPanelPaymentsFooter } from "./components/CustomersPanelPaymentsFooter";

@@ -6,7 +6,7 @@ import { icon_info } from 'config/icons';
 
 import AdminFilter from './admin';
 import MDTypography from 'components/MDTypography';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 
 
 

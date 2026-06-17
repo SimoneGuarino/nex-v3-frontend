@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/components/CustomerNotesPanelTitle.tsx
 /**
  * descrizione: Titolo header del pannello note.
  * compito:     mostra customerCode/ragione sociale e badge di validita codice.

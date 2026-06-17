@@ -31,3 +31,5 @@ export const palette: Record<FDColor, { bg: string; soft: string; ring: string; 
     },
     transparent: { bg: "bg-transparent", soft: "bg-transparent", ring: "transparent", text: "text-black dark:text-gray-200" },
 } as const;
+
+export type FDButtonVariant = "solid" | "contained" | "soft" | "outline" | "outlined" | "ghost" | "gradient" | "underline" | "text" | "textHover";

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import FDSwitch from "components/UI/input/FDSwitch";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDSwitch, FDButton} from "@nex/fd-ui";
 import { enqueueSnackbar } from "components/MessageBox";
 import { TbLock, TbLockOpen2 } from "react-icons/tb";
 import { BsBookmarkCheck } from "react-icons/bs";
@@ -293,7 +292,7 @@ export const Profilazione: React.FC<{
                                     : "Nessun campo valorizzato"}
                             </SectionPill>
                             <SectionActionButton
-                                onClick={(event) => {
+                                onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
                                     event.stopPropagation();
                                     onOpenDetails?.();
                                 }}

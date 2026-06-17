@@ -20,7 +20,7 @@ import { useGeneralDataContext } from 'context/GeneralDataContext';
 import { FDBox } from '@nex/fd-ui';
 import { UserState } from 'types/UserContext';
 import { useTour } from "tour/TourProvider";
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 import { IoReturnDownBack, IoCloseOutline } from "react-icons/io5";
 import { useNexTheme } from '@nex/theme-system';
 

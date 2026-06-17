@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useContext, useRef } from 'react';
 
+import { FDIconButton, ContextMenu } from "@nex/fd-ui";
+
 import { UserContext } from "context/UserContext";
 import { ReintegrateItem } from './fetchData/actions/reintegrateItem';
 import { ExcludeItem } from './fetchData/actions/excludeItem';
@@ -16,9 +18,7 @@ import { Product } from 'config/interfaces';
 import { Badge, Fade, Skeleton } from '@mui/material';
 import { enqueueSnackbar } from 'components/MessageBox';
 import { useTour } from "tour/TourProvider";
-import { ContextMenu } from 'components/UI/menu/ContextMenu';
 import CommentsPanel from './comments/CommentsPanel';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
 
 
 // ——————————————————————————————————————————————————————————

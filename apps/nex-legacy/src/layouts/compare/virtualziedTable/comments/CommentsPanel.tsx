@@ -3,11 +3,9 @@ import React, { useContext, useMemo, useRef, useState } from "react";
 import { UserContext } from "context/UserContext";
 import { AddNote } from "../fetchData/actions/addNote";
 import { RemoveNote } from "../fetchData/actions/removeNote";
-import FDButton from "components/UI/buttons/FDButton";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton, FDButton, ContextMenu } from "@nex/fd-ui";
 import { getRolesMappedByLabel, Notifications } from "utils/index";
 import { BodyNotificationsProps } from "utils/notifications/notifications";
-import { ContextMenu } from "components/UI/menu/ContextMenu";
 
 //icons
 import { IoIosSend } from "react-icons/io";

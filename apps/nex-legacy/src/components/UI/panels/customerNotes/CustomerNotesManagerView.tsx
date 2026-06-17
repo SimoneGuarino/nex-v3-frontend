@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/CustomerNotesManagerView.tsx
 /**
  * descrizione: Adapter tra framework "view clienti" e CustomerNotesManager.
  * compito:     traduce i filtri globali in `queryBody` consumabile dal modulo note.

@@ -12,8 +12,7 @@ import { HiOutlineDocumentText } from "react-icons/hi2";
 import { FiTruck } from "react-icons/fi";
 import { BiNote } from "react-icons/bi";
 
-import ContextMenu from "components/UI/menu/ContextMenu";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton, ContextMenu } from "@nex/fd-ui";
 import { CustomersPanel } from "components/UI/panels/customersPanel";
 
 import { BackordersDetailsPanel } from "./BackordersDetailsPanel";

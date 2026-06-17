@@ -1,8 +1,8 @@
-import { FDBox } from "@nex/fd-ui";
-import FDIconButton from "components/UI/buttons/FDIconButton"
+import { FDBox, FDIconButton } from "@nex/fd-ui";
 import { useState } from "react"
 //icons
 import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
+
 
 export function InfoPanel() {
     const [expanded, setExpanded] = useState(true)

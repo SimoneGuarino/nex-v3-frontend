@@ -1,4 +1,3 @@
-// src/components/UI/panels/customerNotes/fetchdata/addNotes.ts
 /**
  * descrizione: Client API per creazione note e recupero tipologie note cliente.
  * dipendenze:  `FetchData`, `enqueueSnackbar`.

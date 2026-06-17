@@ -13,7 +13,7 @@ import { LoadScreen } from "components/Load";
 import InfoPoupUpMenu from "examples/infoPoupUpMenu";
 import MDButton from "components/MDButton";
 import { downloadPdfSingleAPI } from "layouts/documentiPDF/lib/downloadDocuments";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 // icons
 import { IoCloudDownloadOutline } from "react-icons/io5";
 import { CiFileOn } from "react-icons/ci";

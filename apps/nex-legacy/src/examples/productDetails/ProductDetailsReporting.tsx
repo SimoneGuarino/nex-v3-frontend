@@ -1,5 +1,5 @@
 ﻿import React, { MutableRefObject, useEffect, useMemo, useState } from "react";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDButton } from "@nex/fd-ui";
 import { SidePanelShell } from "layouts/quotazioni/sidePanel/SidePanelShell";
 import { HeaderSection } from "./components/HeaderSection";
 import MainInfoSection from "./components/MainInfoSection";

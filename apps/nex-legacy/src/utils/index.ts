@@ -28,3 +28,5 @@ export { randomIntFromInterval } from './number/random';
 export { CopyToClipboard } from './string/copy';
 export { TruncateText } from './string/truncate';
 export { getRolesMappedByIndex, getRolesMappedByLabel, getRolesOptionsFromEnv } from './ruoli';
+export { ConvertToReadableString } from './string/convert.ts';
+export { writeRecent } from './cookie/operate';

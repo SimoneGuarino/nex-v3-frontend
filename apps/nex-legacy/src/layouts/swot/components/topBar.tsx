@@ -6,7 +6,7 @@ import MDTypography from "components/MDTypography";
 import { icon_Keyboard_ArrowUp, icon_download, icon_Keyboard_ArrowDown } from "config/icons";
 import { Tag } from "components/Tag/Tag";
 import { User } from "types/user";
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 import { GetTableDataAPI } from "../fetchData/get/getTableData";
 import { enqueueSnackbar } from "components/MessageBox";
 

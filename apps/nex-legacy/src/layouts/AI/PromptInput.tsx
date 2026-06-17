@@ -2,7 +2,7 @@ import { useContext, useState } from "react";
 import { motion } from "framer-motion";
 import { v4 as uuidv4 } from "uuid"; // npm install uuid
 
-import FDIconButton from "components/UI/buttons/FDIconButton";
+import { FDIconButton } from "@nex/fd-ui";
 
 //icons
 import * as FaIcons from "react-icons/fa";

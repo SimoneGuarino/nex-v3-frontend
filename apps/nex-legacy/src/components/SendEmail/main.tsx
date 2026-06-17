@@ -12,7 +12,7 @@ import { PopupInfo } from 'components/PopupInfo';
 import { SendMailAPI } from './fetch/send';
 import { useUserContext } from 'context/UserContext';
 import { Success } from 'components/Success';
-import RichTextEditor from 'components/UI/input/RichTextEditor';
+import { RichTextEditor } from '@nex/fd-ui';
 import { useNexTheme } from '@nex/theme-system';
 
 

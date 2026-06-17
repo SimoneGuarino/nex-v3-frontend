@@ -3,7 +3,7 @@ import { icon_chrono, icon_delete, icon_expandMore, icon_verified } from '../../
 import React from 'react';
 import MinLoader from '../../../minLoader';
 import theme from 'assets/theme';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 import { FDBox } from '@nex/fd-ui';
 import { useTour } from "tour/TourProvider";
 import { useNexTheme } from '@nex/theme-system';

@@ -11,7 +11,7 @@ import { useDragZone } from 'utils/useDragZone';
 import { enqueueSnackbar } from 'components/MessageBox';
 import { UploadAPI } from '../fetchData/post/upload';
 import { User } from 'types/user';
-import FDIconButton from 'components/UI/buttons/FDIconButton';
+import { FDIconButton } from "@nex/fd-ui";
 import { DeleteContractAPI } from '../fetchData/delete/deleteContract';
 import { DeleteTargetAPI } from '../fetchData/delete/deleteObjective';
 import QuarterStatsChart from './QuarterStatsChart';

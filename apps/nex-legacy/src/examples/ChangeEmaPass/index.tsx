@@ -44,7 +44,7 @@ import { SendEmailAPI } from "layouts/authentication/reset-password/fetchData/se
 import { enqueueSnackbar } from "components/MessageBox";
 import { ResetPasswordAPI } from "layouts/authentication/reset-password/fetchData/resetPassword";
 import { differenceInSeconds } from "date-fns";
-import FDInput from "components/UI/input/FDInput";
+import { FDInput } from "@nex/fd-ui";
 import { useNexTheme } from "@nex/theme-system";
 
 

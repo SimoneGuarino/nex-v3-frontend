@@ -4,8 +4,7 @@ import { MenuItem, Select, FormControl, InputLabel, LinearProgress, OutlinedInpu
 
 import { DownloadConfrontatoreFileV2 } from "layouts/compare/virtualziedTable/fetchData/confrontatore-v2";
 import { Tag } from "components/Tag/Tag";
-import { FDBox } from "@nex/fd-ui";
-import FDButton from "components/UI/buttons/FDButton";
+import { FDBox, FDButton } from "@nex/fd-ui";
 import { MdOutlineKeyboardArrowUp, MdClose as MdCloseRaw } from "react-icons/md";
 import { IoNewspaperOutline } from "react-icons/io5";
 
