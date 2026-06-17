@@ -37,7 +37,7 @@ export function QuickReservationMenu({ onClose, onSuccess }: QuickReservationMen
 
     // ruolo è string, usa CheckRoleAdmin per controllare se è admin/dev
     // Dev/Admin: ruolo number 0 o 1
-    const ruolo = details?.ruolo;
+    const ruolo = details?.authz?.activeGroup?.key; // KEY gruppo attivo del utente (stringa)
     const isAdmin = CheckRoleAdmin({ role: ruolo || "", rolesToCheck: [0, 1] });
 
     // codice buyer dell'utente corrente (default)

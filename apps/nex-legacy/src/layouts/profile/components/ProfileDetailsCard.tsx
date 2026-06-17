@@ -27,6 +27,9 @@ function formatDate(d?: string | Date | null) {
 export default function ProfileDetailsCard() {
     const [user, setUser] = useUserContext();
     const d = user?.details;
+    const groupContexts = Array.isArray(d?.authz?.groupContexts)
+        ? d.authz.groupContexts
+        : [];
 
     const [editing, setEditing] = React.useState<Record<string, boolean>>({});
     const [local, setLocal] = React.useState({
@@ -34,6 +37,8 @@ export default function ProfileDetailsCard() {
         cognome: d?.cognome ?? "",
         bio: d?.bio ?? "",
     });
+
+    console.log("ProfileDetailsCard render", { d });
 
     const abortController = React.useRef<AbortController | null>(null);
 
@@ -147,9 +152,11 @@ export default function ProfileDetailsCard() {
                                 <div className="flex gap-1 flex-wrap">
                                     <p className="text-xs text-gray-400 dark:text-gray-500">Ruoli disponibili</p>
                                     <div className="flex gap-1 flex-wrap">
-                                        {(d?.multiRuolo ?? []).map((r: { ruolo: string; descrizione: string }, i: number) => (
-                                            <Tag key={i} text={`#${r.ruolo}`} />
-                                        ))}
+                                        {groupContexts.map((group: { _id: string; name?: string; key?: string; description?: string }) => {
+                                            return (
+                                                <Tag key={group._id} text={`#${group.name || group.key || group._id}`} />
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>

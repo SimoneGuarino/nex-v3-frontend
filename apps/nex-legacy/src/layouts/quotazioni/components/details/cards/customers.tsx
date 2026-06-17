@@ -25,6 +25,7 @@ type CustomersCardProps = {
     setOpenCustomersDetails: React.Dispatch<React.SetStateAction<boolean>>;
     canReplacePlaceholderCustomer?: boolean;
     onReplacePlaceholderCustomer?: (customerCode: string) => Promise<void> | void;
+    hasCap: (cap: string) => boolean;
 };
 
 export default function CustomersCard({
@@ -32,6 +33,7 @@ export default function CustomersCard({
     setOpenCustomersDetails,
     canReplacePlaceholderCustomer = false,
     onReplacePlaceholderCustomer,
+    hasCap,
 }: CustomersCardProps) {
     const [isOpen, setIsOpen] = React.useState(true);
     const [replaceMode, setReplaceMode] = React.useState(false);
@@ -64,7 +66,7 @@ export default function CustomersCard({
 
     const ragioneSociale = customer.RagioneSociale || "Cliente senza ragione sociale";
 
-    const codiceCliente = customer.CodiceCliente?.Focelda ?? "N/A";
+    //const codiceCliente = customer.CodiceCliente?.Focelda ?? "N/A";
     const codiceFiscale = customer.CodiceFiscale || "N/A";
     const partitaIVA = customer.PartitaIVA || "N/A";
     const canaleVendita = customer.CanaleVendita || "N/A";
@@ -102,8 +104,9 @@ export default function CustomersCard({
 
                 const items = await SearchCustomersAPI({
                     abortController: controller,
-                    params: params.toString(),
+                    query: params.toString(),
                     ChangeLoadStatus: () => { },
+                    hasCap
                 });
                 setCustomerOptions(items ?? []);
             } finally {

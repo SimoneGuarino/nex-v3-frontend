@@ -711,6 +711,7 @@ export function QuotationDetails() {
                             // La protezione definitiva resta comunque lato BE.
                             canReplacePlaceholderCustomer={Boolean(isRequester && qts?.tipologia === "BID_PASSIVO" && customer?.isPlaceholder)}
                             onReplacePlaceholderCustomer={handleReplacePlaceholderCustomer}
+                            hasCap={hasCap}
                         />
                     </div>
                 </FDBox>}

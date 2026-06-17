@@ -6,7 +6,8 @@
 import React, { useEffect, useRef } from "react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { createPortal } from "react-dom";
-import FDButton, { type FDColor } from "../buttons/FDButton";
+import FDButton from "../buttons/FDButton";
+import { type FDColor } from "../../palette/palette";
 
 export type FDDialogSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full";
 

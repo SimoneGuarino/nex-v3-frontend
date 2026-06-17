@@ -247,7 +247,7 @@ export default function SmartDashboard() {
         version: "1.0.0",
         user: {
             id: userContext?.details?.id ?? "",
-            role: (userContext?.details?.ruolo as Role) ?? "Tester",
+            role: (userContext?.details?.authz?.activeGroup?.key as Role) ?? "Tester",
         },
         keys: "dashboard",
         actions: {
@@ -258,7 +258,7 @@ export default function SmartDashboard() {
         }
     });
 
-    const currentRole: RoleName | null = normalizeRoleName(userContext?.details?.ruolo);
+    const currentRole: RoleName | null = normalizeRoleName(userContext?.details?.authz?.activeGroup?.name);
 
     // Lista widget permessi per il ruolo
     const allowedWidgets = React.useMemo(

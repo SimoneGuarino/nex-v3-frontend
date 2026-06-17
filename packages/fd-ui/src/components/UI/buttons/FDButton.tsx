@@ -1,6 +1,6 @@
 import React, { forwardRef, memo } from "react";
 import { motion, type HTMLMotionProps, type Variants } from "framer-motion";
-import { FDButtonVariant as FDVariant } from "../../palette/palette";
+import { FDButtonVariant as FDVariant, type FDColor } from "../../palette/palette";
 
 // ——————————————————————————————————————————————————————————
 // TYPES
@@ -8,19 +8,6 @@ import { FDButtonVariant as FDVariant } from "../../palette/palette";
 type DefaultSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
 export type FDRadius = "none" | DefaultSize | "full";
 export type FDSize = "small" | "medium" | "large" | DefaultSize;
-export type FDColor =
-    | "primary"
-    | "secondary"
-    | "info"
-    | "success"
-    | "warning"
-    | "error"
-    | "light"
-    | "dark"
-    | "purple"
-    | "lightPurple"
-    | "neutral"
-    | "none";
 
 /**
  * Props comuni (indipendenti dal fatto che sia motion o native button).
@@ -192,6 +179,11 @@ const palette = {
         textOnSolid: "text-neutral-900 dark:text-neutral-100",
         textOnOutline: "text-neutral-700 dark:text-neutral-300",
         onHover: "hover:bg-neutral-300/10 dark:hover:bg-neutral-700/10",
+    },
+    transparent: {
+        bg: "bg-transparent",
+        soft: "bg-transparent",
+        ring: "border-transparent",
     },
     none: {
         bg: "",
